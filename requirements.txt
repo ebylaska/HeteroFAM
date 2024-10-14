@@ -1,0 +1,11 @@
+flask
+requests
+paramiko
+pyYaml
+pymysql 
+pymongo
+Pillow
+numpy
+tinydb
+tinymongo
+pexpect
