@@ -1,0 +1,5 @@
+#!/bin/bash
+
+
+java -jar $ARROWS_HOME/bin/JmolData.jar -ion -g 355x355 -s $1 -q0 -w png:$2 
+
