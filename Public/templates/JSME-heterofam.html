@@ -51,15 +51,32 @@
             text-decoration: underline;
         }
 
-
-
-body {
+  body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            color: #1C6291;
-}
+            margin: 20px;
+            line-height: 1.6;
+            border-left: 10px solid #2C3E50; /* Larger left border */
+            padding-left: 20px; /* Padding to avoid text being too close to the border */
+        }
+
+        h1, h2, h3 {
+            color: #2C3E50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
 header {
             color: #1C6291;
             background-color: #0d3b66;
@@ -487,35 +504,257 @@ Our platform integrates the latest in computational advancements to provide seam
 </p></font>
 
 <font color="1C6291" size="+2"> 
-<h2>Workflows Outline</h2>
-<ul>
-    <li><h3>NWChemEx Plane-Wave DFT (PWDFT) Simulations for Magnetic Materials</h3>
-        <ul>
-            <li>Exa-scale hybrid MPI-GPU algorithms for periodic plane-wave electronic structure methods</li>
-            <li><a href="https://github.com/ebylaska/PWDFT" target="_blank">PWDFT GitHub Repository</a>
-            <li><a href="https://github.com/nwchemgit/nwchem" target="_blank">NWChem GitHub Repository</a>
 
-                <ul>
-                    <li>Hybrid DFT (incorporating exact exchange)</li>
-                    <li>Meta-GGAs</li>
-                    <li>DFT+U</li>
-                    <li>Van der Waals (vdW) dispersion GGAs</li>
-                    <li>RPA</li>
-                </ul>
-            </li>
-            <li>Band structure recently added to NWChemEx PWDFT</li>
-        </ul>
-    </li>
-    <li><h3>NWChem GW (Molecular Gaussian Method)</h3></li>
-    <li><h3>ExaChem</h3>
-        <ul>
-            <li><a href="https://github.com/ExaChem/exachem" target="_blank">ExaChem GitHub Repository</a>
-            <li>Primarily a chemistry tool</li>
-            <li>Focuses on many-body methods</li>
-        </ul>
-    </li>
-    <li><h3>ExaLearn</h3></li>
-</ul>
+
+    <h2>Work Plan: Navigating the Design Space of Heterostructures</h2>
+
+    <h2>1. Overview of Key Phases</h2>
+    <p>The project is divided into <strong>three major thrusts</strong> that will progress over two years:</p>
+    <ul>
+        <li><strong>Thrust 1:</strong> Machine Learning (ML) workflows to discover new correlated and topological moiré systems.</li>
+        <li><strong>Thrust 2:</strong> Prototype development for studying correlated electron physics and emergent states.</li>
+        <li><strong>Thrust 3:</strong> AI-driven expert system for spin configurations in transition metal oxides.</li>
+    </ul>
+
+    <h2>2. Year 1: Planning, Development, and Initial Modeling</h2>
+
+    <h3>2.1 Thrust 1: Building ML Workflows</h3>
+    <p><strong>Objective:</strong> Develop and test initial machine learning models for predicting the properties of correlated and topological moiré systems.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1-Q2: Define key datasets from <em>ab initio</em> calculations for training ML models.</li>
+                <li>Q3: Train preliminary models on smaller datasets to test the robustness of predictions.</li>
+                <li>Q4: Optimize ML algorithms for higher accuracy and begin identifying new candidate materials.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>Completion of dataset preparation.</li>
+                <li>Initial ML model validation on small datasets.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>2.2 Thrust 2: Prototype Development for COVOs-QFlow</h3>
+    <p><strong>Objective:</strong> Design and build a prototype of COVOs-QFlow for studying correlated electron physics in 2D materials.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1-Q2: Define system architecture and user requirements for COVOs-QFlow.</li>
+                <li>Q3: Begin coding the initial prototype with basic functionality.</li>
+                <li>Q4: Test the prototype on simple 2D material systems and assess output accuracy.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>Prototype v1.0 ready for testing.</li>
+                <li>Initial validation on basic systems.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>2.3 Thrust 3: AI System for Spin Configurations</h3>
+    <p><strong>Objective:</strong> Develop a framework for an AI-driven system to predict spin configurations in transition metal oxides.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1: Literature review and identification of existing data for spin configurations.</li>
+                <li>Q2-Q3: Design the architecture of the AI model.</li>
+                <li>Q4: Build and test the model on simple oxides.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>AI model framework ready.</li>
+                <li>Initial testing on small datasets completed.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>3. Year 2: Optimization, Scaling, and Outreach</h2>
+
+    <h3>3.1 Thrust 1: Scaling ML Workflows</h3>
+    <p><strong>Objective:</strong> Scale the ML models and workflows to handle more complex 2D materials and moiré systems.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1: Scale up the dataset to include larger and more complex material systems.</li>
+                <li>Q2: Refine the ML algorithms to improve prediction speed and accuracy.</li>
+                <li>Q3: Begin predicting the properties of new 2D materials.</li>
+                <li>Q4: Publish findings on predicted new materials.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>Scaled ML model validated.</li>
+                <li>Identification of new candidate materials.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3.2 Thrust 2: Finalizing COVOs-QFlow</h3>
+    <p><strong>Objective:</strong> Enhance the functionality of COVOs-QFlow and integrate advanced features.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1-Q2: Add advanced functionality for localized state predictions.</li>
+                <li>Q3: Validate the tool with real-world data from experimental studies.</li>
+                <li>Q4: Release COVOs-QFlow to the broader research community and begin documentation for users.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>Finalized version of COVOs-QFlow.</li>
+                <li>Full integration with DOE HPC systems.</li>
+                <li>Outreach for researchers to adopt the tool.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3>3.3 Thrust 3: Optimizing AI for Spin Configurations</h3>
+    <p><strong>Objective:</strong> Extend and refine the AI system for larger oxide systems.</p>
+    <ul>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Q1-Q2: Optimize the AI model for predicting spin configurations in complex oxide systems.</li>
+                <li>Q3: Validate the system using experimental data and benchmarks.</li>
+                <li>Q4: Publish results and release the tool for use by the wider materials science community.</li>
+            </ul>
+        </li>
+        <li><strong>Milestones:</strong>
+            <ul>
+                <li>Validated AI tool for oxide spin configurations.</li>
+                <li>Publication and dissemination of results.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>4. Risk Management</h2>
+    <ul>
+        <li><strong>Key Risks:</strong>
+            <ul>
+                <li>Dataset inadequacy for training ML models.</li>
+                <li>Technical challenges in scaling COVOs-QFlow for larger systems.</li>
+                <li>Difficulty in obtaining accurate experimental data for validation.</li>
+            </ul>
+        </li>
+        <li><strong>Mitigation:</strong>
+            <ul>
+                <li>Use DOE HPC resources for rapid dataset expansion and model optimization.</li>
+                <li>Collaborate with experimentalists for timely data sharing.</li>
+                <li>Regular cross-team reviews to address challenges early.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>5. Verification, Validation, and Software Integration</h2>
+    <ul>
+        <li><strong>Verification:</strong> Regular testing of models and tools on benchmark systems to ensure accuracy.</li>
+        <li><strong>Validation:</strong> Comparing predictions with experimental results.</li>
+        <li><strong>Integration:</strong> Ensure that all tools (ML workflows, COVOs-QFlow, AI system) are compatible with DOE’s High-Performance Computing (HPC) facilities.</li>
+    </ul>
+
+    <h2>6. Outreach and Community Engagement</h2>
+    <ul>
+        <li><strong>Objective:</strong> Engage with the broader research community and promote diversity, equity, and inclusion.</li>
+        <li><strong>Tasks:</strong>
+            <ul>
+                <li>Develop outreach programs targeting underrepresented groups in computational material sciences.</li>
+                <li>Host workshops and webinars to train new users on the tools developed (COVOs-QFlow, AI system).</li>
+                <li>Collaborate with universities and national labs for broader dissemination of research findings.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>7. Timeline of Key Activities</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Quarter</th>
+                <th>Thrust 1: ML Workflows</th>
+                <th>Thrust 2: COVOs-QFlow</th>
+                <th>Thrust 3: AI Spin Configurations</th>
+                <th>Milestones</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Year 1</td>
+                <td>Dataset preparation (Q1-Q2)<br>Initial ML model training (Q3-Q4)</td>
+                <td>Define architecture (Q1-Q2)<br>Prototype development (Q3)</td>
+                <td>Literature review (Q1-Q2)<br>AI framework design (Q3-Q4)</td>
+                <td>Initial prototypes for all thrusts by Q4</td>
+            </tr>
+            <tr>
+                <td>Year 2</td>
+                <td>Scaling ML models (Q1-Q3)<br>Predict new materials (Q4)</td>
+                <td>Advanced functionality (Q1-Q3)<br>Release to the community (Q4)</td>
+                <td>Optimizing AI for complex oxides (Q1-Q2)<br>Publish results and tool (Q4)</td>
+                <td>Full validation of models and tools by Q4</td>
+            </tr>
+        </tbody>
+    </table>
+
+<h2>Software Used in the Project</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>Software</th>
+            <th>Description</th>
+            <th>Link</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>NWChemEx PWDFT</strong></td>
+            <td>NWChemEx is an exascale version of NWChem. It integrates ML techniques and physical simulation workflows to enhance scalability and performance for computational materials design.</td>
+            <td><a href="https://github.com/ebylaska/PWDFT" target="_blank">NWChemEx PWDFT GitHub Repository</a></td>
+        </tr>
+        <tr>
+            <td><strong>Sella</strong></td>
+            <td>Utility for finding first-order saddle points and minima on potential energy surfaces (PESs).</td>
+            <td><a href="https://github.com/zadorlab/sella" target="_blank">Sella GitHub Repository</a></td>
+        </tr>
+        <tr>
+            <td><strong>COVOS</strong></td>
+            <td>A tool used in the project, with further details to be provided as development progresses.</td>
+            <td>Not Available</td>
+        </tr>
+        <tr>
+            <td><strong>EMSL Arrows</strong></td>
+            <td>A web application that uses NWChem and chemical computational databases for materials and chemical modeling, supporting free energy methods and surface generation.</td>
+            <td><a href="https://arrows.emsl.pnnl.gov/api/" target="_blank">EMSL Arrows</a></td>
+        </tr>
+        <tr>
+            <td><strong>NWChem</strong></td>
+            <td>An electronic structure theory package that implements various DFT functionals and enhancements for optimizers and beyond-DFT methods.</td>
+            <td><a href="https://github.com/nwchemgit/nwchem" target="_blank">NWChem GitHub Repository</a></td>
+        </tr>
+       <tr>
+            <td><strong>NWChem GW (Gaussian Method)</strong></td>
+            <td>Gaussian GW (GW approximation for electronic structure calculations) added to NWChem for accurate electronic properties calculations in molecular systems.</td>
+            <td><a href="https://github.com/nwchemgit/nwchem" target="_blank">NWChem GW on GitHub</a></td>
+        </tr>
+        <tr>
+            <td><strong>Siesta</strong></td>
+            <td>A density-functional theory (DFT) program used for ab initio molecular simulations of molecules and solids. It will be used in parallel computations to validate machine learning workflows.</td>
+            <td><a href="https://gitlab.com/siesta-project" target="_blank">Siesta GitHub Repository</a></td>
+        </tr>
+        <tr>
+            <td><strong>ExaChem</strong></td>
+            <td>A tool focused on many-body methods and exascale hybrid MPI-GPU algorithms for computational chemistry.</td>
+            <td><a href="https://github.com/ExaChem/exachem" target="_blank">ExaChem GitHub Repository</a></td>
+        </tr>
+        <tr>
+            <td><strong>ExaLearn</strong></td>
+            <td>A tool that integrates machine learning techniques into computational material science workflows.</td>
+            <td>Not Available</td>
+        </tr>
+    </tbody>
+</table>
+
 
 <h2>Sponsor</h2>
 <p>Sponsored by the U.S. Department of Energy's Basic Energy Sciences (DOE BES) Computational Materials Sciences (CMS) program.</p>
