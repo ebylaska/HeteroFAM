@@ -12,7 +12,8 @@ HeteroFAM_HOME     = __file__.split("HeteroFAM")[0] + "HeteroFAM"
 
 print("HeteroFAM_HOME=",HeteroFAM_HOME)
 
-HeteroFAM_API_HOME = 'http://localhost:5002/api/'
+#HeteroFAM_API_HOME = 'http://localhost:5002/api/'
+HeteroFAM_API_HOME = 'http://heterofam.pnl.gov/api/'
 ###################### HeteroFAM Locations #######################
 
 #UPLOAD_FOLDER = '/tmp/'
@@ -4184,4 +4185,4 @@ if __name__ == '__main__':
     #app.run(debug=True,threaded=True)
     #app.run(host='0.0.0.0', threaded=True)
     #app.run(debug=True,host='0.0.0.0',port=5000,threaded=True)
-    app.run(debug=True,host='0.0.0.0',port=5002,threaded=True)
+    app.run(debug=True,host='0.0.0.0',port=8080,threaded=True)

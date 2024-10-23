@@ -21,6 +21,15 @@ FROM python:3-slim-buster
 
 WORKDIR /HeteroFAM
 
+# Set up proxy 
+ENV HTTP_PROXY=http://proxy01.pnl.gov:3128
+ENV HTTPS_PROXY=http://proxy01.pnl.gov:3128
+ENV NO_PROXY=localhost,127.0.0.1
+
+# Set up proxy for apt-get
+RUN echo 'Acquire::http::Proxy "http://proxy01.pnl.gov:3128";' >> /etc/apt/apt.conf.d/99proxy
+
+
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 

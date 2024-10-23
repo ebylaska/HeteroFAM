@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: heterofam:latest
     ports:
-      - 5002:5002
+      - 8080:8080
     volumes:
       - ../MyHeteroFAM/archive:/HeteroFAM/archive
       - ../MyHeteroFAM/Work:/HeteroFAM/Work
