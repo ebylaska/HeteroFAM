@@ -493,6 +493,77 @@
 
         <center><font color="1C6291" size="+4"> <p><b>Welcome to HeteroFAM </b></p></font></center>
 
+	<div style="background-color: #f0f4f8; padding: 20px; border-radius: 10px;">
+
+	   <!-- Flexbox container to align sections side by side -->
+           <div style="display: flex; justify-content: space-between; padding: 20px;">
+
+               <!-- Section: Project Mission -->
+               <div style="flex: 1; margin-right: 20px;">
+                   <h2 style="font-size: 28px;">Project Mission</h2>
+                   <p style="font-size: 20px;">
+                       The mission of the Navigating the Design Space of Heterostructures (HeteroFAM) project is to revolutionize materials science by advancing the computational modeling and design of two-dimensional (2D) materials and transition metal oxides. Leveraging exascale computing, machine learning, and advanced electronic structure methods, the project aims to explore and optimize the properties of complex heterostructures. It focuses on developing tools to enable the rapid discovery of novel materials with enhanced functionalities, with the goal to foster innovation in next-generation technologies. Through community engagement, open software development, and user-friendly interfaces, the project strives to make cutting-edge computational tools accessible to researchers across diverse disciplines, thereby accelerating progress in materials science and engineering.</p>
+               </div>
+     
+               <!-- Section: Project Features -->
+               <div style="flex: 1;">
+                   <h2 style="font-size: 28px;">Project Features</h2>
+                   <ul style="font-size: 20px;">
+                       <li><strong>Thrust 1:</strong> Machine Learning (ML) workflows to discover new correlated and topological moiré systems.</li>
+                       <li><strong>Thrust 2:</strong> Prototype development for studying correlated electron physics and emergent states.</li>
+                       <li><strong>Thrust 3:</strong> AI-driven expert system for spin configurations in transition metal oxides.</li>
+                   </ul>
+               </div>
+            </div>
+            </div>
+
+	    <!-- Images Section Below the Top Two Sections -->
+<div style="text-align: center; margin-top: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture1.png')}}" alt="Image 1" style="max-width: 30%; height: auto; margin-bottom: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture2.png')}}" alt="Image 2" style="max-width: 20%; height: auto; margin-bottom: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture3.png')}}" alt="Image 3" style="max-width: 20%; height: auto; margin-bottom: 20px;">
+</div>
+
+        <!-- Flexbox container for the table -->
+	<!-- Flexbox container for the table -->
+      <div style="background-color: #f0f4f8; padding: 20px; border-radius: 10px; margin-top: 20px;">
+
+
+        <!-- Section: Timeline of Key Activities -->
+        <div style="flex: 1;">
+            <h2 style="font-size: 28px;">Timeline of Key Activities</h2>
+            <ul style="font-size: 20px;">
+            <table border="1" cellpadding="10" cellspacing="0" style="width: 100%; border-collapse: collapse; text-align: center;">
+                <thead>
+                    <tr style="background-color: #d1e7ff;">
+                        <th>Quarter</th>
+                        <th>Thrust 1: ML Workflows</th>
+                        <th>Thrust 2: COVOs-QFlow</th>
+                        <th>Thrust 3: AI Spin Configurations</th>
+                        <th>Milestones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Year 1</td>
+                        <td>Dataset preparation (Q1-Q2)<br>Initial ML model training (Q3-Q4)</td>
+                        <td>Define architecture (Q1-Q2)<br>Prototype development (Q3)</td>
+                        <td>Literature review (Q1-Q2)<br>AI framework design (Q3-Q4)</td>
+                        <td>Initial prototypes for all thrusts by Q4</td>
+                    </tr>
+                    <tr>
+                        <td>Year 2</td>
+                        <td>Scaling ML models (Q1-Q3)<br>Predict new materials (Q4)</td>
+                        <td>Advanced functionality (Q1-Q3)<br>Release to the community (Q4)</td>
+                        <td>Optimizing AI for complex oxides (Q1-Q2)<br>Publish results and tool (Q4)</td>
+                        <td>Full validation of models and tools by Q4</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        </div>
+
 <font color="1C6291" size="+2"> 
 <details>
     <summary><strong>Show/Hide Project Features and Mission</strong></summary>
@@ -1121,7 +1192,7 @@ Our platform integrates the latest in computational advancements to provide seam
      Keywords: quantum chemistry calculations - quantum chemistry computations - quantum chemistry - molecular modeling calculations - molecular modeling computations - molecular modeling - chemical modeling - chemical reactions calculations - chemical reactions computations - chemical reactions - NWChem calculations - computational chemistry - NWChem 
 
 <br><br>
-<div align="right"><font color="298DB4"> Tiny Arrows API visited {{ visits }} times </font></div>
+<div align="right"><font color="298DB4"> HeteroFAM API visited {{ visits }} times </font></div>
 
 </body>
 </html>
