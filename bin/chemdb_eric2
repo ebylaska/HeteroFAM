@@ -10,11 +10,12 @@ from math import *
 
 ###################### PARAMETERS ###########################
 #ARROWS_HOME     = '/Users/bylaska/Public/TinyArrows'
-ARROWS_HOME           = __file__.split("TinyArrows")[0] + "TinyArrows"
+ARROWS_HOME           = __file__.split("HeteroFAM")[0] + "HeteroFAM"
 MY_ENV                = os.environ.copy()
 MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 
-ARROWS_API_HOME = 'http://localhost:5001/api/'
+ARROWS_API_HOME = 'http://localhost:8080/api/'
+#ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
 
 
 ####################### mongoDB #############################

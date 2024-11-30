@@ -12,8 +12,8 @@ HeteroFAM_HOME     = __file__.split("HeteroFAM")[0] + "HeteroFAM"
 
 print("HeteroFAM_HOME=",HeteroFAM_HOME)
 
-#HeteroFAM_API_HOME = 'http://localhost:5002/api/'
-HeteroFAM_API_HOME = 'http://heterofam.pnl.gov/api/'
+HeteroFAM_API_HOME = 'http://localhost:8080/api/'
+#HeteroFAM_API_HOME = 'http://heterofam.pnnl.gov/api/'
 ###################### HeteroFAM Locations #######################
 
 #UPLOAD_FOLDER = '/tmp/'
@@ -26,6 +26,7 @@ tar                     = "/bin/tar -czf "
 chemdb_fetch_reactions  = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " -e "
 chemdb_fetch_reactions0 = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " "
 chemdb_queue            = HeteroFAM_HOME + "/bin/chemdb_queue --heterofam_api=" + HeteroFAM_API_HOME + " "
+solid_queue             = HeteroFAM_HOME + "/bin/solid_queue --heterofam_api=" + HeteroFAM_API_HOME + " "
 chemdb_balance_reaction = HeteroFAM_HOME + "/bin/chemdb_balance_reaction9f --heterofam_api=" + HeteroFAM_API_HOME + " "
 tnt_submit              = HeteroFAM_HOME + "/bin/tnt_submit5 --heterofam_api=" + HeteroFAM_API_HOME + " -f "
 
@@ -1138,6 +1139,8 @@ def get_listallesmiles(nrows):
        #result = subprocess.check_output(cmd7,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
        result = subprocess.check_output(cmd7,shell=True).decode("utf-8")
 
+       print("RESULT=",result)
+
        ### resolve image files in html ###
        with open(htmlfile,'r') as ff: html = ff.read()
        html = resolve_images(result,html)
@@ -2037,6 +2040,32 @@ def list_queue_nwchem3():
 
 
 ############################ queue        ###############################
+@app.route('/api/solid_queue/', methods=['GET'])
+def solid_queue():
+   global namecount
+   name = "tmp/solid%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-l'
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "heteroFAM solid queue not found\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += calcs
+   #html += "</pre> </html>"
+   calcs += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + calcs
+
+   return data
 
 @app.route('/api/queue/', methods=['GET'])
 def list_queue():
@@ -3099,6 +3128,9 @@ def arrows_draw_post():
        filename = text.strip("download datafile").strip()
        ddfile = filename[filename.rfind('/')+1:]
        return send_from_directory(directory='chemdb_hold', filename=ddfile,as_attachment=True)
+
+    elif ("solid_queue" in text.lower()):
+       return solid_queue_html()
 
     elif ("==>" in text):
        reaction = text

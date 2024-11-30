@@ -20,9 +20,10 @@ services:
     image: mariadb:latest
     ports:
       - 3306:3306
+    container_name: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: 05291999
-      MYSQL_DATABASE: HeteroFAM_Project
+      MYSQL_DATABASE: TNT_Project
       MYSQL_USER: hetero
       MYSQL_PASSWORD: solid
     command: --bind-address=0.0.0.0
@@ -42,4 +43,3 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: solid
       MONGO_INITDB_DATABASE: HeteroFAM # Set the default database name for MongoDB
     command: mongod --auth --bind_ip_all # Enable authentication and bind to all interfaces
-
