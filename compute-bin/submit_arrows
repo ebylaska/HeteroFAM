@@ -3,12 +3,12 @@
 import os,sys,subprocess,requests,getopt,math,random
 
 ALLOWED_EXTENSIONS = set(['nw','eap','inp'])
-arrows_post_url    = 'https://arrows.emsl.pnnl.gov/api/upload/'
-arrows_get_url     = 'https://arrows.emsl.pnnl.gov/api/queue_nwchem_add/'
+arrows_post_url    = 'https://heterofam.pnnl.gov/api/upload/'
+arrows_get_url     = 'https://heterofam.pnnl.gov/api/queue_nwchem_add/'
 
 ############## machine parameters #########################
 curdir      = os.getcwd()
-machinename = 'we34304'
+machinename = 'wd49389'
 ############## machine parameters #########################
 
 #def allowed_file(filename):

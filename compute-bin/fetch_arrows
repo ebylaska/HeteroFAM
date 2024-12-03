@@ -9,10 +9,10 @@ from contextlib import closing
 #arrows_queue_delete_url = 'https://arrows.emsl.pnnl.gov/api/queue_nwchem_delete/'
 #arrows_queue_zip_url    = 'https://arrows.emsl.pnnl.gov/api/queue_nwchem_zip/'
 
-arrows_queue_url        = 'localhost:5001/api/queue_nwchem/'
-arrows_queue_fetch_url  = 'localhost:5001/api/queue_nwchem_fetch/'
-arrows_queue_delete_url = 'localhost:5001/api/queue_nwchem_delete/'
-arrows_queue_zip_url    = 'localhost:5001/api/queue_nwchem_zip/'
+arrows_queue_url        = 'localhost:8080/api/queue_nwchem/'
+arrows_queue_fetch_url  = 'localhost:8080/api/queue_nwchem_fetch/'
+arrows_queue_delete_url = 'localhost:8080/api/queue_nwchem_delete/'
+arrows_queue_zip_url    = 'localhost:8080/api/queue_nwchem_zip/'
 
 
 

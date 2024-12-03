@@ -6,8 +6,8 @@ import os,sys,getopt,requests
 #arrows_queue_fetch_url = 'https://arrows.emsl.pnnl.gov/api/queue_fetch/'
 #stag = '#chemdb_queue - version 1.0'
 
-arrows_queue_url       = 'http://localhost:5001/api/queue/'
-arrows_queue_fetch_url = 'http://localhost:5001/api/queue_fetch/'
+arrows_queue_url       = 'http://localhost:8080/api/queue/'
+arrows_queue_fetch_url = 'http://localhost:8080/api/queue_fetch/'
 stag = '#chemdb_queue - version 2.0 '
 aspace = ''
 
@@ -21,7 +21,7 @@ fetch_nwchem_input
   -e entry
   -m machine
   -q showq
-  -s use https://arrows.emsl.pnnl.gov/api, instead of http://localhost:5001/api
+  -s use https://heterofam.pnnl.gov/api, instead of http://localhost:8080/api
   -h help
 
 """
@@ -38,9 +38,9 @@ for o, a in opts:
   if '-q' in o:
      showq       = True
   if '-s' in o:
-     arrows_queue_url       = 'https://arrows.emsl.pnnl.gov/api/queue/'
-     arrows_queue_fetch_url = 'https://arrows.emsl.pnnl.gov/api/queue_fetch/'
-     aspace = " - arrows_api url= https://arrows.emsl.pnnl.gov/api/ \n\n"
+     arrows_queue_url       = 'https://heterofam.pnnl.gov/api/queue/'
+     arrows_queue_fetch_url = 'https://heterofam.pnnl.gov/api/queue_fetch/'
+     aspace = " - arrows_api url= https://heterofam.emsl.pnnl.gov/api/ \n\n"
      stag = '#chemdb_queue - version 1.0'
   if '-e' in o:
      queue_entry = eval(a)

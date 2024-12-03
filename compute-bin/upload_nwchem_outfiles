@@ -5,8 +5,8 @@ import os,sys,getopt,requests
 ALLOWED_EXTENSIONS = set(['cube', 'out', 'nwout', 'nwo', 'cif', 'xyz' ])
 #arrows_post_url    = 'https://arrows.emsl.pnnl.gov/api/upload/'
 #arrows_get_url     = 'https://arrows.emsl.pnnl.gov/api/submit_output/'
-arrows_post_url    = 'http://localhost:5001/api/upload/'
-arrows_get_url     = 'http://localhost:5001/api/submit_output/'
+arrows_post_url    = 'http://localhost:8080/api/upload/'
+arrows_get_url     = 'http://localhost:8080/api/submit_output/'
 
 
 def allowed_file(filename):
@@ -25,7 +25,7 @@ upload_nwchem_outfiles
 
   Usage: upload_nwchem_outfiles -h datafiles 
 
-  -s use https://arrows.emsl.pnnl.gov/api, instead of http://localhost:5001/api
+  -s use https:/heterofam.pnnl.gov/api, instead of http://localhost:8080/api
   -h help
 
 """
@@ -37,8 +37,8 @@ print()
 opts, args = getopt.getopt(sys.argv[1:], "sh")
 for o, a in opts:
   if '-s' in o:
-     arrows_post_url = 'https://arrows.emsl.pnnl.gov/api/upload/'
-     arrows_get_url  = 'https://arrows.emsl.pnnl.gov/api/submit_output/'
+     arrows_post_url = 'https://heterofam.pnnl.gov/api/upload/'
+     arrows_get_url  = 'https://heterofam.pnnl.gov/api/submit_output/'
   if o in ("-h","--help"):
     print(usage)
     exit()

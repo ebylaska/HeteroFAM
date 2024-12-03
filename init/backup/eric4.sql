@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS materials (
     id INT AUTO_INCREMENT PRIMARY KEY, -- Unique identifier
     name VARCHAR(255) NOT NULL,        -- Material name
     description TEXT,                  -- Material description
-    xyz TEXT,                          -- Coordinates or geometry data
+    xyz BLOB,                          -- Coordinates or geometry data
     unita VARCHAR(50),                 -- Unit of measurement
     mformula VARCHAR(255),             -- Material formula
     charge INT,                        -- Net charge of the system
@@ -13,21 +13,21 @@ CREATE TABLE IF NOT EXISTS materials (
     number_atoms INT,                  -- number of atoms
     xc VARCHAR(100),                   -- Exchange-correlation functional
     theory VARCHAR(255),               -- Theory level or method
-    k_points TEXT,                     -- K-points configuration
+    k_points JSON,                     -- K-points configuration
     smearing_type VARCHAR(50),         -- Smearing method type
     smearing_temperature FLOAT,        -- Smearing temperature
     kerker_energy FLOAT,               -- Kerker Temperature
-    fractional_occupations TEXT,       -- JSON format
-    initial_spin_penalties TEXT,       -- JSON Initial spin-penalties
-    atomic_symbols TEXT,               -- JSON atomic symbols
-    atomic_charges TEXT,               -- JSON Blochl atomic charges
+    fractional_occupations JSON,       -- JSON format
+    initial_spin_penalties JSON,       -- JSON Initial spin-penalties
+    atomic_symbols JSON,               -- JSON atomic symbols
+    atomic_charges JSON,               -- JSON Blochl atomic charges
     Hubbard_U FLOAT,                   -- Hubbard U parameter for DFT+U
     Hubbard_J FLOAT,                   -- Hubbard J parameter for DFT+U
     calculation_type VARCHAR(100),     -- Type of calculation
     machine VARCHAR(100),              -- Machine name used for calculation
     ncpu INT,                          -- Number of CPUs used
     wall_time VARCHAR(50),             -- Wall time for the computation
-    pseudopotentials TEXT,             -- JSON Details of pseudopotentials used
+    pseudopotentials JSON,             -- JSON Details of pseudopotentials used
     material_name VARCHAR(255),        -- Name of the material
     lattice_parameter_a FLOAT,         -- Lattice parameter for a
     lattice_parameter_b FLOAT,         -- Lattice parameter for b
@@ -42,7 +42,20 @@ CREATE TABLE IF NOT EXISTS materials (
     energy FLOAT,                      -- Energy of the material/system in atomic units
     enthalpy FLOAT,                    -- Enthalpy value in atomic units
     entropy FLOAT,                     -- Entropy value in atomic units
+    data_filenames BLOB,               -- Store file paths
+    calculation_exaf BLOB,             -- exafs BLOB
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Creation timestamp
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Last update timestamp
+);
+
+CREATE TABLE IF NOT EXISTS exafs (
+    id INT AUTO_INCREMENT PRIMARY KEY, -- Unique identifier
+    name VARCHAR(255) NOT NULL,        -- Material name
+    description TEXT,                  -- Material description
+    mformula VARCHAR(255),             -- Material formula
+    materials_ids JSON,                -- exafs materia id
+    materials_weights JSON,            -- exafs weights
+    weight_exafs BLOB,                 -- combined exafs BLOB
+    experiment_exaf BLOB               -- experiment exafs BLOB
 );
 

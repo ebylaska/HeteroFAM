@@ -30,37 +30,37 @@ def save_as_xyz(cif_file, xyz_file):
     write(xyz_file, structure)
     print(f"XYZ file saved to {xyz_file}")
 
+
 # Function to generate spin penalty from HPSN data
 def generate_spin_penalty_from_hpsn(hpsn_data, nwfile):
     """
     Generate and save spin penalty function for NWChem based on HPSN data.
     """
-    # Extract magnetic spins from hpsn_data
     magnetic_spins = hpsn_data.get("magnetic_spins", [])
     if not magnetic_spins:
-        print("No magnetic spins found in HPSN data.")
-        return
+        raise ValueError("No magnetic spins found in HPSN data.")
 
     atom_indices_up = []
     atom_indices_down = []
 
-    # Sort spins into up and down
     for spin_info in magnetic_spins:
         atom_index = spin_info["atom_index"] + 1  # Convert to 1-based index
-        spin_magnitude = spin_info["spin_magnitude"]
-        spin_orientation = spin_info["spin_orientation"]  # Example: [0, 0, ±1]
-        if spin_orientation[2] > 0:
+        spin_orientation = spin_info["spin_orientation"]
+        if spin_orientation == [0, 0, 1]:
             atom_indices_up.append(atom_index)
-        elif spin_orientation[2] < 0:
+        elif spin_orientation == [0, 0, -1]:
             atom_indices_down.append(atom_index)
 
-    # Generate the spin penalty function
-    spin_penalty = generate_nwchem_spin_penalty(atom_indices_up, atom_indices_down, 1.0, -1.0)
+    spin_penalty = []
+    spin_penalty.append("nwpw")
+    spin_penalty.append(f"   pspspin down  d -1.0 {' '.join(map(str, atom_indices_down))}")
+    spin_penalty.append(f"   pspspin up    d -1.0 {' '.join(map(str, atom_indices_up))}")
+    spin_penalty.append("end")
 
-    # Save to file
     with open(nwfile, 'w') as f:
-        f.write(spin_penalty)
+        f.write("\n".join(spin_penalty))
     print(f"Spin penalty function saved to {nwfile}")
+
 
 def generate_nwchem_spin_penalty(atom_indices_up, atom_indices_down, spin_value_up=1.0, spin_value_down=-1.0):
     """
@@ -73,35 +73,50 @@ def generate_nwchem_spin_penalty(atom_indices_up, atom_indices_down, spin_value_
     lines.append("end")
     return "\n".join(lines)
 
-
-def assign_afm_spins(structure, axis='c', magnitude=5.0):
+def assign_afm_spins(structure, axis, magnitude=5.0, tolerance=1e-2):
     """
     Assign antiferromagnetic spins based on spatial layers along a given axis.
-    Non-magnetic elements (e.g., O) are assigned spin magnitude 0.0.
+    Layers are grouped using the tolerance to avoid numerical precision issues.
     :param structure: ASE Atoms object.
     :param axis: Lattice direction for AFM ordering ('a', 'b', or 'c').
     :param magnitude: Magnetic moment magnitude for AFM ordering.
+    :param tolerance: Tolerance for grouping layers (default: 1e-3).
     :return: List of spin dictionaries.
     """
     axis_map = {'a': 0, 'b': 1, 'c': 2}
     axis_index = axis_map[axis]
-    
-    # Get unique layers along the chosen axis (in fractional coordinates)
+
+    # Get fractional positions along the specified axis
     fractional_positions = structure.get_scaled_positions()
-    layers = sorted(set(fractional_positions[:, axis_index]))
-    
-    # Assign spins alternatingly for layers
+    positions_along_axis = fractional_positions[:, axis_index]
+
+    print(f"Fractional positions along axis {axis} (index {axis_index}):")
+    for i, pos in enumerate(positions_along_axis):
+        print(f"  Atom {i}: Position {pos:.6f}")
+
+    # Group positions into layers using the tolerance
+    unique_layers = []
+    for pos in sorted(positions_along_axis):
+        if not unique_layers or abs(pos - unique_layers[-1]) > tolerance:
+            unique_layers.append(pos)
+
+    print(f"Unique fractional layers along axis index {axis_index} (with tolerance {tolerance}):")
+    for i, layer in enumerate(unique_layers):
+        print(f"  Layer {i}: {layer:.6f}")
+
     magnetic_spins = []
     for atom, frac_coords in zip(structure, fractional_positions):
-        # Exclude non-magnetic elements
         spin_magnitude = MAGNETIC_MOMENTS.get(atom.symbol, 0.0)
-        if spin_magnitude == 0.0:
-            spin_orientation = [0, 0, 0]  # No orientation for non-magnetic atoms
-        else:
-            layer_index = layers.index(frac_coords[axis_index])  # Use fractional coordinate for layer index
+        if spin_magnitude > 0.0:
+            # Assign spin based on layer alternation
+            layer_index = next(i for i, layer in enumerate(unique_layers) if abs(frac_coords[axis_index] - layer) < tolerance)
             spin_magnitude = magnitude if layer_index % 2 == 0 else -magnitude
-            spin_orientation = [0, 0, +1] if spin_magnitude > 0 else [0, 0, -1]
-        
+            spin_orientation = [0, 0, 1] if spin_magnitude > 0 else [0, 0, -1]
+            print(f"Atom {atom.index}: {atom.symbol}, Layer {layer_index}, Spin {spin_orientation}.")
+        else:
+            spin_orientation = [0, 0, 0]
+            print(f"Atom {atom.index}: {atom.symbol} is non-magnetic.")
+
         magnetic_spins.append({
             "atom_index": atom.index,
             "symbol": atom.symbol,
@@ -109,10 +124,54 @@ def assign_afm_spins(structure, axis='c', magnitude=5.0):
             "spin_orientation": spin_orientation
         })
 
+    print(f"Assigned spins along axis index {axis_index} ({'a', 'b', 'c'}[axis_index]).")
     return magnetic_spins
 
 
-def cif_to_hpsn(cif_file, assign_spins=False, axis='c', magnitude=5.0):
+def assign_afm_spins0(structure, axis, magnitude=5.0, tolerance=1e-3):
+    """
+    Assign antiferromagnetic spins to match a specific alternation pattern.
+    """
+    import numpy as np
+
+    axis_map = {'a': 0, 'b': 1, 'c': 2}
+    axis_index = axis_map[axis]
+
+    # Get fractional positions along the specified axis
+    fractional_positions = structure.get_scaled_positions()
+    positions_along_axis = fractional_positions[:, axis_index]
+
+    # Group positions into layers using the tolerance
+    unique_layers = []
+    for pos in sorted(positions_along_axis):
+        if not unique_layers or abs(pos - unique_layers[-1]) > tolerance:
+            unique_layers.append(pos)
+
+    magnetic_spins = []
+    for atom in structure:
+        spin_magnitude = MAGNETIC_MOMENTS.get(atom.symbol, 0.0)
+        if spin_magnitude > 0.0:
+            # Assign down spins to specific indices for desired alternation
+            if atom.index + 1 in {1, 4, 17, 20, 33, 36, 49, 52, 65, 68, 84}:
+                spin_orientation = [0, 0, -1]  # Down
+            else:
+                spin_orientation = [0, 0, 1]  # Up
+            print(f"Atom {atom.index + 1}: {atom.symbol}, Spin {spin_orientation}.")
+        else:
+            spin_orientation = [0, 0, 0]
+            print(f"Atom {atom.index + 1}: {atom.symbol} is non-magnetic.")
+        
+        magnetic_spins.append({
+            "atom_index": atom.index,
+            "symbol": atom.symbol,
+            "spin_magnitude": magnitude,
+            "spin_orientation": spin_orientation
+        })
+
+    return magnetic_spins
+
+
+def cif_to_hpsn(cif_file, axis, assign_spins=False, magnitude=5.0):
     """
     Convert a CIF file to HPSN notation with optional magnetic spins and orientations.
     
@@ -188,12 +247,12 @@ def save_hpsn_to_json(hpsn, output_file):
 
 
 # Example usage
-cif_file_path = "1011267.cif"  # Path to your CIF file
-output_json_path = "output_hpsn_with_afm_spins.json"
+#cif_file_path = "1011267.cif"  # Path to your CIF file
+#output_json_path = "output_hpsn_with_afm_spins.json"
 
 # Convert CIF to HPSN with AFM spins
-hpsn_data = cif_to_hpsn(cif_file_path, assign_spins=True, axis='c', magnitude=5.0)
-save_hpsn_to_json(hpsn_data, output_json_path)
+#hpsn_data = cif_to_hpsn(cif_file_path, assign_spins=True, axis, magnitude=5.0)
+#save_hpsn_to_json(hpsn_data, output_json_path)
 
 
 def main():
@@ -210,13 +269,14 @@ def main():
   -o output   generate hpsn output
   -x xyzfile  Generate xyzfile
   -w nwfile    Generate nwchem input file
+  -a axis  
 
   """
 
   #cif_file_path = "1011267.cif"  # Path to your CIF file
   #output_json_path = "output_hpsn_with_afm_spins.json"
 
-  opts, args = getopt.getopt(sys.argv[1:], "o:x:w:")
+  opts, args = getopt.getopt(sys.argv[1:], "o:x:w:a:")
   if len(args) < 1:
     print(usage)
     return
@@ -229,6 +289,7 @@ def main():
   print("args=",args)
   printxyz = False
   printnw = False
+  axis = 'c'
 
   for o, a in opts:
     if o in ("-o","--json"):
@@ -240,9 +301,14 @@ def main():
     if o in ("-w"):
       nwfile = a
       printnw = True
+    if o in ("-a"):
+       axis = a
+
+  print("axis=",axis)
 
   cif_file_path = open(cif_file,"r")
-  hpsn_data = cif_to_hpsn(cif_file_path, assign_spins=True, axis='c', magnitude=5.0)
+  #hpsn_data = cif_to_hpsn(cif_file_path, assign_spins=True, axis='a', magnitude=5.0)
+  hpsn_data = cif_to_hpsn(cif_file_path, axis, assign_spins=True, magnitude=5.0)
   save_hpsn_to_json(hpsn_data, output_json_file)
 
   if (printxyz): 
