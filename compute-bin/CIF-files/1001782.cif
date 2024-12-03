@@ -1,0 +1,87 @@
+#------------------------------------------------------------------------------
+#$Date: 2023-11-12 12:37:04 +0200 (Sun, 12 Nov 2023) $
+#$Revision: 287555 $
+#$URL: file:///home/coder/svn-repositories/cod/cif/1/00/17/1001782.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_1001782
+loop_
+_publ_author_name
+'Fejdi, P.'
+'Poullen, J. F.'
+'Gasperin, M.'
+_publ_section_title
+;
+ Affinement de la structure de la vivianite Fe3(PO4)2*8H2O
+ Locality: synthetic
+;
+_journal_name_full               'Bulletin de Mineralogie'
+_journal_page_first              135
+_journal_page_last               138
+_journal_volume                  103
+_journal_year                    1980
+_chemical_compound_source        'from Huanuni tin mine, Bolivia'
+_chemical_formula_structural     'Fe3 (P O4)2 (H2 O)8'
+_chemical_formula_sum            'Fe3 H16 O16 P2'
+_chemical_name_mineral           Vivianite
+_chemical_name_systematic        'Triiron bis(phosphate(V)) octahydrate'
+_space_group_IT_number           12
+_symmetry_cell_setting           monoclinic
+_symmetry_Int_Tables_number      12
+_symmetry_space_group_name_Hall  '-C 2y'
+_symmetry_space_group_name_H-M   'C 1 2/m 1'
+_cell_angle_alpha                90
+_cell_angle_beta                 104.27(2)
+_cell_angle_gamma                90
+_cell_formula_units_Z            2
+_cell_length_a                   10.086(3)
+_cell_length_b                   13.441(4)
+_cell_length_c                   4.703(2)
+_cell_volume                     617.9
+_exptl_crystal_density_meas      2.69
+_refine_ls_R_factor_all          0.041
+_cod_original_formula_sum        'H16 Fe3 O16 P2'
+_cod_database_code               1001782
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+x,-y,z
+-x,-y,-z
+-x,y,-z
+1/2+x,1/2+y,z
+1/2+x,1/2-y,z
+1/2-x,1/2-y,-z
+1/2-x,1/2+y,-z
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_symmetry_multiplicity
+_atom_site_Wyckoff_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_attached_hydrogens
+_atom_site_calc_flag
+Fe1 Fe2+ 2 a 0. 0. 0. 1. 0 d
+Fe2 Fe2+ 4 g 0. 0.3898 0. 1. 0 d
+P1 P5+ 4 i 0.3139(1) 0. 0.3751(1) 1. 0 d
+O1 O2- 4 i 0.1579(1) 0. 0.3632(4) 1. 0 d
+O2 O2- 4 i 0.3906(1) 0. 0.6981(4) 1. 0 d
+O3 O2- 8 j 0.3449(1) 0.0954(1) 0.2224(3) 1. 0 d
+O4 O2- 8 j 0.1019(1) 0.1172(1) 0.7994(3) 1. 2 d
+O5 O2- 8 j 0.3962(1) 0.2246(1) 0.7114(4) 1. 2 d
+loop_
+_atom_type_symbol
+_atom_type_oxidation_number
+Fe2+ 2.000
+P5+ 5.000
+O2- -2.000
+H1+ 1.000
+_database_code_amcsd 0012069
