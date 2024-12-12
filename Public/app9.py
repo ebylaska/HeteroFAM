@@ -2608,7 +2608,7 @@ def list_queue_nwchem_html():
             stime = ((time.time() - evalnum(restln.split()[-1])) > 2592000.0)  # approximately 30 days
          except:
             stime = True
-         stime = stime or ("aerosol" in ln)
+         stime = stime or ("magnetic" in ln)
          isfinished = "yes" in restln.split()[1]
          link   = HeteroFAM_API_HOME + "queue_nwchem_view/"+ss[0]
          zzip   = HeteroFAM_API_HOME + "queue_nwchem_zip/"+ss[0]
@@ -2672,7 +2672,7 @@ def list_queue_nwchem_check(qname):
                stime = ((time.time() - evalnum(restln.split()[-1])) >  2592000.0)  #30 days
             except:
                stime = True
-            stime = stime or ("aerosol" in ln)
+            stime = stime or ("magnetic" in ln)
             isfinished = "yes" in restln.split()[1]
             link   = HeteroFAM_API_HOME + "queue_nwchem_view/"+ss[0]
             zzip   = HeteroFAM_API_HOME + "queue_nwchem_zip/"+ss[0]
@@ -3809,16 +3809,16 @@ def arrows_eugene_draw_post():
     return parsing_text(text)
 
 
-@app.route('/api/aerosol')
-def arrows_aerosol_draw_form():
+@app.route('/api/magnetic')
+def arrows_magnetic_draw_form():
    increment_apivisited()
    calcs = arrowsjobsrun()
    molcalcs = calculationscount()
    avisits = apivisited()
-   return render_template("emsl-aerosols.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+   return render_template("emsl-magnetic.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
-@app.route('/api/aerosol', methods=['POST'])
-def arrows_aerosol_draw_post():
+@app.route('/api/magnetic', methods=['POST'])
+def arrows_magnetic_draw_post():
     text = request.form['smi']
     text = text.replace("\"","")
     text =  " ".join(text.split())
