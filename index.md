@@ -11,7 +11,7 @@ Welcome to the **HeteroFAM** Computational Materials and Chemical Sciences Netwo
 ### [Thrust 1: Machine Learning (ML) Workflows for Moire Materials](thrust1.md)
 Explore ML-driven workflows for discovering new correlated and topological moiré systems. This section provides detailed descriptions of algorithms, datasets, and tools used in this thrust.
 
-### [Thrust 2: Prototype Development](thrust2.md)
+### [Thrust 2: Prototype Development of COVOs-QFLOW for Periodic Materials](thrust2.md)
 Learn about the prototypes developed for studying correlated electron physics and emergent states, including methodologies and experimental setups.
 
 ### [Thrust 3: Phenomenlogical initialization for magnetic structures](thrust3.md)

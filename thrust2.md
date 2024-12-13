@@ -1,4 +1,4 @@
-# Thrust 2: Prototype Development
+# Thrust 2: Prototype Development of COVOs-QFLOW for Periodic Materials
 
 ## **Objective**
 Develop prototypes to study correlated electron physics and emergent states.
