@@ -1,4 +1,4 @@
-# TinyArrows
+# HeteroFAM 
 HeteroFAM is a version of EMSL Arrows
 
 Web location:
