@@ -1,4 +1,4 @@
-# Thrust 1: Machine Learning (ML) Workflows
+# Thrust 1: Machine Learning (ML) Workflows for Moire Materials
 
 ## **Objective**
 Discover new correlated and topological moiré systems using advanced machine learning (ML) workflows.

@@ -1,4 +1,4 @@
-# Thrust 3: Phenomenlogical initialization for magnetic structurem
+# Thrust 3: Phenomenlogical initialization for magnetic structures
 
 ## **Objective**
 Develop an AI-driven expert system to predict and optimize spin configurations in transition metal oxides.
