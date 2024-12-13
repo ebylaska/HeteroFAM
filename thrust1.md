@@ -24,3 +24,4 @@ Discover new correlated and topological moiré systems using advanced machine le
 
 For detailed instructions, visit the [HeteroFAM ML GitHub Wiki](https://github.com/ebylaska/HeteroFAM/wiki).
 
+## [Return to Manual Home](index.md)

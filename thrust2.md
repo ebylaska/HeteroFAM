@@ -19,3 +19,4 @@ Develop prototypes to study correlated electron physics and emergent states.
 
 For more, refer to the [Prototype Development Documentation](https://github.com/ebylaska/HeteroFAM/prototypes).
 
+## [Return to Manual Home](index.md)

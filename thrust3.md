@@ -23,3 +23,4 @@ Develop an AI-driven expert system to predict and optimize spin configurations i
 
 Check the [Spin Configuration Expert System Guide](https://github.com/ebylaska/HeteroFAM/spin-config) for details.
 
+## [Return to Manual Home](index.md)
