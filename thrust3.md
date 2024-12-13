@@ -1,4 +1,4 @@
-# Thrust 3: AI-Driven Expert System
+# Thrust 3: Phenomenlogical initialization for magnetic structurem
 
 ## **Objective**
 Develop an AI-driven expert system to predict and optimize spin configurations in transition metal oxides.
