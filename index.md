@@ -4,14 +4,18 @@ Welcome to the **HeteroFAM** Computational Materials and Chemical Sciences Netwo
 
 ---
 
-## **Introduction**
+---
 
-HeteroFAM aims to explore heterostructures using advanced computational methods. This project is supported by the DOE BES CMCSN initiative.
+## **Thrusts Overview**
 
-Key areas include:
-- Computational materials design.
-- Chemical science workflows.
-- Integration with HPC platforms.
+### [Thrust 1: Machine Learning (ML) Workflows](thrust1.md)
+Explore ML-driven workflows for discovering new correlated and topological moiré systems. This section provides detailed descriptions of algorithms, datasets, and tools used in this thrust.
+
+### [Thrust 2: Prototype Development](thrust2.md)
+Learn about the prototypes developed for studying correlated electron physics and emergent states, including methodologies and experimental setups.
+
+### [Thrust 3: AI-Driven Expert System](thrust3.md)
+Dive into the AI-driven expert system designed for predicting and optimizing spin configurations in transition metal oxides.
 
 ---
 
