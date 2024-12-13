@@ -14,7 +14,7 @@ Explore ML-driven workflows for discovering new correlated and topological moir√
 ### [Thrust 2: Prototype Development of COVOs-QFLOW for Periodic Materials](thrust2.md)
 Learn about the prototypes developed for studying correlated electron physics and emergent states, including methodologies and experimental setups.
 
-### [Thrust 3: Phenomenlogical initialization for magnetic structures](thrust3.md)
+### [Thrust 3: Phenomenlogical Initialization for Magnetic Structures](thrust3.md)
 Dive into the AI-driven expert system designed for predicting and optimizing spin configurations in transition metal oxides.
 
 ---
