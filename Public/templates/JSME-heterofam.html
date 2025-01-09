@@ -509,7 +509,16 @@
         <p style="color:#1C6291; font-size:24px; font-weight:bold;">
              Partner Institutions: Pacific Northwest National Laboratory (PNNL) and the University of Washington (UW)
          </p>
+        <p style="color:#1C6291; font-size:24px; font-weight:bold;">
+            Sponsor: The U.S. Department of Energy's Basic Energy Sciences Computational Materials Sciences (DOE BES CMCSN) program
+         </p>
+         </p>
     </center>
+    <div style="text-align: center; margin-top: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture1.png')}}" alt="Image 1" style="max-width: 30%; height: auto; margin-bottom: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture2.png')}}" alt="Image 2" style="max-width: 20%; height: auto; margin-bottom: 20px;">
+    <img src="{{url_for('static', filename='heteroatom-static/Picture3.png')}}" alt="Image 3" style="max-width: 20%; height: auto; margin-bottom: 20px;">
+    </div>
 
 	<div style="background-color: #f0f4f8; padding: 20px; border-radius: 10px;">
 
@@ -518,29 +527,116 @@
 
                <!-- Section: Project Mission -->
                <div style="flex: 1; margin-right: 20px;">
-                   <h2 style="font-size: 28px;">Project Mission</h2>
-                   <p style="font-size: 20px;">
-                       The mission of the Navigating the Design Space of Heterostructures (HeteroFAM) project is to revolutionize materials science by advancing the computational modeling and design of two-dimensional (2D) materials and transition metal oxides. Leveraging exascale computing, machine learning, and advanced electronic structure methods, the project aims to explore and optimize the properties of complex heterostructures. It focuses on developing tools to enable the rapid discovery of novel materials with enhanced functionalities, with the goal to foster innovation in next-generation technologies. Through community engagement, open software development, and user-friendly interfaces, the project strives to make cutting-edge computational tools accessible to researchers across diverse disciplines, thereby accelerating progress in materials science and engineering.</p>
+                   <h2 style="font-size: 28px;">Welcome to HeteroFAM</h2>
+                   <p style="font-size: 20px;"> At the cutting edge of materials research, HeteroFAM is a Pacific Northwest National Laboratory (PNNL) initiative designed to revolutionize the modeling, discovery, and understanding of complex material systems. By integrating advanced computational tools, machine learning, and automation, HeteroFAM enables breakthroughs in areas such as moiré materials, correlated electron physics and emergent quantum phenomena, and magnetic materials.</p>
+
+                   <p style="font-size: 20px;">Rooted in the three-pillared modeling framework, HeteroFAM bridges first principles, empirical insights, and scalable workflows to tackle the scientific challenges of the 21st century.</p>
+
+                  <h2 style="font-size: 28px;">Three-Pillared Modeling Framework</h2>
+                  <p>The <strong>three-pillared modeling framework</strong> is the backbone of the HeteroFAM project, combining three core approaches to tackle the most challenging problems in materials science, from moiré materials to quantum systems. These pillars—**analytic models**, **data-driven models**, and **automation**—work together seamlessly to provide a comprehensive and adaptable strategy for discovery.</p>
+
+
+                  <h3 style="font-size: 18px;">1. Analytic Models (Rationalism)</h3>
+                  <p>Based on fundamental physical laws, **analytic models** are the cornerstone of the framework, offering mechanistic insights derived from quantum mechanics, thermodynamics, and classical mechanics. These models allow us to understand the intrinsic behaviors of systems and make reliable predictions from first principles.</p>
+                  <p><strong>HeteroFAM’s Contributions:</strong></p>
+                  <ul>
+                      <li>Developing quantum mechanical models for accurately describing electronic interactions in materials like moiré systems and transition metal oxides.</li>
+                      <li>Integrating first-principles simulations with multi-scale models to study complex, emergent phenomena like high-temperature superconductivity.</li>
+                  </ul>
+
+                  <h3 style="font-size: 18px;">2. Data-Driven Models (Empiricism)</h3>
+                  <p>Informed by the philosophy of **empiricism**, **data-driven models** utilize machine learning and statistical techniques to extract patterns and relationships from large datasets. These models are indispensable for exploring systems where analytical models may be computationally expensive or difficult to implement.</p>
+                  <p><strong>HeteroFAM’s Contributions:</strong></p>
+                  <ul>
+                      <li>Training machine learning models to uncover hidden correlations in experimental data, enabling rapid discovery of new materials and correlated states.</li>
+                      <li>Automating the analysis of materials properties, optimizing design spaces based on both theoretical and experimental datasets.</li>
+                  </ul>
+
+                  <h3 style="font-size: 18px;">3. Automation (Pragmatism)</h3>
+                  <p>With the **pragmatic** goal of enabling scalable, efficient, and reproducible research, **automation** integrates the analytic and data-driven pillars into dynamic, adaptable workflows. Automation enhances productivity by handling repetitive tasks, optimizing parameters, and seamlessly managing multi-scale simulations.</p>
+                  <p><strong>HeteroFAM’s Contributions:</strong></p>
+                  <ul>
+                      <li>Creating high-throughput workflows that combine analytic and data-driven models, accelerating the discovery of new materials and quantum phases.</li>
+                      <li>Employing optimization algorithms, genetic algorithms, and AI-driven co-pilots to automate decision-making and improve efficiency in the exploration of complex systems.</li>
+                  </ul>
+
+                  <p>Together, these three pillars create a robust framework that balances fundamental understanding with practical data applications and scalable automation. This holistic approach enables HeteroFAM to solve some of the most pressing challenges in modern materials science.</p>
+
+
+                  <h2 style="font-size: 28px;">Get Involved</h2>
+                  <ul style="font-size: 20px;">
+                  <p> HeteroFAM invites collaboration with researchers across disciplines. Whether you’re exploring moiré materials, advancing reaction networks, or tackling quantum magnetism, our platform and expertise are here to support your work.</p>
+                  </ul>
+
                </div>
      
+
                <!-- Section: Project Features -->
                <div style="flex: 1;">
-                   <h2 style="font-size: 28px;">Project Features</h2>
-                   <ul style="font-size: 20px;">
-                       <li><strong>Thrust 1:</strong> Machine Learning (ML) workflows to discover new correlated and topological moiré systems.</li>
-                       <li><strong>Thrust 2:</strong> Prototype development for studying correlated electron physics and emergent states.</li>
-                       <li><strong>Thrust 3:</strong> AI-driven expert system for spin configurations in transition metal oxides.</li>
-                   </ul>
+                  <h2 style="font-size: 28px;">Key Focus Areas</h2>
+                  <ul>
+                      <li>
+                          <strong>Thrust 1:</strong> Machine Learning Workflows for Correlated and Topological Moiré Systems
+                          <p>Moiré materials, formed by stacking and twisting 2D layers with mismatched lattice constants, have emerged as a platform for discovering correlated electron states and topological phases. These systems exhibit highly tunable properties, such as superconductivity, magnetism, and exotic quantum phenomena.</p>
+                          <p><strong>HeteroFAM’s Contributions:</strong></p>
+                          <ul>
+                              <li>Developing machine learning workflows that analyze electronic interactions and band structures in moiré systems.</li>
+                              <li>Automating the discovery of new correlated and topological states by integrating high-throughput data with advanced computational models.</li>
+                              <li>Enabling rapid exploration of parameter spaces, such as twist angles, external fields, and layer alignments.</li>
+                          </ul>
+                          <p></p>
+                      </li>
+                      <li>
+                          <strong>Thrust 2:</strong> Prototype Development for Correlated Electron Physics and Emergent States
+                          <p>Understanding the physics of strongly correlated electrons is critical for designing materials with unique quantum properties, such as high-temperature superconductivity and fractional quantum Hall states.</p>
+                          <p><strong>HeteroFAM’s Contributions:</strong></p>
+                          <ul>
+                              <li>Creating prototypes to study emergent states in correlated materials, including:
+                                  <ul>
+                                      <li>Spin liquids</li>
+                                      <li>Quantum critical points</li>
+                                      <li>Novel magnetic phases</li>
+                                  </ul>
+                              </li>
+                              <li>Simulating experimental conditions and environmental parameters to validate theoretical predictions.</li>
+                              <li>Bridging the gap between theory and experiment through dynamic model refinement.</li>
+                          </ul>
+                          <p></p>
+                      </li>
+                      <li>
+                          <strong>Thrust 3:</strong> AI-Driven Expert System for Spin Configurations in Transition Metal Oxides
+                          <p>Transition metal oxides are key materials for applications in energy, catalysis, and spintronics. Their complex spin configurations present both challenges and opportunities for material design.</p>
+                          <p><strong>HeteroFAM’s Contributions:</strong></p>
+                          <ul>
+                              <li>Designing an AI-driven expert system to predict and optimize spin configurations in transition metal oxides.</li>
+                              <li>Integrating first-principles calculations with data-driven approaches to uncover trends in magnetic and electronic behaviors.</li>
+                              <li>Streamlining workflows to design materials with specific magnetic properties for quantum computing and energy storage applications.</li>
+                          </ul>
+                      </li>
+                  </ul>
+
+                  <h2 style="font-size: 28px;">Tools and Technologies</h2>
+                  <ul>
+                      <li>
+                          <strong>Advanced Algorithms:</strong>
+                          <p>HeteroFAM leverages state-of-the-art computational algorithms to enhance the precision and efficiency of its modeling workflows. This includes genetic algorithms, machine learning techniques, and optimization frameworks designed to tackle complex problems in materials science.</p>
+                      </li>
+                      <li>
+                          <strong>Computational Platforms:</strong>
+                          <p>Utilizing cutting-edge computational platforms such as quantum computing and exascale computing systems enables HeteroFAM to perform large-scale simulations and handle computationally intensive tasks effectively, driving forward the boundaries of scientific research.</p>
+                      </li>
+                      <li>
+                          <strong>EMSL Arrows:</strong>
+                          <p>EMSL Arrows acts as the workflow engine behind HeteroFAM, integrating various modeling approaches and facilitating seamless collaboration across different research teams. This web-based platform ensures that complex simulations are accessible and manageable.</p>
+                      </li>
+                  </ul>
                </div>
+
+
+
             </div>
             </div>
 
-	    <!-- Images Section Below the Top Two Sections -->
-<div style="text-align: center; margin-top: 20px;">
-    <img src="{{url_for('static', filename='heteroatom-static/Picture1.png')}}" alt="Image 1" style="max-width: 30%; height: auto; margin-bottom: 20px;">
-    <img src="{{url_for('static', filename='heteroatom-static/Picture2.png')}}" alt="Image 2" style="max-width: 20%; height: auto; margin-bottom: 20px;">
-    <img src="{{url_for('static', filename='heteroatom-static/Picture3.png')}}" alt="Image 3" style="max-width: 20%; height: auto; margin-bottom: 20px;">
-</div>
 
         <!-- Flexbox container for the table -->
 	<!-- Flexbox container for the table -->
@@ -867,335 +963,6 @@ Our platform integrates the latest in computational advancements to provide seam
 </table>
 </details>
 
-    <summary><strong>Show/Hide To Do API</strong></summary>
-        <thead>
-            <tr>
-                <th>Milestones</th>
-            </tr>
-        </thead>
-
-
-         
-         <font color="298DB4"><p> {{ calculations }}</b> Arrows calculations carried out to date <br>
-                                    {{ moleculecalculations }} Molecular calculations in database to date </p></font>
-    <h2>Enter an <a href="https://nwchemgit.github.io/EMSL_Arrows#introduction-to-esmiles-how-to-change-calculation-theories">esmiles</a>, <a href="https://nwchemgit.github.io/EMSL_Arrows.html#esmiles-reactions-how-to-calculate-reaction-energies"> esmiles reaction</a>, or other Arrows input, then push the "Run Arrows" button.</h2>
-    <form action="." name="form"  method="POST">
-       <table>
-          <tr>
-             <td> <input type="text" name="smi" SIZE=100 
-                   style="font-family: sans-serif; font-size: 20px;" 
-                   onkeydown="if (event.keyCode == 13) Confirm(this.form)"> 
-            </td>
-             <!--td> <input type="submit" name="JSME-arrows" value="Run Arrows" style="font-family: sans-serif; font-size: 20px;"></td-->
-             <td> <input type="button" name="JSME-arrows" value="Run Arrows" style="font-family: sans-serif; font-size: 20px;" onClick="Confirm(this.form)"></td>
-          </tr>
-          <tr> 
-             <td> <INPUT TYPE="button" VALUE="Append SMILES from JSME Molecular Editor" onClick="appendSmiles()"> &nbsp;
-                  <input type="button" class="button3" name="jmolreactionplane" id="jmolreactionplane" value="Reaction on" onClick="jmreactionplane()"/> 
-                  <INPUT TYPE="button" VALUE="no html5" 
-                          onClick="document.form.smi.value+=' nohtml5'" > 
-                  <INPUT TYPE="button" VALUE="Clear" onClick="clearSmiles()"> 
-            </td>
-             <td> <INPUT TYPE="button" VALUE="Email Submit" onClick="emailSmiles()"> </td>
-          </tr>
-       </table>
-    </form>
-    <section class="blink" style="color: red"> <b id="runmebanner"> </b> </section> 
-    <br>
-    <FORM METHOD="POST" ONSUBMIT="return false;">
-       <INPUT TYPE="button" VALUE="theory{dft}" id="dft"
-              onClick="txspressed('dft')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="theory{pspw}" id="pspw"
-              onClick="txspressed('pspw')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="theory{pspw4}" id="pspw4"
-              onClick="txspressed('pspw4')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="theory{mp2}" id="mp2"
-              onClick="txspressed('mp2')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="theory{ccsd(t)}" id="ccsd(t)"
-              onClick="txspressed('ccsd(t)')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="theory{pm3}" id="pm3"
-              onClick="txspressed('pm3')"
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="basis{6-31G*}" id="6-31G*"
-              onClick="txspressed('6-31G*')"
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="basis{6-311++G(2d,2p)}" id="6-311++G(2d,2p)"
-              onClick="txspressed('6-311++G(2d,2p)')"
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <br>
-       <INPUT TYPE="button" VALUE="xc{lda}" id="lda"
-              onClick="txspressed('lda')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="xc{pbe}" id="pbe"
-              onClick="txspressed('pbe')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="xc{pbe0}" id="pbe0"
-              onClick="txspressed('pbe0')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="xc{blyp}" id="blyp"
-              onClick="txspressed('blyp')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="xc{b3lyp}" id="b3lyp"
-              onClick="txspressed('b3lyp')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="xc{m06-2x}" id="m06-2x"
-              onClick="txspressed('m06-2x')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="solvation_type{None}" id="None"
-              onClick="txspressed('None')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="solvation_type{COSMO}"  id="COSMO"
-              onClick="txspressed('COSMO')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="solvation_type{Born}"  id="Born"
-              onClick="txspressed('Born')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <br>
-       <INPUT TYPE="button" VALUE="solvation_type{COSMO-SMD}"  id="COSMO-SMD"
-              onClick="txspressed('COSMO-SMD')"
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <select id="SMD_solvent" onChange="document.getElementById('COSMO-SMD').value = document.getElementById('SMD_solvent').value; txspressed('COSMO-SMD')" >
-                 <option value="solvation_type{COSMO-SMD}">water (default)</option>
-                 <option value="solvation_type{COSMO-SMD:acetacid}">acetic acid</option>
-                 <option value="solvation_type{COSMO-SMD:acetone}">acetone</option>
-                 <option value="solvation_type{COSMO-SMD:acetntrl}">acetonitrile</option>
-                 <option value="solvation_type{COSMO-SMD:acetphen}">acetophenone</option>
-                 <option value="solvation_type{COSMO-SMD:aniline}">aniline</option>
-                 <option value="solvation_type{COSMO-SMD:anisole}">anisole</option>
-                 <option value="solvation_type{COSMO-SMD:benzaldh}">benzaldehyde</option>
-                 <option value="solvation_type{COSMO-SMD:benzene}">benzene</option>
-                 <option value="solvation_type{COSMO-SMD:benzntrl}">benzonitrile</option>
-                 <option value="solvation_type{COSMO-SMD:benzylcl}">benzyl chloride</option>
-                 <option value="solvation_type{COSMO-SMD:brisobut}">1-bromo-2-methylpropane</option>
-                 <option value="solvation_type{COSMO-SMD:brbenzen}">bromobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:brethane}">bromoethane</option>
-                 <option value="solvation_type{COSMO-SMD:bromform}">bromoform</option>
-                 <option value="solvation_type{COSMO-SMD:broctane}">1-bromooctane</option>
-                 <option value="solvation_type{COSMO-SMD:brpentan}">1-bromopentane</option>
-                 <option value="solvation_type{COSMO-SMD:brpropa2}">2-bromopropane</option>
-                 <option value="solvation_type{COSMO-SMD:brpropan}">1-bromopropane</option>
-                 <option value="solvation_type{COSMO-SMD:butanal}">butanal</option>
-                 <option value="solvation_type{COSMO-SMD:butacid}">butanoic acid</option>
-                 <option value="solvation_type{COSMO-SMD:butanol}">1-butanol</option>
-                 <option value="solvation_type{COSMO-SMD:butanol2}">2-butanol</option>
-                 <option value="solvation_type{COSMO-SMD:butanone}">butanone</option>
-                 <option value="solvation_type{COSMO-SMD:butantrl}">butanonitrile</option>
-                 <option value="solvation_type{COSMO-SMD:butile}">butyl acetate</option>
-                 <option value="solvation_type{COSMO-SMD:nba}">butylamine</option>
-                 <option value="solvation_type{COSMO-SMD:nbutbenz}">n-butylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:sbutbenz}">sec-butylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:tbutbenz}">tert-butylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:cs2}">carbon disulfide</option>
-                 <option value="solvation_type{COSMO-SMD:carbntet}">carbon tetrachloride</option>
-                 <option value="solvation_type{COSMO-SMD:clbenzen}">chlorobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:secbutcl}">sec-butyl chloride</option>
-                 <option value="solvation_type{COSMO-SMD:chcl3}">chloroform</option>
-                 <option value="solvation_type{COSMO-SMD:clhexane}">1-chlorohexane</option>
-                 <option value="solvation_type{COSMO-SMD:clpentan}">1-chloropentane</option>
-                 <option value="solvation_type{COSMO-SMD:clpropan}">1-chloropropane</option>
-                 <option value="solvation_type{COSMO-SMD:ocltolue}">o-chlorotoluene</option>
-                 <option value="solvation_type{COSMO-SMD:m-cresol}">m-cresol</option>
-                 <option value="solvation_type{COSMO-SMD:o-cresol}">o-cresol</option>
-                 <option value="solvation_type{COSMO-SMD:cychexan}">cyclohexane</option>
-                 <option value="solvation_type{COSMO-SMD:cychexon}">cyclohexanone</option>
-                 <option value="solvation_type{COSMO-SMD:cycpentn}">cyclopentane</option>
-                 <option value="solvation_type{COSMO-SMD:cycpntol}">cyclopentanol</option>
-                 <option value="solvation_type{COSMO-SMD:cycpnton}">cyclopentanone</option>
-                 <option value="solvation_type{COSMO-SMD:declncis}">cis-decalin</option>
-                 <option value="solvation_type{COSMO-SMD:declntra}">trans-decalin</option>
-                 <option value="solvation_type{COSMO-SMD:declnmix}">decalin (cis/trans mixture)</option>
-                 <option value="solvation_type{COSMO-SMD:decane}">n-decane</option>
-                 <option value="solvation_type{COSMO-SMD:decanol}">1-decanol</option>
-                 <option value="solvation_type{COSMO-SMD:edb12}">1,2-dibromoethane</option>
-                 <option value="solvation_type{COSMO-SMD:dibrmetn}">dibromomethane</option>
-                 <option value="solvation_type{COSMO-SMD:butyleth}">dibutyl ether</option>
-                 <option value="solvation_type{COSMO-SMD:odiclbnz}">o-dichlorobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:edc12}">1,2-dichloroethane</option>
-                 <option value="solvation_type{COSMO-SMD:c12dce}">cis-dichloroethylene</option>
-                 <option value="solvation_type{COSMO-SMD:t12dce}">trans-dichloroethylene</option>
-                 <option value="solvation_type{COSMO-SMD:dcm}">dichloromethane</option>
-                 <option value="solvation_type{COSMO-SMD:ether}">diethyl ether</option>
-                 <option value="solvation_type{COSMO-SMD:et2s}">diethyl sulfide</option>
-                 <option value="solvation_type{COSMO-SMD:dietamin}">diethylamine</option>
-                 <option value="solvation_type{COSMO-SMD:mi}">diiodomethane</option>
-                 <option value="solvation_type{COSMO-SMD:dipe}">diisopropyl ether</option>
-                 <option value="solvation_type{COSMO-SMD:dmds}">dimethyl disulfide</option>
-                 <option value="solvation_type{COSMO-SMD:dmso}">dimethyl sulfoxide</option>
-                 <option value="solvation_type{COSMO-SMD:dma}">N,N-dimethylacetamide</option>
-                 <option value="solvation_type{COSMO-SMD:cisdmchx}">cis-1,2-dimethylcyclohexane</option>
-                 <option value="solvation_type{COSMO-SMD:dmf}">N,N-dimethylformamide</option>
-                 <option value="solvation_type{COSMO-SMD:dmepen24}">2,4-dimethylpentane</option>
-                 <option value="solvation_type{COSMO-SMD:dmepyr24}">2,4-dimethylpyridine</option>
-                 <option value="solvation_type{COSMO-SMD:dmepyr26}">2,6-dimethylpyridine</option>
-                 <option value="solvation_type{COSMO-SMD:dioxane}">1,4-dioxane</option>
-                 <option value="solvation_type{COSMO-SMD:phoph}">diphenyl ether</option>
-                 <option value="solvation_type{COSMO-SMD:dproamin}">dipropylamine</option>
-                 <option value="solvation_type{COSMO-SMD:dodecan}">n-dodecane</option>
-                 <option value="solvation_type{COSMO-SMD:meg}">1,2-ethanediol</option>
-                 <option value="solvation_type{COSMO-SMD:etsh}">ethanethiol</option>
-                 <option value="solvation_type{COSMO-SMD:ethanol}">ethanol</option>
-                 <option value="solvation_type{COSMO-SMD:etoac}">ethyl acetate</option>
-                 <option value="solvation_type{COSMO-SMD:etome}">ethyl formate</option>
-                 <option value="solvation_type{COSMO-SMD:eb}">ethylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:phenetol}">ethyl phenyl ether</option>
-                 <option value="solvation_type{COSMO-SMD:c6h5f}">fluorobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:foctane}">1-fluorooctane</option>
-                 <option value="solvation_type{COSMO-SMD:formamid}">formamide</option>
-                 <option value="solvation_type{COSMO-SMD:formacid}">formic acid</option>
-                 <option value="solvation_type{COSMO-SMD:heptane}">n-heptane</option>
-                 <option value="solvation_type{COSMO-SMD:heptanol}">1-heptanol</option>
-                 <option value="solvation_type{COSMO-SMD:heptnon2}">2-heptanone</option>
-                 <option value="solvation_type{COSMO-SMD:heptnon4}">4-heptanone</option>
-                 <option value="solvation_type{COSMO-SMD:hexadecn}">n-hexadecane</option>
-                 <option value="solvation_type{COSMO-SMD:hexane}">n-hexane</option>
-                 <option value="solvation_type{COSMO-SMD:hexnacid}">hexanoic acid</option>
-                 <option value="solvation_type{COSMO-SMD:hexanol}">1-hexanol</option>
-                 <option value="solvation_type{COSMO-SMD:hexanon2}">2-hexanone</option>
-                 <option value="solvation_type{COSMO-SMD:hexene}">1-hexene</option>
-                 <option value="solvation_type{COSMO-SMD:hexyne}">1-hexyne</option>
-                 <option value="solvation_type{COSMO-SMD:c6h5i}">iodobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:iobutane}">1-iodobutane</option>
-                 <option value="solvation_type{COSMO-SMD:c2h5i}">iodoethane</option>
-                 <option value="solvation_type{COSMO-SMD:iohexdec}">1-iodohexadecane</option>
-                 <option value="solvation_type{COSMO-SMD:ch3i}">iodomethane</option>
-                 <option value="solvation_type{COSMO-SMD:iopentan}">1-iodopentane</option>
-                 <option value="solvation_type{COSMO-SMD:iopropan}">1-iodopropane</option>
-                 <option value="solvation_type{COSMO-SMD:cumene}">isopropylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:p-cymene}">p-isopropyltoluene</option>
-                 <option value="solvation_type{COSMO-SMD:mesityln}">mesitylene</option>
-                 <option value="solvation_type{COSMO-SMD:methanol}">methanol</option>
-                 <option value="solvation_type{COSMO-SMD:egme}">2-methoxyethanol</option>
-                 <option value="solvation_type{COSMO-SMD:meacetat}">methyl acetate</option>
-                 <option value="solvation_type{COSMO-SMD:mebnzate}">methyl benzoate</option>
-                 <option value="solvation_type{COSMO-SMD:mebutate}">methyl butanoate</option>
-                 <option value="solvation_type{COSMO-SMD:meformat}">methyl formate</option>
-                 <option value="solvation_type{COSMO-SMD:mibk}">4-methyl-2-pentanone</option>
-                 <option value="solvation_type{COSMO-SMD:mepropyl}">methyl propanoate</option>
-                 <option value="solvation_type{COSMO-SMD:isobutol}">2-methyl-1-propanol</option>
-                 <option value="solvation_type{COSMO-SMD:terbutol}">2-methyl-2-propanol</option>
-                 <option value="solvation_type{COSMO-SMD:nmeaniln}">N-methylaniline</option>
-                 <option value="solvation_type{COSMO-SMD:mecychex}">methylcyclohexane</option>
-                 <option value="solvation_type{COSMO-SMD:nmfmixtr}">N-methylformamide (E/Z mixture)</option>
-                 <option value="solvation_type{COSMO-SMD:isohexan}">2-methylpentane</option>
-                 <option value="solvation_type{COSMO-SMD:mepyrid2}">2-methylpyridine</option>
-                 <option value="solvation_type{COSMO-SMD:mepyrid3}">3-methylpyridine</option>
-                 <option value="solvation_type{COSMO-SMD:mepyrid4}">4-methylpyridine</option>
-                 <option value="solvation_type{COSMO-SMD:c6h5no2}">nitrobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:c2h5no2}">nitroethane</option>
-                 <option value="solvation_type{COSMO-SMD:ch3no2}">nitromethane</option>
-                 <option value="solvation_type{COSMO-SMD:ntrprop1}">1-nitropropane</option>
-                 <option value="solvation_type{COSMO-SMD:ntrprop2}">2-nitropropane</option>
-                 <option value="solvation_type{COSMO-SMD:ontrtolu}">o-nitrotoluene</option>
-                 <option value="solvation_type{COSMO-SMD:nonane}">n-nonane</option>
-                 <option value="solvation_type{COSMO-SMD:nonanol}">1-nonanol</option>
-                 <option value="solvation_type{COSMO-SMD:nonanone}">5-nonanone</option>
-                 <option value="solvation_type{COSMO-SMD:octane}">n-octane</option>
-                 <option value="solvation_type{COSMO-SMD:octanol}">1-octanol</option>
-                 <option value="solvation_type{COSMO-SMD:octanon2}">2-octanone</option>
-                 <option value="solvation_type{COSMO-SMD:pentdecn}">n-pentadecane</option>
-                 <option value="solvation_type{COSMO-SMD:pentanal}">pentanal</option>
-                 <option value="solvation_type{COSMO-SMD:npentane}">n-pentane</option>
-                 <option value="solvation_type{COSMO-SMD:pentacid}">pentanoic acid</option>
-                 <option value="solvation_type{COSMO-SMD:pentanol}">1-pentanol</option>
-                 <option value="solvation_type{COSMO-SMD:pentnon2}">2-pentanone</option>
-                 <option value="solvation_type{COSMO-SMD:pentnon3}">3-pentanone</option>
-                 <option value="solvation_type{COSMO-SMD:pentene}">1-pentene</option>
-                 <option value="solvation_type{COSMO-SMD:e2penten}">E-2-pentene</option>
-                 <option value="solvation_type{COSMO-SMD:pentacet}">pentyl acetate</option>
-                 <option value="solvation_type{COSMO-SMD:pentamin}">pentylamine</option>
-                 <option value="solvation_type{COSMO-SMD:pfb}">perfluorobenzene</option>
-                 <option value="solvation_type{COSMO-SMD:benzalcl}">phenylmethanol</option>
-                 <option value="solvation_type{COSMO-SMD:propanal}">propanal</option>
-                 <option value="solvation_type{COSMO-SMD:propacid}">propanoic acid</option>
-                 <option value="solvation_type{COSMO-SMD:propanol}">1-propanol</option>
-                 <option value="solvation_type{COSMO-SMD:propnol2}">2-propanol</option>
-                 <option value="solvation_type{COSMO-SMD:propntrl}">propanonitrile</option>
-                 <option value="solvation_type{COSMO-SMD:propenol}">2-propen-1-ol</option>
-                 <option value="solvation_type{COSMO-SMD:propacet}">propyl acetate</option>
-                 <option value="solvation_type{COSMO-SMD:propamin}">propylamine</option>
-                 <option value="solvation_type{COSMO-SMD:pyridine}">pyridine</option>
-                 <option value="solvation_type{COSMO-SMD:c2cl4}">tetrachloroethene</option>
-                 <option value="solvation_type{COSMO-SMD:thf}">tetrahydrofuran</option>
-                 <option value="solvation_type{COSMO-SMD:sulfolan}">tetrahydrothiophene-S,S-dioxide</option>
-                 <option value="solvation_type{COSMO-SMD:tetralin}">tetralin</option>
-                 <option value="solvation_type{COSMO-SMD:thiophen}">thiophene</option>
-                 <option value="solvation_type{COSMO-SMD:phsh}">thiophenol</option>
-                 <option value="solvation_type{COSMO-SMD:toluene}">toluene</option>
-                 <option value="solvation_type{COSMO-SMD:tbp}">tributyl phosphate</option>
-                 <option value="solvation_type{COSMO-SMD:tca111}">1,1,1-trichloroethane</option>
-                 <option value="solvation_type{COSMO-SMD:tca112}">1,1,2-trichloroethane</option>
-                 <option value="solvation_type{COSMO-SMD:tce}">trichloroethene</option>
-                 <option value="solvation_type{COSMO-SMD:et3n}">triethylamine</option>
-                 <option value="solvation_type{COSMO-SMD:tfe222}">2,2,2-trifluoroethanol</option>
-                 <option value="solvation_type{COSMO-SMD:tmben124}">1,2,4-trimethylbenzene</option>
-                 <option value="solvation_type{COSMO-SMD:isoctane}">2,2,4-trimethylpentane</option>
-                 <option value="solvation_type{COSMO-SMD:undecane}">n-undecane</option>
-                 <option value="solvation_type{COSMO-SMD:m-xylene}">m-xylene</option>
-                 <option value="solvation_type{COSMO-SMD:o-xylene}">o-xylene</option>
-                 <option value="solvation_type{COSMO-SMD:p-xylene}">p-xylene</option>
-                 <option value="solvation_type{COSMO-SMD:xylenemx}">xylene (mixture)</option>
-       </select><br>
-
-       <INPUT TYPE="button" VALUE="-->" 
-              onClick="document.form.smi.value+=' --> '" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="+" 
-              onClick="document.form.smi.value+=' + '" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="~" 
-              onClick="document.form.smi.value+=' ~ '" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="1" 
-              onClick="document.form.smi.value+='1'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="2" 
-              onClick="document.form.smi.value+='2'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="3" 
-              onClick="document.form.smi.value+='3'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="4" 
-              onClick="document.form.smi.value+='4'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="5" 
-              onClick="document.form.smi.value+='5'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="6" 
-              onClick="document.form.smi.value+='6'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="7" 
-              onClick="document.form.smi.value+='7'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="8" 
-              onClick="document.form.smi.value+='8'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="9" 
-              onClick="document.form.smi.value+='9'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="0" 
-              onClick="document.form.smi.value+='0'" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE=" " 
-              onClick="document.form.smi.value+=' '" 
-              style="background-color:#f8f8ff; color:#298DB4;"> 
-       <INPUT TYPE="button" VALUE="charge" 
-              onClick="entercharge()" 
-              style="background-color:#f8f8ff; color:#298DB4;">
-       <INPUT TYPE="button" VALUE="mult" 
-              onClick="entermult()" 
-              style="background-color:#f8f8ff; color:#298DB4;">
-    </FORM>
-    <br>
-    <table align="center"> 
-        <tr> <td> <input type="button" VALUE="Arrows input to JSME &#8600;" onClick="esmiles2dWindow()" style="background-color:#f8f8ff; color:#de3e59; font-size: 14px; font-weight:bold"/> </td> </tr>
-        <tr><td align="center" id="appletContainer"></td></tr> 
-     </table>
-     <center><font color="443322" size="2"><p> JSME Editor Citation: <a href="http://jcheminf.springeropen.com/articles/10.1186/1758-2946-5-24"> B. Bienfait and P. Ertl, JSME: a free molecule editor in JavaScript, J. Cheminformatics 5:24 (2013)</a> </p></font></center>
     <br><br>
 
     <div id="swapper-first" style="display:block; border:2px dashed; border-color: #102DB0; background-color: white;  padding:25px;>
@@ -1205,8 +972,10 @@ Our platform integrates the latest in computational advancements to provide seam
     <!--td> <a href="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/ArrowsBeaker2.gif"><img src="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/ArrowsBeaker2.gif" alt="Arrows Movie"> </a> </td-->
     </tr></table>
      Keywords: quantum chemistry calculations - quantum chemistry computations - quantum chemistry - molecular modeling calculations - molecular modeling computations - molecular modeling - chemical modeling - chemical reactions calculations - chemical reactions computations - chemical reactions - NWChem calculations - computational chemistry - NWChem 
+   <br><br>
+    <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/bes-subprograms-mse-4.png')}}" alt="Copyright HeteroFAM Logo" width="140" height="100" align="left"></a>
+   <br><br>
 
-<br><br>
 <div align="right"><font color="298DB4"> HeteroFAM API visited {{ visits }} times </font></div>
 
 </body>
