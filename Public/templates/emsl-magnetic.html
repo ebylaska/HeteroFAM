@@ -14226,12 +14226,165 @@ ul, li {
                </table>
                </div>
 
-                <!-- Spin Penalty -->
 
+                <!-- Spin Penalty Javascipt -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Event listener for the Generate Spin Penalty button
+        document.getElementById("generateSpinPenalty").addEventListener("click", function () {
+            try {
+                // Get CIF content from the ACE editor
+                const cifContent = ace.edit("editor").getValue();
+
+                // Parse CIF content and prepare Spin Penalty data
+                const spinPenaltyInput = prepareSpinPenaltyFromCIF(cifContent, 'c', 5.0);
+
+                // Display Spin Penalty data in the swapper-other div
+                displaySpinPenaltyData(spinPenaltyInput);
+
+                // Populate atom indexes in input fields
+                populateAtomLists(spinPenaltyInput);
+            } catch (error) {
+                console.error("Error in generating spin penalty data:", error);
+                alert("An error occurred while processing the CIF file. Please check the console for details.");
+            }
+        });
+
+        /**
+         * Parse CIF content and prepare spin penalty data.
+         * @param {string} cifContent - The CIF file content as a string.
+         * @param {string} axis - The crystallographic axis ('a', 'b', 'c') for spin alignment.
+         * @param {number} magnitude - The magnitude of the spins.
+         * @returns {Array} - The spin penalty data.
+         */
+        function prepareSpinPenaltyFromCIF(cifContent, axis = 'c', magnitude = 5.0) {
+            const lines = cifContent.split("\n");
+            const atoms = [];
+            let parsingAtoms = false;
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+
+                // Detect atom positions block
+                if (trimmed.startsWith("loop_")) {
+                    parsingAtoms = true;
+                    continue;
+                }
+
+                // Parse atom site data
+                if (parsingAtoms && trimmed) {
+                    const tokens = trimmed.split(/\s+/);
+                    if (tokens.length === 4) { // Expecting symbol and three fractional coordinates
+                        atoms.push({
+                            symbol: tokens[0],
+                            fractional: [
+                                parseFloat(tokens[1]),
+                                parseFloat(tokens[2]),
+                                parseFloat(tokens[3])
+                            ]
+                        });
+                    }
+                }
+            }
+
+            if (atoms.length === 0) {
+                throw new Error("No atoms were parsed from the CIF file.");
+            }
+
+            return assignAFMSpins(atoms, axis, magnitude);
+        }
+
+        /**
+         * Assign alternating spins for antiferromagnetic layers.
+         * @param {Array} structure - Array of atom objects with fractional positions.
+         * @param {string} axis - The axis along which to alternate spins ('a', 'b', 'c').
+         * @param {number} magnitude - The magnitude of the spins.
+         * @returns {Array} - Array of atom objects with spin information added.
+         */
+        function assignAFMSpins(structure, axis = 'c', magnitude = 5.0) {
+            const axisMap = { a: 0, b: 1, c: 2 };
+            const axisIndex = axisMap[axis];
+
+            // Get unique layers along the chosen axis
+            const fractionalPositions = structure.map(atom => atom.fractional);
+            const layers = Array.from(new Set(fractionalPositions.map(pos => pos[axisIndex]))).sort((a, b) => a - b);
+
+            // Assign spins alternatingly for layers
+            return structure.map(atom => {
+                const fracPos = atom.fractional;
+                const layerIndex = layers.indexOf(fracPos[axisIndex]);
+
+                let spinMagnitude = 0.0;
+                let spinOrientation = [0, 0, 0];
+                if (atom.symbol !== 'O') { // Example: Assign spins to non-oxygen atoms
+                    spinMagnitude = (layerIndex % 2 === 0 ? magnitude : -magnitude);
+                    spinOrientation = spinMagnitude > 0 ? [0, 0, 1] : [0, 0, -1];
+                }
+
+                return {
+                    ...atom,
+                    spinMagnitude: Math.abs(spinMagnitude),
+                    spinOrientation
+                };
+            });
+        }
+
+        /**
+         * Display spin penalty data in the swapper-other div.
+         * @param {Array} spinPenaltyData - Array of objects containing spin penalty data.
+         */
+        function displaySpinPenaltyData(spinPenaltyData) {
+            const swapperDiv = document.getElementById("swapper-other");
+            let htmlContent = "<h3>Spin Penalty Data</h3><table border='1' style='border-collapse: collapse; width: 100%;'>";
+            htmlContent += "<tr><th>Position</th><th>Spin</th><th>Magnitude</th></tr>";
+
+            spinPenaltyData.forEach(item => {
+                htmlContent += `<tr>
+                    <td>[${item.fractional.map(coord => coord.toFixed(3)).join(", ")}]</td>
+                    <td>[${item.spinOrientation.join(", ")}]</td>
+                    <td>${item.spinMagnitude.toFixed(2)}</td>
+                </tr>`;
+            });
+
+            htmlContent += "</table>";
+            swapperDiv.innerHTML = htmlContent;
+            swapperDiv.style.display = "block";
+        }
+
+        /**
+         * Populate atom index lists dynamically into input fields.
+         * @param {Array} spinPenaltyData - Array of objects containing spin penalty data.
+         */
+        function populateAtomLists(spinPenaltyData) {
+            if (!spinPenaltyData || spinPenaltyData.length === 0) {
+                console.error("populateAtomLists: No valid spin penalty data available.");
+                return;
+            }
+
+            const atomlist1 = document.getElementById("atomlist1");
+            const atomlist2 = document.getElementById("atomlist2");
+
+            if (!atomlist1 || !atomlist2) {
+                throw new Error("Input fields 'atomlist1' and 'atomlist2' are missing.");
+            }
+
+            const allIndexes = spinPenaltyData.map((_, index) => index);
+            const half = Math.ceil(allIndexes.length / 2);
+
+            atomlist1.value = allIndexes.slice(0, half).join(", ");
+            atomlist2.value = allIndexes.slice(half).join(", ");
+        }
+    });
+</script>
+
+
+
+                <!-- Spin Penalty -->
                <div id="swapper-other" style="display:none; border:2px dashed; border-color: #102DB0; background-color: white; padding:10px;">
                <p align="center" style="color:#102DB0">Spin Penalty</p>
                <table>
                   <tr> 
+                  <button id="generateSpinPenalty">Generate Spin Penalty Data</button>
                   <input type="button" class="button" id="redrawspin" value="Reset spin color" onClick="jms('select *; color cpk;');"/>  
                   <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" onClick="jms('delete $atomlist*;');"/>  
                   <br> <br>
