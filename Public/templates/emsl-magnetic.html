@@ -14229,152 +14229,209 @@ ul, li {
 
                 <!-- Spin Penalty Javascipt -->
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Event listener for the Generate Spin Penalty button
-        document.getElementById("generateSpinPenalty").addEventListener("click", function () {
-            try {
-                // Get CIF content from the ACE editor
-                const cifContent = ace.edit("editor").getValue();
 
-                // Parse CIF content and prepare Spin Penalty data
-                const spinPenaltyInput = prepareSpinPenaltyFromCIF(cifContent, 'c', 5.0);
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("DOM fully loaded and parsed.");
 
-                // Display Spin Penalty data in the swapper-other div
-                displaySpinPenaltyData(spinPenaltyInput);
+    /**
+     * Update displayed rotation angles and calculate the rotation matrix.
+     */
+    function updateRotationAngles() {
+        const rotateX = parseFloat(document.getElementById("rotateX").value);
+        const rotateY = parseFloat(document.getElementById("rotateY").value);
+        const rotateZ = parseFloat(document.getElementById("rotateZ").value);
 
-                // Populate atom indexes in input fields
-                populateAtomLists(spinPenaltyInput);
-            } catch (error) {
-                console.error("Error in generating spin penalty data:", error);
-                alert("An error occurred while processing the CIF file. Please check the console for details.");
+        document.getElementById("rotateXValue").innerText = rotateX;
+        document.getElementById("rotateYValue").innerText = rotateY;
+        document.getElementById("rotateZValue").innerText = rotateZ;
+    }
+
+    /**
+     * Calculate a 3x3 rotation matrix based on Euler angles.
+     * @param {number} rotateX - Rotation around the X-axis in degrees.
+     * @param {number} rotateY - Rotation around the Y-axis in degrees.
+     * @param {number} rotateZ - Rotation around the Z-axis in degrees.
+     * @returns {Array} 3x3 rotation matrix.
+     */
+    function calculateRotationMatrix(rotateX, rotateY, rotateZ) {
+        const radX = (Math.PI / 180) * rotateX;
+        const radY = (Math.PI / 180) * rotateY;
+        const radZ = (Math.PI / 180) * rotateZ;
+
+        const Rx = [
+            [1, 0, 0],
+            [0, Math.cos(radX), -Math.sin(radX)],
+            [0, Math.sin(radX), Math.cos(radX)],
+        ];
+
+        const Ry = [
+            [Math.cos(radY), 0, Math.sin(radY)],
+            [0, 1, 0],
+            [-Math.sin(radY), 0, Math.cos(radY)],
+        ];
+
+        const Rz = [
+            [Math.cos(radZ), -Math.sin(radZ), 0],
+            [Math.sin(radZ), Math.cos(radZ), 0],
+            [0, 0, 1],
+        ];
+
+        const Rzy = multiplyMatrices(Rz, Ry);
+        return multiplyMatrices(Rzy, Rx);
+    }
+
+    /**
+     * Multiply two 3x3 matrices.
+     */
+    function multiplyMatrices(A, B) {
+        const result = [];
+        for (let i = 0; i < 3; i++) {
+            result[i] = [];
+            for (let j = 0; j < 3; j++) {
+                result[i][j] = A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j];
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Apply rotation and prepare spin penalty data based on visual input.
+     */
+    document.getElementById("applyVisualRotation").addEventListener("click", function () {
+        const rotateX = parseFloat(document.getElementById("rotateX").value);
+        const rotateY = parseFloat(document.getElementById("rotateY").value);
+        const rotateZ = parseFloat(document.getElementById("rotateZ").value);
+
+        const rotationMatrix = calculateRotationMatrix(rotateX, rotateY, rotateZ);
+
+        const cifContent = ace.edit("editor").getValue();
+        const axis = 'c';
+        const magnitude = 5.0;
+
+        try {
+            const spinPenaltyData = prepareSpinPenaltyFromCIF(cifContent, axis, magnitude, rotationMatrix);
+            displaySpinPenaltyData(spinPenaltyData);
+        } catch (error) {
+            console.error("Error applying rotation and generating spin penalty data:", error.message);
+        }
+    });
+
+    document.getElementById("generateSpinPenalty").addEventListener("click", function () {
+        console.log("Generate Spin Penalty button clicked.");
+
+        try {
+            const cifContent = ace.edit("editor").getValue();
+            if (!cifContent || cifContent.trim() === "") {
+                throw new Error("No CIF content found in the editor.");
+            }
+
+            const axis = document.getElementById("axis") ? document.getElementById("axis").value : 'c';
+            const magnitude = 5.0;
+
+            const spinPenaltyInput = prepareSpinPenaltyFromCIF(cifContent, axis, magnitude);
+            displaySpinPenaltyData(spinPenaltyInput);
+        } catch (error) {
+            console.error("Error generating spin penalty data:", error);
+            alert("An error occurred while processing the CIF file. Please check the console for details.");
+        }
+    });
+
+    /**
+     * Parse CIF content and prepare spin penalty data.
+     */
+    function prepareSpinPenaltyFromCIF(cifContent, axis, magnitude, rotationMatrix = null) {
+        const lines = cifContent.split("\n");
+        const atoms = [];
+        let parsingAtoms = false;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith("loop_")) {
+                parsingAtoms = true;
+                continue;
+            }
+
+            if (parsingAtoms && trimmed) {
+                const tokens = trimmed.split(/\s+/);
+                if (tokens.length === 4) {
+                    let fractional = [
+                        parseFloat(tokens[1]),
+                        parseFloat(tokens[2]),
+                        parseFloat(tokens[3]),
+                    ];
+
+                    if (rotationMatrix) {
+                        fractional = [
+                            fractional[0] * rotationMatrix[0][0] +
+                                fractional[1] * rotationMatrix[0][1] +
+                                fractional[2] * rotationMatrix[0][2],
+                            fractional[0] * rotationMatrix[1][0] +
+                                fractional[1] * rotationMatrix[1][1] +
+                                fractional[2] * rotationMatrix[1][2],
+                            fractional[0] * rotationMatrix[2][0] +
+                                fractional[1] * rotationMatrix[2][1] +
+                                fractional[2] * rotationMatrix[2][2],
+                        ];
+                    }
+
+                    atoms.push({
+                        symbol: tokens[0],
+                        fractional,
+                    });
+                }
+            }
+        }
+
+        return assignAFMSpins(atoms, axis, magnitude);
+    }
+
+    function assignAFMSpins(structure, axis = 'c', magnitude = 5.0) {
+        const axisMap = { a: 0, b: 1, c: 2 };
+        const axisIndex = axisMap[axis];
+        const fractionalPositions = structure.map((atom) => atom.fractional);
+        const layers = Array.from(
+            new Set(fractionalPositions.map((pos) => pos[axisIndex]))
+        ).sort((a, b) => a - b);
+
+        return structure.map((atom) => {
+            const fracPos = atom.fractional;
+            const layerIndex = layers.indexOf(fracPos[axisIndex]);
+
+            const spinMagnitude = layerIndex % 2 === 0 ? magnitude : -magnitude;
+            const spinOrientation = spinMagnitude > 0 ? [0, 0, 1] : [0, 0, -1];
+
+            return {
+                ...atom,
+                spinMagnitude: Math.abs(spinMagnitude),
+                spinOrientation,
+            };
+        });
+    }
+
+    function displaySpinPenaltyData(spinPenaltyData) {
+        let textareaContent = "";
+        const spinUpIndexes = [];
+        const spinDownIndexes = [];
+
+        spinPenaltyData.forEach((item, index) => {
+            const position = item.fractional.map((coord) => coord.toFixed(3)).join(", ");
+            const spin = item.spinOrientation.join(", ");
+            const magnitude = item.spinMagnitude.toFixed(2);
+            textareaContent += `Atom ${index + 1}, Position: [${position}], Spin: [${spin}], Magnitude: ${magnitude}\n`;
+
+            if (item.spinOrientation[2] === 1) {
+                spinUpIndexes.push(index + 1);
+            } else if (item.spinOrientation[2] === -1) {
+                spinDownIndexes.push(index + 1);
             }
         });
 
-        /**
-         * Parse CIF content and prepare spin penalty data.
-         * @param {string} cifContent - The CIF file content as a string.
-         * @param {string} axis - The crystallographic axis ('a', 'b', 'c') for spin alignment.
-         * @param {number} magnitude - The magnitude of the spins.
-         * @returns {Array} - The spin penalty data.
-         */
-        function prepareSpinPenaltyFromCIF(cifContent, axis = 'c', magnitude = 5.0) {
-            const lines = cifContent.split("\n");
-            const atoms = [];
-            let parsingAtoms = false;
+        document.getElementById("pdata").value = textareaContent;
+        document.getElementById("atomlist1").value = spinUpIndexes.join(" ");
+        document.getElementById("atomlist2").value = spinDownIndexes
 
-            for (const line of lines) {
-                const trimmed = line.trim();
 
-                // Detect atom positions block
-                if (trimmed.startsWith("loop_")) {
-                    parsingAtoms = true;
-                    continue;
-                }
-
-                // Parse atom site data
-                if (parsingAtoms && trimmed) {
-                    const tokens = trimmed.split(/\s+/);
-                    if (tokens.length === 4) { // Expecting symbol and three fractional coordinates
-                        atoms.push({
-                            symbol: tokens[0],
-                            fractional: [
-                                parseFloat(tokens[1]),
-                                parseFloat(tokens[2]),
-                                parseFloat(tokens[3])
-                            ]
-                        });
-                    }
-                }
-            }
-
-            if (atoms.length === 0) {
-                throw new Error("No atoms were parsed from the CIF file.");
-            }
-
-            return assignAFMSpins(atoms, axis, magnitude);
-        }
-
-        /**
-         * Assign alternating spins for antiferromagnetic layers.
-         * @param {Array} structure - Array of atom objects with fractional positions.
-         * @param {string} axis - The axis along which to alternate spins ('a', 'b', 'c').
-         * @param {number} magnitude - The magnitude of the spins.
-         * @returns {Array} - Array of atom objects with spin information added.
-         */
-        function assignAFMSpins(structure, axis = 'c', magnitude = 5.0) {
-            const axisMap = { a: 0, b: 1, c: 2 };
-            const axisIndex = axisMap[axis];
-
-            // Get unique layers along the chosen axis
-            const fractionalPositions = structure.map(atom => atom.fractional);
-            const layers = Array.from(new Set(fractionalPositions.map(pos => pos[axisIndex]))).sort((a, b) => a - b);
-
-            // Assign spins alternatingly for layers
-            return structure.map(atom => {
-                const fracPos = atom.fractional;
-                const layerIndex = layers.indexOf(fracPos[axisIndex]);
-
-                let spinMagnitude = 0.0;
-                let spinOrientation = [0, 0, 0];
-                if (atom.symbol !== 'O') { // Example: Assign spins to non-oxygen atoms
-                    spinMagnitude = (layerIndex % 2 === 0 ? magnitude : -magnitude);
-                    spinOrientation = spinMagnitude > 0 ? [0, 0, 1] : [0, 0, -1];
-                }
-
-                return {
-                    ...atom,
-                    spinMagnitude: Math.abs(spinMagnitude),
-                    spinOrientation
-                };
-            });
-        }
-
-        /**
-         * Display spin penalty data in the swapper-other div.
-         * @param {Array} spinPenaltyData - Array of objects containing spin penalty data.
-         */
-        function displaySpinPenaltyData(spinPenaltyData) {
-            const swapperDiv = document.getElementById("swapper-other");
-            let htmlContent = "<h3>Spin Penalty Data</h3><table border='1' style='border-collapse: collapse; width: 100%;'>";
-            htmlContent += "<tr><th>Position</th><th>Spin</th><th>Magnitude</th></tr>";
-
-            spinPenaltyData.forEach(item => {
-                htmlContent += `<tr>
-                    <td>[${item.fractional.map(coord => coord.toFixed(3)).join(", ")}]</td>
-                    <td>[${item.spinOrientation.join(", ")}]</td>
-                    <td>${item.spinMagnitude.toFixed(2)}</td>
-                </tr>`;
-            });
-
-            htmlContent += "</table>";
-            swapperDiv.innerHTML = htmlContent;
-            swapperDiv.style.display = "block";
-        }
-
-        /**
-         * Populate atom index lists dynamically into input fields.
-         * @param {Array} spinPenaltyData - Array of objects containing spin penalty data.
-         */
-        function populateAtomLists(spinPenaltyData) {
-            if (!spinPenaltyData || spinPenaltyData.length === 0) {
-                console.error("populateAtomLists: No valid spin penalty data available.");
-                return;
-            }
-
-            const atomlist1 = document.getElementById("atomlist1");
-            const atomlist2 = document.getElementById("atomlist2");
-
-            if (!atomlist1 || !atomlist2) {
-                throw new Error("Input fields 'atomlist1' and 'atomlist2' are missing.");
-            }
-
-            const allIndexes = spinPenaltyData.map((_, index) => index);
-            const half = Math.ceil(allIndexes.length / 2);
-
-            atomlist1.value = allIndexes.slice(0, half).join(", ");
-            atomlist2.value = allIndexes.slice(half).join(", ");
-        }
-    });
 </script>
 
 
@@ -14387,6 +14444,25 @@ ul, li {
                   <button id="generateSpinPenalty">Generate Spin Penalty Data</button>
                   <input type="button" class="button" id="redrawspin" value="Reset spin color" onClick="jms('select *; color cpk;');"/>  
                   <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" onClick="jms('delete $atomlist*;');"/>  
+                  <br><br>
+                  <div id="rotation-matrix-visual">
+                      <h3>Rotation Matrix Generator</h3>
+                      <p>Adjust the angles to generate a rotation matrix:</p>
+                      
+                      <label for="rotateX">Rotate around X-axis (°): </label>
+                      <input type="range" id="rotateX" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
+                      <span id="rotateXValue">0</span>°<br><br>
+                      
+                      <label for="rotateY">Rotate around Y-axis (°): </label>
+                      <input type="range" id="rotateY" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
+                      <span id="rotateYValue">0</span>°<br><br>
+                      
+                      <label for="rotateZ">Rotate around Z-axis (°): </label>
+                      <input type="range" id="rotateZ" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
+                      <span id="rotateZValue">0</span>°<br><br>
+                 
+                      <button id="applyVisualRotation">Apply Rotation</button>
+                  </div>
                   <br> <br>
                   </tr>
                   <tr> 
@@ -14417,7 +14493,7 @@ ul, li {
                      </td>
                   </tr> 
                   <tr>
-                     <td> atoms: <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
+                     <td> Spin up Atoms: <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
                   </tr>
                   <tr> 
                      <td> <select id="colortype2" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)">
@@ -14446,69 +14522,18 @@ ul, li {
                            <input type="number" id="penalty2c" size="9" min="-10.000" max="10.000" step="0.01" value="-1.00" oninput="cacheInput(this)"> 
                      </td>
                   </tr> 
+                  <tr>
+                     <td> Spin Down Atoms: <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"> <br><br></td>
+                  </tr>
                   <tr> 
-                     <td> atoms: <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"><br><br> </td>
+                     <td> Spin Penalty Data: <br><br> </td>
                   </tr> 
                   <tr> 
-                     <td> <select id="colortype3" onchange="set_color_penalty('atomlist3','colortype3','penalty3a','penalty3b','penalty3c')" oninput="cacheInput(this)">
-                          <option value="translucent 0.3 green">translucent green</option>
-                          <option value="translucent 0.3 yellow">translucent yellow</option>
-                          <option value="translucent 0.3 red" selected="selected">translucent red</option>
-                          <option value="translucent 0.3 blue">translucent blue</option>
-                          <option value="translucent 0.3 orange">translucent orange</option>
-                          <option value="translucent 0.3 grey">translucent grey</option>
-                          </select>
-                          <select id="penalty3a" oninput="cacheInput(this)">
-                          <option value="up">up</option>
-                          <option value="down">down</option>
-                          <option value="polyhedra" selected="selected">polyhedra</option>
-                          </select>
-                          <select id="penalty3b" oninput="cacheInput(this)">
-                          <option value="s">s</option>
-                          <option value="p">p</option>
-                          <option value="d">d</option>
-                          <option value="f">f</option>
-                          <option value="tetra">tetra</option>
-                          <option value="penta">penta</option>
-                          <option value="octa" selected="selected">octa</option>
-                          <option value="other">other</option>
-                          </select>
-                          <input type="number" id="penalty3c" size="9" min="-10.000" max="10.000" step="0.01" value="6" oninput="cacheInput(this)"> 
+                     <td> 
+                          <textarea  name="ppdata" id="pdata" rows="15" cols="65" style="color: blue; font-size: 14px;"></textarea>
                      </td>
                   </tr> 
-                  <tr> 
-                     <td> atoms: <input type="atomarray" id="atomlist3"  size="70" value="" onchange="set_color_penalty('atomlist3','colortype3','penalty3a','penalty3b','penalty3c')" oninput="cacheInput(this)"> <br><br></td>
-                  </tr> 
-                  <tr> 
-                     <td> <select id="colortype4" onchange="set_color_penalty('atomlist4','colortype4','penalty4a','penalty4b','penalty4c')" oninput="cacheInput(this)">
-                          <option value="translucent 0.3 green">translucent green</option>
-                          <option value="translucent 0.3 yellow">translucent yellow</option>
-                          <option value="translucent 0.3 red">translucent red</option>
-                          <option value="translucent 0.3 blue" selected="selected">translucent blue</option>
-                          <option value="translucent 0.3 orange">translucent orange</option>
-                          <option value="translucent 0.3 grey">translucent grey</option>
-                          </select>
-                          <select id="penalty4a" oninput="cacheInput(this)">
-                          <option value="up">up</option>
-                          <option value="down">down</option>
-                          <option value="polyhedra" selected="selected">polyhedra</option>
-                          </select>
-                          <select id="penalty4b" oninput="cacheInput(this)">
-                          <option value="s">s</option>
-                          <option value="p">p</option>
-                          <option value="d">d</option>
-                          <option value="f">f</option>
-                          <option value="tetra">tetra</option>
-                          <option value="penta">penta</option>
-                          <option value="octa" selected="selected">octa</option>
-                          <option value="other">other</option>
-                          </select>
-                          <input type="number" id="penalty4c" size="9" min="-10.000" max="10.000" step="0.01" value="6" oninput="cacheInput(this)">
-                     </td>
-                  </tr> 
-                  <tr> 
-                     <td> atoms: <input type="atomarray" id="atomlist4"  size="70" value="" onchange="set_color_penalty('atomlist4','colortype4','penalty4a','penalty4b','penalty4c')" oninput="cacheInput(this)"> </td>
-                  </tr> 
+
                </table>
                </div>
 
