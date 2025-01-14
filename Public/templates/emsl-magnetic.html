@@ -14777,50 +14777,39 @@ function solveSpinStates(JijMatrix, multiplicity = null, temperature = 100, cool
 
 
 /**
- * Solve for spin states given a Jij matrix and magnetic atom information.
+ * Solve for spin states given a Jij matrix, enforcing intrinsic spin constraints.
  * @param {Array<Array<number>>} JijMatrix - The Jij interaction matrix.
  * @param {string} magneticAtomInfo - Formatted string containing magnetic atom details.
- * @param {number|null} [multiplicity=null] - Optional desired multiplicity. If null, no constraint is applied.
  * @param {number} temperature - Initial temperature for annealing.
  * @param {number} coolingRate - Rate of temperature reduction.
  * @param {number} maxIterations - Maximum number of iterations.
  * @returns {Object} Optimal spin configuration, energy, and resulting multiplicity.
  */
-function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
-    const N = JijMatrix.length; // Number of spins
+function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
+    const N = JijMatrix.length;
 
     // Parse magneticAtomInfo to extract magnetic atom data
     const magneticAtoms = magneticAtomInfo
-        .split("\n") // Split the string into lines
+        .split("\n")
         .map(line => {
             const match = line.match(/Index: (\d+), Element: (\w+), Coordinates: \(([-\d.]+), ([-\d.]+), ([-\d.]+)\)/);
             if (match) {
                 return {
                     index: parseInt(match[1], 10),
                     element: match[2],
-                    fx: parseFloat(match[3]),
-                    fy: parseFloat(match[4]),
-                    fz: parseFloat(match[5]),
+                    spin: MAGNETIC_ION_SPINS[match[2]] || 0,
                 };
             }
-            return null; // Skip lines that don't match the expected format
+            return null;
         })
-        .filter(atom => atom !== null); // Remove any null entries
+        .filter(atom => atom !== null);
 
+    const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0);
+    const targetSpinDifference = 2 * totalIntrinsicSpin;
 
-    // Calculate the total intrinsic spin of the system
-    const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => {
-        const spin = MAGNETIC_ION_SPINS[atom.element] || 0; // Default to 0 if not found
-        return sum + spin;
-    }, 0);
-
-    // Calculate the target spin difference (2S) if multiplicity is provided
-    const targetSpinDifference = multiplicity ? (multiplicity - 1) : null;
-
-    // Initialize random spin configuration (+1 or -1)
+    // Initialize random spin configuration
     let spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
 
-    // Function to calculate energy for a given spin configuration
     function calculateEnergy(spins) {
         let energy = 0;
         for (let i = 0; i < N; i++) {
@@ -14828,72 +14817,50 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
                 energy += -JijMatrix[i][j] * spins[i] * spins[j];
             }
         }
-        return energy / 2; // Avoid double-counting interactions
+        return energy / 2;
     }
 
-    // Function to calculate spin difference (N_up - N_down)
     function calculateSpinDifference(spins) {
-        return spins.reduce((sum, spin) => sum + spin, 0); // Sum of spins gives N_up - N_down
+        return spins.reduce((sum, spin) => sum + spin, 0);
     }
 
-    // Current energy
     let currentEnergy = calculateEnergy(spins);
     let currentSpinDifference = calculateSpinDifference(spins);
-
-    // Store the best solution found
     let bestSpins = [...spins];
     let bestEnergy = currentEnergy;
 
-    // Simulated annealing loop
     for (let iteration = 0; iteration < maxIterations; iteration++) {
-        // Perform multiple iterations at the current temperature
         for (let step = 0; step < N * 10; step++) {
-            // Choose a random spin to flip
             const randomIndex = Math.floor(Math.random() * N);
-            spins[randomIndex] *= -1; // Flip the spin
+            spins[randomIndex] *= -1;
 
-            // Calculate new energy and spin difference
             const newEnergy = calculateEnergy(spins);
             const newSpinDifference = calculateSpinDifference(spins);
 
-            // Determine whether to accept the new configuration
-            const spinDifferencePenalty = targetSpinDifference !== null
-                ? Math.abs(newSpinDifference - targetSpinDifference)
-                : 0; // No penalty if no multiplicity constraint
-            const currentPenalty = targetSpinDifference !== null
-                ? Math.abs(currentSpinDifference - targetSpinDifference)
-                : 0;
+            const spinDifferencePenalty = Math.abs(newSpinDifference - targetSpinDifference);
+            const currentPenalty = Math.abs(currentSpinDifference - targetSpinDifference);
 
             if (
-                (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) || // Prefer closer spin difference if applicable
+                (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) ||
                 Math.random() < Math.exp((currentEnergy - newEnergy) / temperature)
             ) {
-                currentEnergy = newEnergy; // Accept the new configuration
+                currentEnergy = newEnergy;
                 currentSpinDifference = newSpinDifference;
             } else {
-                spins[randomIndex] *= -1; // Revert the flip
+                spins[randomIndex] *= -1;
             }
 
-            // Update the best solution found
-            if (
-                (targetSpinDifference === null || currentSpinDifference === targetSpinDifference) &&
-                currentEnergy < bestEnergy
-            ) {
+            if (spinDifferencePenalty === 0 && currentEnergy < bestEnergy) {
                 bestSpins = [...spins];
                 bestEnergy = currentEnergy;
             }
         }
 
-        // Cool down the temperature
         temperature *= coolingRate;
-
-        // Break if temperature is too low
         if (temperature < 1e-6) break;
     }
 
-    // Calculate the resulting multiplicity
-    const resultingSpinDifference = calculateSpinDifference(bestSpins);
-    const resultingMultiplicity = Math.abs(resultingSpinDifference) + 1; // M = |N_up - N_down| + 1
+    const resultingMultiplicity = Math.abs(currentSpinDifference) + 1;
 
     return {
         spins: bestSpins,
@@ -14902,9 +14869,6 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
         totalIntrinsicSpin,
     };
 }
-
-
-
 
         /**
          * Populate Spin Up and Spin Down atoms based on the spin configuration using magneticAtomInfo.
