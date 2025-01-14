@@ -3007,8 +3007,6 @@ ul, li {
            console.log("into atomlist penalty");
            supercell_atomlist_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c',nion,n1,n2,n3);
            supercell_atomlist_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c',nion,n1,n2,n3);
-           supercell_atomlist_color_penalty('atomlist3','colortype3','penalty3a','penalty3b','penalty3c',nion,n1,n2,n3);
-           supercell_atomlist_color_penalty('atomlist4','colortype4','penalty4a','penalty4b','penalty4c',nion,n1,n2,n3);
 
             setTimeout(() => { jsmcellchange(false,true); }, 1500);
 
@@ -3184,14 +3182,10 @@ ul, li {
                     //jmredrawMolecule0();
                     reset_color_penalty(atominfo,'atomlist1','colortype1','penalty1a','penalty1b','penalty1c');
                     reset_color_penalty(atominfo,'atomlist2','colortype2','penalty2a','penalty2b','penalty2c');
-                    reset_color_penalty(atominfo,'atomlist3','colortype3','penalty3a','penalty3b','penalty3c');
-                    reset_color_penalty(atominfo,'atomlist4','colortype4','penalty4a','penalty4b','penalty4c');
                     window.reindex = false;
                     jsmcellchange0();
                     set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c');
                     set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c');
-                    set_color_penalty('atomlist3','colortype3','penalty3a','penalty3b','penalty3c');
-                    set_color_penalty('atomlist4','colortype4','penalty4a','penalty4b','penalty4c');
                  }, 500);
               }
            }
@@ -7908,8 +7902,6 @@ ul, li {
 
               x += gen_spin_penalty("atomlist1","penalty1a","penalty1b","penalty1c");
               x += gen_spin_penalty("atomlist2","penalty2a","penalty2b","penalty2c");
-              x += gen_spin_penalty("atomlist3","penalty3a","penalty3b","penalty3c");
-              x += gen_spin_penalty("atomlist4","penalty4a","penalty4b","penalty4c");
               x += "end\n";
               x += "set nwpw:kbpp_ray    .true.\n";
               x += "set nwpw:kbpp_filter .true.\n";
@@ -14230,206 +14222,743 @@ ul, li {
                 <!-- Spin Penalty Javascipt -->
 <script>
 
-document.addEventListener("DOMContentLoaded", function () {
-    console.log("DOM fully loaded and parsed.");
+       const MAGNETIC_ELEMENTS = [
+           // Transition Metals
+           "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+           "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd",
+           "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
+  
+           // Lanthanides
+           "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb",
+           "Dy", "Ho", "Er", "Tm", "Yb", "Lu",
+  
+           // Actinides
+           "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk",
+           "Cf", "Es", "Fm", "Md", "No", "Lr",
+       ];
 
-    /**
-     * Update displayed rotation angles and calculate the rotation matrix.
-     */
-    function updateRotationAngles() {
-        const rotateX = parseFloat(document.getElementById("rotateX").value);
-        const rotateY = parseFloat(document.getElementById("rotateY").value);
-        const rotateZ = parseFloat(document.getElementById("rotateZ").value);
+       const MAGNETIC_ION_SPINS = {
+           // Transition Metals
+           Sc: 0.0, Ti: 1.0, V: 1.5, Cr: 1.5, Mn: 2.5, Fe: 2.5, Co: 1.5, Ni: 1.0, Cu: 0.5, Zn: 0.0,
+           Y: 0.0, Zr: 0.5, Nb: 1.0, Mo: 1.5, Tc: 2.0, Ru: 1.5, Rh: 1.0, Pd: 0.0, Ag: 0.0, Cd: 0.0,
+           Hf: 0.5, Ta: 1.0, W: 1.5, Re: 2.0, Os: 1.5, Ir: 1.0, Pt: 0.0, Au: 0.5, Hg: 0.0,
 
-        document.getElementById("rotateXValue").innerText = rotateX;
-        document.getElementById("rotateYValue").innerText = rotateY;
-        document.getElementById("rotateZValue").innerText = rotateZ;
-    }
+           // Lanthanides (assuming trivalent states as most common)
+           La: 0.0, Ce: 1.0, Pr: 1.5, Nd: 2.0, Pm: 2.5, Sm: 2.5, Eu: 3.0, Gd: 3.5, Tb: 3.0,
+           Dy: 2.5, Ho: 2.0, Er: 1.5, Tm: 1.0, Yb: 0.5, Lu: 0.0,
 
-    /**
-     * Calculate a 3x3 rotation matrix based on Euler angles.
-     * @param {number} rotateX - Rotation around the X-axis in degrees.
-     * @param {number} rotateY - Rotation around the Y-axis in degrees.
-     * @param {number} rotateZ - Rotation around the Z-axis in degrees.
-     * @returns {Array} 3x3 rotation matrix.
-     */
-    function calculateRotationMatrix(rotateX, rotateY, rotateZ) {
-        const radX = (Math.PI / 180) * rotateX;
-        const radY = (Math.PI / 180) * rotateY;
-        const radZ = (Math.PI / 180) * rotateZ;
+           // Actinides (assuming trivalent states as most common)
+           Th: 0.0, Pa: 0.5, U: 1.0, Np: 1.5, Pu: 2.0, Am: 2.5, Cm: 3.0, Bk: 3.5, Cf: 4.0,
+           Es: 3.5, Fm: 3.0, Md: 2.5, No: 2.0, Lr: 0.5,
+       };
 
-        const Rx = [
-            [1, 0, 0],
-            [0, Math.cos(radX), -Math.sin(radX)],
-            [0, Math.sin(radX), Math.cos(radX)],
-        ];
+       const BOND_THRESHOLD = 3.0; // Maximum bond distance for interaction in Å
 
-        const Ry = [
-            [Math.cos(radY), 0, Math.sin(radY)],
-            [0, 1, 0],
-            [-Math.sin(radY), 0, Math.cos(radY)],
-        ];
+       /**
+         * Generate Jij Matrix based on GKA rules
+         */
+       function generateJijMatrix() {
+           console.log("HELLOA");
+           const temperature = parseFloat(document.getElementById("temperature").value);
+           const coolingRate = parseFloat(document.getElementById("coolingRate").value);
+           const maxIterations = parseInt(document.getElementById("maxIterations").value, 10);
+      
+           try {
+               const cifData = editor.getValue();
+               console.log("HELLOB, cif=", cifData);
+      
+               const parsedCIFData = parse_cif(cifData);
+               console.log("HELLOC, parsedCIFData=", parsedCIFData);
+      
+       
+               const { jijMatrix, dijMatrix, magneticAtomInfo } = calculateJijMatrix(parsedCIFData); // Extract both Jij matrix and magnetic atom info
+               console.log("HELLOD, JijMatrix=", jijMatrix);
+               console.log("HELLOD, Magnetic Atom Info:\n", magneticAtomInfo);
+          
+               const textarea = document.getElementById("pdata");
+               if (!textarea) {
+                   console.error("Textarea with id 'pdata' not found!");
+                   return;
+               }
+          
+               // Format and display the results in the textarea
+               textarea.value =
+                   "Magnetic Atom Info:\n" +
+                   magneticAtomInfo +
+                   "\n\nJij Matrix:\n" +
+                   formatJijMatrix(jijMatrix) + 
+                   "\n\nDij Matrix:\n" +
+                   formatJijMatrix(dijMatrix);
+          
+               console.log("HELLOE Jij and Dij Matrices and Magnetic Atom Info successfully displayed.");
 
-        const Rz = [
-            [Math.cos(radZ), -Math.sin(radZ), 0],
-            [Math.sin(radZ), Math.cos(radZ), 0],
-            [0, 0, 1],
-        ];
+               const result = solveSpinStates(jijMatrix, magneticAtomInfo, null, temperature, coolingRate, maxIterations);
+               console.log("Optimal Spin Configuration:", result.spins);
+               console.log("Minimum Energy:", result.energy);
+               console.log("Multiplicity:", result.multiplicity);
+               console.log("Total Intrinsic Spin:", result.totalIntrinsicSpin);
 
-        const Rzy = multiplyMatrices(Rz, Ry);
-        return multiplyMatrices(Rzy, Rx);
-    }
+               // Display the spins
+               populateSpinAtoms(result.spins, magneticAtomInfo)
 
-    /**
-     * Multiply two 3x3 matrices.
-     */
-    function multiplyMatrices(A, B) {
-        const result = [];
-        for (let i = 0; i < 3; i++) {
-            result[i] = [];
-            for (let j = 0; j < 3; j++) {
-                result[i][j] = A[i][0] * B[0][j] + A[i][1] * B[1][j] + A[i][2] * B[2][j];
+               // Display the energy
+               const energyValueElement = document.getElementById("energyValue");
+               const multiplicityValueElement = document.getElementById("multiplicityValue");
+               energyValueElement.textContent = result.energy.toFixed(4); // Update energy display
+               multiplicityValueElement.textContent = result.multiplicity; // Update multiplicity display
+
+            } catch (error) {
+                console.error("Error generating Jij Matrix:", error);
+            }
+       }
+
+
+
+
+
+        /**
+         * Calculate the Jij matrix based on parsed CIF data using GKA rules.
+         * @param {Object} parsedCIFData - Parsed CIF data containing atoms, lattice, and symmetry.
+         * @returns {Array<Array<number>>} Jij matrix.
+         * 
+         *  When to Use -1, 1, or 0 for Jij
+         *    1 (FM): Use when the bond angle is large (e.g., > 120degrees) and favors ferromagnetic interaction.
+         *   -1 (AFM): Use when the bond angle is small ( ≤ 120degrees) and favors antiferromagnetic interaction.
+         *    0 (No Interaction): Use when the atoms are too far apart (distance exceeds the threshold), or when the angle cannot be calculated (e.g., fewer than two ligands).
+         */
+        function calculateJijMatrix(parsedCIFData) {
+           // Extract atoms, lattice, and symmetry
+           const atomsRaw = parsedCIFData[0]; // Array of atom data
+           const lattice = parsedCIFData[1];  // Lattice vectors
+
+           if (!atomsRaw || !Array.isArray(atomsRaw)) {
+               throw new Error("Invalid atom data in parsedCIFData");
+           }
+
+           // Cutoff function parameters
+           const r0 = 3.0; // Reference distance in Å
+           const alpha = 2.0; // Sharpness of decay
+           const n = 2; // Steepness
+           const tau = 1.0; // Normalization factor
+
+           // Reformat atoms into an array of objects for easier handling
+           const atoms = atomsRaw.map(([element, fx, fy, fz]) => ({
+               element,
+               fx: parseFloat(fx),
+               fy: parseFloat(fy),
+               fz: parseFloat(fz),
+           }));
+      
+           // Filter magnetic atoms
+           const magneticAtoms = atoms.filter(atom => MAGNETIC_ELEMENTS.includes(atom.element));
+           console.log("Magnetic Atoms:", magneticAtoms);
+           if (magneticAtoms.length === 0) {
+               console.warn("No magnetic atoms found in the structure.");
+               return { jijMatrix: [], dijMatrix: [],  magneticAtomInfo: "No magnetic atoms found." };
+           }
+
+           const magneticAtomInfo = formatMagneticAtoms(atoms, magneticAtoms);
+           console.log("Magnetic Atoms:\n", magneticAtomInfo);
+      
+           const dijMatrix = [];
+           const jijMatrix = [];
+      
+           for (let i = 0; i < magneticAtoms.length; i++) {
+               dijMatrix[i] = [];
+               jijMatrix[i] = [];
+               for (let j = 0; j < magneticAtoms.length; j++) {
+                   if (i === j) {
+                       dijMatrix[i][j] = 0; // Diagonal elements are always 0
+                       jijMatrix[i][j] = 0; // Diagonal elements are always 0
+                   } else {
+                       const atom1 = magneticAtoms[i];
+                       const atom2 = magneticAtoms[j];
+      
+                       // Calculate the distance between two magnetic atoms
+                       const distance = calculateDistance(atom1, atom2, lattice);
+      
+                       //if (distance <= BOND_THRESHOLD) {
+                       if (distance <= 2 * r0) {
+                           // Find ligands for the second magnetic atom
+                           const ligands = findLigandAtoms(atoms, atom2, lattice);
+      
+                           if (ligands.length >= 2) {
+                               // Use the first two ligands to calculate the angle
+                               const angle = calculateAngle(ligands[0], atom2, ligands[1], lattice);
+      
+                               // Apply GKA rules to determine Jij
+                               // Determine FM (1) or AFM (-1) based on GKA rules
+                               const interaction = angle > 120 ? 1 : -1; // Ferromagnetic or antiferromagnetic
+
+                               // Apply cutoff function to scale Jij value
+                               const weight = cutoffFunction(distance, r0, alpha, n, tau);
+
+                               //const weight = Math.exp(-distance / DECAY_CONSTANT); // Exponential decay
+                               dijMatrix[i][j] = distance;
+                               jijMatrix[i][j] = interaction * weight;
+                             //  if (angle > 120) {
+                             //      jijMatrix[i][j] = 1; // Ferromagnetic coupling
+                             //  } else {
+                             //      jijMatrix[i][j] = -1; // Antiferromagnetic coupling
+                             //  }
+                           } else {
+                               // Not enough ligands to determine an angle
+                               dijMatrix[i][j] = 0; // No significant interaction
+                               jijMatrix[i][j] = 0; // No significant interaction
+                           }
+                       } else {
+                           // Distance exceeds the bond threshold
+                           dijMatrix[i][j] = 0; // No interaction
+                           jijMatrix[i][j] = 0; // No interaction
+                       }
+                   }
+               }
+           }
+      
+           return {
+               jijMatrix,
+               dijMatrix,
+               magneticAtomInfo,
+           };
+        }
+
+        /**
+         * Format a list of magnetic atoms and their CIF indices for display.
+         * @param {Array} atoms - List of all atoms from the parsed CIF data.
+         * @param {Array} magneticAtoms - List of magnetic atoms extracted from the atoms list.
+         * @returns {string} Formatted string representation of magnetic atoms and their indices.
+         */
+        function formatMagneticAtoms(atoms, magneticAtoms) {
+           if (!magneticAtoms.length) {
+               return "No magnetic atoms found.";
+           }
+      
+           // Find the original indices of magnetic atoms
+           const magneticAtomInfo = magneticAtoms.map(magAtom => {
+               const index = atoms.findIndex(atom =>
+                   atom.element === magAtom.element &&
+                   Math.abs(atom.fx - magAtom.fx) < 1e-6 &&
+                   Math.abs(atom.fy - magAtom.fy) < 1e-6 &&
+                   Math.abs(atom.fz - magAtom.fz) < 1e-6
+               );
+               return { index: index + 1, ...magAtom }; // +1 to match CIF 1-based indexing
+           });
+      
+           // Format magnetic atom information
+           return magneticAtomInfo
+               .map(info => `Index: ${info.index}, Element: ${info.element}, Coordinates: (${info.fx.toFixed(3)}, ${info.fy.toFixed(3)}, ${info.fz.toFixed(3)})`)
+               .join("\n");
+        }
+
+
+        /**
+         * Identify non-magnetic ligand atoms within a bond threshold of a given magnetic atom.
+         * @param {Array} atoms - List of all atoms in the structure.
+         * @param {Object} centralAtom - The magnetic atom to find ligands for.
+         * @param {Array} lattice - Lattice vectors in Cartesian coordinates.
+         * @returns {Array} List of non-magnetic ligand atoms.
+         */
+        function findLigandAtoms(atoms, centralAtom, lattice) {
+      
+           const ligands = [];
+      
+           for (const atom of atoms) {
+               // Skip the central atom itself
+               if (atom === centralAtom) continue;
+      
+               // Ensure the atom is non-magnetic
+               if (MAGNETIC_ELEMENTS.includes(atom.element)) continue;
+      
+               // Calculate distance using minimal image convention (MIC)
+               const distance = calculateDistance(atom, centralAtom, lattice);
+      
+               // Add to ligands if within the bond threshold
+               if (distance <= BOND_THRESHOLD) {
+                   ligands.push(atom);
+               }
+           }
+      
+           return ligands;
+        }
+
+        /**
+         * Compute the cutoff function value for a given distance.
+         * @param {number} r - Distance between atoms.
+         * @param {number} r0 - Critical/reference distance where the transition begins.
+         * @param {number} alpha - Sharpness of the decay.
+         * @param {number} n - Steepness of the cutoff.
+         * @param {number} tau - Normalization factor.
+         * @returns {number} Cutoff function value.
+         */
+        function cutoffFunction(r, r0, alpha, n, tau) {
+           if (r <= r0) {
+               return 1; // Maximum interaction for distances less than or equal to r0
+           }
+           const expTerm = Math.exp(-alpha * (r - r0));
+           return (1 - Math.pow(1 - expTerm, n)) / tau;
+        }
+
+
+
+
+        /**
+         * Calculate the shortest distance between two atoms using the minimal image convention (MIC).
+         * @param {Object} atom1 - First atom with fractional coordinates (fx, fy, fz).
+         * @param {Object} atom2 - Second atom with fractional coordinates (fx, fy, fz).
+         * @param {Array<Array<number>>} lattice - Lattice vectors in Cartesian coordinates.
+         * @returns {number} Shortest distance between the two atoms in Å.
+         */
+        function calculateDistance(atom1, atom2, lattice) {
+           // Convert fractional coordinates to Cartesian
+           const cart1 = fractionalToCartesian(atom1, lattice);
+           const cart2 = fractionalToCartesian(atom2, lattice);
+      
+           // Vector difference in Cartesian space
+           const dx = cart1.x - cart2.x;
+           const dy = cart1.y - cart2.y;
+           const dz = cart1.z - cart2.z;
+      
+           // Apply minimal image convention (MIC)
+           const wrappedVector = wrapVectorToCell([dx, dy, dz], lattice);
+      
+           // Calculate Euclidean distance
+           return Math.sqrt(
+               wrappedVector[0] ** 2 +
+               wrappedVector[1] ** 2 +
+               wrappedVector[2] ** 2
+           );
+        }
+
+
+        /**
+         * Calculate the angle between two ligand atoms and a central magnetic atom.
+         * @param {Object} ligand1 - First ligand atom with fractional coordinates (fx, fy, fz).
+         * @param {Object} centralAtom - Central magnetic atom with fractional coordinates (fx, fy, fz).
+         * @param {Object} ligand2 - Second ligand atom with fractional coordinates (fx, fy, fz).
+         * @param {Array<Array<number>>} lattice - Lattice vectors in Cartesian coordinates.
+         * @returns {number} Angle in degrees between ligand1, centralAtom, and ligand2.
+         */
+        function calculateAngle(ligand1, centralAtom, ligand2, lattice) {
+           // Convert fractional coordinates to Cartesian
+           const cartLigand1 = fractionalToCartesian(ligand1, lattice);
+           const cartCentral = fractionalToCartesian(centralAtom, lattice);
+           const cartLigand2 = fractionalToCartesian(ligand2, lattice);
+      
+           // Vectors from the central atom to each ligand
+           const vec1 = wrapVectorToCell([
+               cartLigand1.x - cartCentral.x,
+               cartLigand1.y - cartCentral.y,
+               cartLigand1.z - cartCentral.z,
+           ], lattice);
+      
+           const vec2 = wrapVectorToCell([
+               cartLigand2.x - cartCentral.x,
+               cartLigand2.y - cartCentral.y,
+               cartLigand2.z - cartCentral.z,
+           ], lattice);
+      
+           // Dot product of vec1 and vec2
+           const dotProduct =
+               vec1[0] * vec2[0] +
+               vec1[1] * vec2[1] +
+               vec1[2] * vec2[2];
+      
+           // Magnitudes of vec1 and vec2
+           const magnitude1 = Math.sqrt(vec1[0] ** 2 + vec1[1] ** 2 + vec1[2] ** 2);
+           const magnitude2 = Math.sqrt(vec2[0] ** 2 + vec2[1] ** 2 + vec2[2] ** 2);
+      
+           // Calculate the cosine of the angle
+           const cosTheta = dotProduct / (magnitude1 * magnitude2);
+      
+           // Convert to degrees
+           return Math.acos(cosTheta) * (180 / Math.PI); // Radians to degrees
+        }
+
+        /**
+         * Convert fractional coordinates to Cartesian coordinates.
+         * @param {Object} atom - Atom with fractional coordinates (fx, fy, fz).
+         * @param {Array<Array<number>>} lattice - Lattice vectors in Cartesian coordinates.
+         * @returns {Object} Cartesian coordinates {x, y, z}.
+         */
+        function fractionalToCartesian(atom, lattice) {
+           const [a, b, c] = lattice;
+           const { fx, fy, fz } = atom;
+      
+           return {
+               x: fx * a[0] + fy * b[0] + fz * c[0],
+               y: fx * a[1] + fy * b[1] + fz * c[1],
+               z: fx * a[2] + fy * b[2] + fz * c[2],
+           };
+        }
+
+        /**
+         * Apply the minimal image convention (MIC) to a vector.
+         * @param {Array<number>} vector - Vector in Cartesian space [dx, dy, dz].
+         * @param {Array<Array<number>>} lattice - Lattice vectors in Cartesian coordinates.
+         * @returns {Array<number>} Wrapped vector in Cartesian space.
+         */
+        function wrapVectorToCell(vector, lattice) {
+           const inverseLattice = invertMatrix(lattice); // Inverse of the lattice matrix
+           const fractionalVector = matrixVectorMultiply(inverseLattice, vector);
+      
+           // Wrap fractional coordinates to [-0.5, 0.5) for MIC
+           const wrappedFractional = fractionalVector.map(coord => coord - Math.round(coord));
+      
+           // Convert back to Cartesian
+           return matrixVectorMultiply(lattice, wrappedFractional);
+        }
+
+        /**
+         * Compute the inverse of a 3x3 matrix.
+         * @param {Array<Array<number>>} matrix - A 3x3 matrix.
+         * @returns {Array<Array<number>>} Inverse of the matrix.
+         */
+        function invertMatrix(matrix) {
+           const [a, b, c] = matrix;
+      
+           const det = a[0] * (b[1] * c[2] - b[2] * c[1])
+                     - a[1] * (b[0] * c[2] - b[2] * c[0])
+                     + a[2] * (b[0] * c[1] - b[1] * c[0]);
+      
+           if (det === 0) throw new Error("Singular matrix, cannot invert.");
+      
+           const invDet = 1 / det;
+      
+           return [
+               [
+                   invDet * (b[1] * c[2] - b[2] * c[1]),
+                   invDet * (a[2] * c[1] - a[1] * c[2]),
+                   invDet * (a[1] * b[2] - a[2] * b[1]),
+               ],
+               [
+                   invDet * (b[2] * c[0] - b[0] * c[2]),
+                   invDet * (a[0] * c[2] - a[2] * c[0]),
+                   invDet * (a[2] * b[0] - a[0] * b[2]),
+               ],
+               [
+                   invDet * (b[0] * c[1] - b[1] * c[0]),
+                   invDet * (a[1] * c[0] - a[0] * c[1]),
+                   invDet * (a[0] * b[1] - a[1] * b[0]),
+               ],
+           ];
+        }
+
+        /**
+         * Multiply a 3x3 matrix by a 3D vector.
+         * @param {Array<Array<number>>} matrix - A 3x3 matrix.
+         * @param {Array<number>} vector - A 3D vector [x, y, z].
+         * @returns {Array<number>} Resultant 3D vector.
+         */
+        function matrixVectorMultiply(matrix, vector) {
+            return [
+                matrix[0][0] * vector[0] + matrix[0][1] * vector[1] + matrix[0][2] * vector[2],
+                matrix[1][0] * vector[0] + matrix[1][1] * vector[1] + matrix[1][2] * vector[2],
+                matrix[2][0] * vector[0] + matrix[2][1] * vector[1] + matrix[2][2] * vector[2],
+            ];
+        }
+
+        /**
+         * Format a Jij matrix into a human-readable string for display in a textarea.
+         * @param {Array<Array<number>>} jijMatrix - 2D array representing the Jij matrix.
+         * @returns {string} Formatted string representation of the Jij matrix.
+         */
+        function formatJijMatrix(jijMatrix) {
+           if (!Array.isArray(jijMatrix) || jijMatrix.length === 0) {
+               return "Jij Matrix is empty or invalid.";
+           }
+      
+           // Format the matrix into a string
+           return jijMatrix
+               .map(row => row.map(value => value.toString().padStart(3, " ")).join(" ")) // Format each row
+               .join("\n"); // Join rows with newlines
+        }
+
+/**
+ * Solve for spin states given a Jij matrix, optionally enforcing a specified multiplicity.
+ * @param {Array<Array<number>>} JijMatrix - The Jij interaction matrix.
+ * @param {number|null} [multiplicity=null] - Optional desired multiplicity. If null, no constraint is applied.
+ * @param {number} temperature - Initial temperature for annealing.
+ * @param {number} coolingRate - Rate of temperature reduction.
+ * @param {number} maxIterations - Maximum number of iterations.
+ * @returns {Object} Optimal spin configuration, energy, and resulting multiplicity.
+ */
+/*
+function solveSpinStates(JijMatrix, multiplicity = null, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
+    const N = JijMatrix.length; // Number of spins
+
+    // Calculate the target total spin difference if multiplicity is provided
+    const targetSpinDifference = multiplicity ? (multiplicity - 1) : null; // 2S = M - 1
+
+    // Initialize random spin configuration (+1 or -1)
+    let spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
+
+    // Function to calculate energy for a given spin configuration
+    function calculateEnergy(spins) {
+        let energy = 0;
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+                energy += -JijMatrix[i][j] * spins[i] * spins[j];
             }
         }
-        return result;
+        return energy / 2; // Avoid double-counting interactions
     }
 
-    /**
-     * Apply rotation and prepare spin penalty data based on visual input.
-     */
-    document.getElementById("applyVisualRotation").addEventListener("click", function () {
-        const rotateX = parseFloat(document.getElementById("rotateX").value);
-        const rotateY = parseFloat(document.getElementById("rotateY").value);
-        const rotateZ = parseFloat(document.getElementById("rotateZ").value);
+    // Function to calculate spin difference (N_up - N_down)
+    function calculateSpinDifference(spins) {
+        return spins.reduce((sum, spin) => sum + spin, 0); // Sum of spins gives N_up - N_down
+    }
 
-        const rotationMatrix = calculateRotationMatrix(rotateX, rotateY, rotateZ);
+    // Current energy
+    let currentEnergy = calculateEnergy(spins);
+    let currentSpinDifference = calculateSpinDifference(spins);
 
-        const cifContent = ace.edit("editor").getValue();
-        const axis = 'c';
-        const magnitude = 5.0;
+    // Store the best solution found
+    let bestSpins = [...spins];
+    let bestEnergy = currentEnergy;
 
-        try {
-            const spinPenaltyData = prepareSpinPenaltyFromCIF(cifContent, axis, magnitude, rotationMatrix);
-            displaySpinPenaltyData(spinPenaltyData);
-        } catch (error) {
-            console.error("Error applying rotation and generating spin penalty data:", error.message);
-        }
-    });
+    // Simulated annealing loop
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+        // Perform multiple iterations at the current temperature
+        for (let step = 0; step < N * 10; step++) {
+            // Choose a random spin to flip
+            const randomIndex = Math.floor(Math.random() * N);
+            spins[randomIndex] *= -1; // Flip the spin
 
-    document.getElementById("generateSpinPenalty").addEventListener("click", function () {
-        console.log("Generate Spin Penalty button clicked.");
+            // Calculate new energy and spin difference
+            const newEnergy = calculateEnergy(spins);
+            const newSpinDifference = calculateSpinDifference(spins);
 
-        try {
-            const cifContent = ace.edit("editor").getValue();
-            if (!cifContent || cifContent.trim() === "") {
-                throw new Error("No CIF content found in the editor.");
+            // Determine whether to accept the new configuration
+            const spinDifferencePenalty = targetSpinDifference !== null
+                ? Math.abs(newSpinDifference - targetSpinDifference)
+                : 0; // No penalty if no multiplicity constraint
+            const currentPenalty = targetSpinDifference !== null
+                ? Math.abs(currentSpinDifference - targetSpinDifference)
+                : 0;
+
+            if (
+                (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) || // Prefer closer spin difference if applicable
+                Math.random() < Math.exp((currentEnergy - newEnergy) / temperature)
+            ) {
+                currentEnergy = newEnergy; // Accept the new configuration
+                currentSpinDifference = newSpinDifference;
+            } else {
+                spins[randomIndex] *= -1; // Revert the flip
             }
 
-            const axis = document.getElementById("axis") ? document.getElementById("axis").value : 'c';
-            const magnitude = 5.0;
-
-            const spinPenaltyInput = prepareSpinPenaltyFromCIF(cifContent, axis, magnitude);
-            displaySpinPenaltyData(spinPenaltyInput);
-        } catch (error) {
-            console.error("Error generating spin penalty data:", error);
-            alert("An error occurred while processing the CIF file. Please check the console for details.");
-        }
-    });
-
-    /**
-     * Parse CIF content and prepare spin penalty data.
-     */
-    function prepareSpinPenaltyFromCIF(cifContent, axis, magnitude, rotationMatrix = null) {
-        const lines = cifContent.split("\n");
-        const atoms = [];
-        let parsingAtoms = false;
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-
-            if (trimmed.startsWith("loop_")) {
-                parsingAtoms = true;
-                continue;
-            }
-
-            if (parsingAtoms && trimmed) {
-                const tokens = trimmed.split(/\s+/);
-                if (tokens.length === 4) {
-                    let fractional = [
-                        parseFloat(tokens[1]),
-                        parseFloat(tokens[2]),
-                        parseFloat(tokens[3]),
-                    ];
-
-                    if (rotationMatrix) {
-                        fractional = [
-                            fractional[0] * rotationMatrix[0][0] +
-                                fractional[1] * rotationMatrix[0][1] +
-                                fractional[2] * rotationMatrix[0][2],
-                            fractional[0] * rotationMatrix[1][0] +
-                                fractional[1] * rotationMatrix[1][1] +
-                                fractional[2] * rotationMatrix[1][2],
-                            fractional[0] * rotationMatrix[2][0] +
-                                fractional[1] * rotationMatrix[2][1] +
-                                fractional[2] * rotationMatrix[2][2],
-                        ];
-                    }
-
-                    atoms.push({
-                        symbol: tokens[0],
-                        fractional,
-                    });
-                }
+            // Update the best solution found
+            if (
+                (targetSpinDifference === null || currentSpinDifference === targetSpinDifference) &&
+                currentEnergy < bestEnergy
+            ) {
+                bestSpins = [...spins];
+                bestEnergy = currentEnergy;
             }
         }
 
-        return assignAFMSpins(atoms, axis, magnitude);
+        // Cool down the temperature
+        temperature *= coolingRate;
+
+        // Break if temperature is too low
+        if (temperature < 1e-6) break;
     }
 
-    function assignAFMSpins(structure, axis = 'c', magnitude = 5.0) {
-        const axisMap = { a: 0, b: 1, c: 2 };
-        const axisIndex = axisMap[axis];
-        const fractionalPositions = structure.map((atom) => atom.fractional);
-        const layers = Array.from(
-            new Set(fractionalPositions.map((pos) => pos[axisIndex]))
-        ).sort((a, b) => a - b);
+    // Calculate the resulting multiplicity
+    const resultingSpinDifference = calculateSpinDifference(bestSpins);
+    const resultingMultiplicity = Math.abs(resultingSpinDifference) + 1; // M = |N_up - N_down| + 1
 
-        return structure.map((atom) => {
-            const fracPos = atom.fractional;
-            const layerIndex = layers.indexOf(fracPos[axisIndex]);
+    return {
+        spins: bestSpins,
+        energy: bestEnergy,
+        multiplicity: resultingMultiplicity,
+    };
+}
+*/
 
-            const spinMagnitude = layerIndex % 2 === 0 ? magnitude : -magnitude;
-            const spinOrientation = spinMagnitude > 0 ? [0, 0, 1] : [0, 0, -1];
 
-            return {
-                ...atom,
-                spinMagnitude: Math.abs(spinMagnitude),
-                spinOrientation,
-            };
-        });
-    }
+/**
+ * Solve for spin states given a Jij matrix and magnetic atom information.
+ * @param {Array<Array<number>>} JijMatrix - The Jij interaction matrix.
+ * @param {string} magneticAtomInfo - Formatted string containing magnetic atom details.
+ * @param {number|null} [multiplicity=null] - Optional desired multiplicity. If null, no constraint is applied.
+ * @param {number} temperature - Initial temperature for annealing.
+ * @param {number} coolingRate - Rate of temperature reduction.
+ * @param {number} maxIterations - Maximum number of iterations.
+ * @returns {Object} Optimal spin configuration, energy, and resulting multiplicity.
+ */
+function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
+    const N = JijMatrix.length; // Number of spins
 
-    function displaySpinPenaltyData(spinPenaltyData) {
-        let textareaContent = "";
-        const spinUpIndexes = [];
-        const spinDownIndexes = [];
-
-        spinPenaltyData.forEach((item, index) => {
-            const position = item.fractional.map((coord) => coord.toFixed(3)).join(", ");
-            const spin = item.spinOrientation.join(", ");
-            const magnitude = item.spinMagnitude.toFixed(2);
-            textareaContent += `Atom ${index + 1}, Position: [${position}], Spin: [${spin}], Magnitude: ${magnitude}\n`;
-
-            if (item.spinOrientation[2] === 1) {
-                spinUpIndexes.push(index + 1);
-            } else if (item.spinOrientation[2] === -1) {
-                spinDownIndexes.push(index + 1);
+    // Parse magneticAtomInfo to extract magnetic atom data
+    const magneticAtoms = magneticAtomInfo
+        .split("\n") // Split the string into lines
+        .map(line => {
+            const match = line.match(/Index: (\d+), Element: (\w+), Coordinates: \(([-\d.]+), ([-\d.]+), ([-\d.]+)\)/);
+            if (match) {
+                return {
+                    index: parseInt(match[1], 10),
+                    element: match[2],
+                    fx: parseFloat(match[3]),
+                    fy: parseFloat(match[4]),
+                    fz: parseFloat(match[5]),
+                };
             }
-        });
+            return null; // Skip lines that don't match the expected format
+        })
+        .filter(atom => atom !== null); // Remove any null entries
 
-        document.getElementById("pdata").value = textareaContent;
-        document.getElementById("atomlist1").value = spinUpIndexes.join(" ");
-        document.getElementById("atomlist2").value = spinDownIndexes
+
+    // Calculate the total intrinsic spin of the system
+    const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => {
+        const spin = MAGNETIC_ION_SPINS[atom.element] || 0; // Default to 0 if not found
+        return sum + spin;
+    }, 0);
+
+    // Calculate the target spin difference (2S) if multiplicity is provided
+    const targetSpinDifference = multiplicity ? (multiplicity - 1) : null;
+
+    // Initialize random spin configuration (+1 or -1)
+    let spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
+
+    // Function to calculate energy for a given spin configuration
+    function calculateEnergy(spins) {
+        let energy = 0;
+        for (let i = 0; i < N; i++) {
+            for (let j = 0; j < N; j++) {
+                energy += -JijMatrix[i][j] * spins[i] * spins[j];
+            }
+        }
+        return energy / 2; // Avoid double-counting interactions
+    }
+
+    // Function to calculate spin difference (N_up - N_down)
+    function calculateSpinDifference(spins) {
+        return spins.reduce((sum, spin) => sum + spin, 0); // Sum of spins gives N_up - N_down
+    }
+
+    // Current energy
+    let currentEnergy = calculateEnergy(spins);
+    let currentSpinDifference = calculateSpinDifference(spins);
+
+    // Store the best solution found
+    let bestSpins = [...spins];
+    let bestEnergy = currentEnergy;
+
+    // Simulated annealing loop
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+        // Perform multiple iterations at the current temperature
+        for (let step = 0; step < N * 10; step++) {
+            // Choose a random spin to flip
+            const randomIndex = Math.floor(Math.random() * N);
+            spins[randomIndex] *= -1; // Flip the spin
+
+            // Calculate new energy and spin difference
+            const newEnergy = calculateEnergy(spins);
+            const newSpinDifference = calculateSpinDifference(spins);
+
+            // Determine whether to accept the new configuration
+            const spinDifferencePenalty = targetSpinDifference !== null
+                ? Math.abs(newSpinDifference - targetSpinDifference)
+                : 0; // No penalty if no multiplicity constraint
+            const currentPenalty = targetSpinDifference !== null
+                ? Math.abs(currentSpinDifference - targetSpinDifference)
+                : 0;
+
+            if (
+                (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) || // Prefer closer spin difference if applicable
+                Math.random() < Math.exp((currentEnergy - newEnergy) / temperature)
+            ) {
+                currentEnergy = newEnergy; // Accept the new configuration
+                currentSpinDifference = newSpinDifference;
+            } else {
+                spins[randomIndex] *= -1; // Revert the flip
+            }
+
+            // Update the best solution found
+            if (
+                (targetSpinDifference === null || currentSpinDifference === targetSpinDifference) &&
+                currentEnergy < bestEnergy
+            ) {
+                bestSpins = [...spins];
+                bestEnergy = currentEnergy;
+            }
+        }
+
+        // Cool down the temperature
+        temperature *= coolingRate;
+
+        // Break if temperature is too low
+        if (temperature < 1e-6) break;
+    }
+
+    // Calculate the resulting multiplicity
+    const resultingSpinDifference = calculateSpinDifference(bestSpins);
+    const resultingMultiplicity = Math.abs(resultingSpinDifference) + 1; // M = |N_up - N_down| + 1
+
+    return {
+        spins: bestSpins,
+        energy: bestEnergy,
+        multiplicity: resultingMultiplicity,
+        totalIntrinsicSpin,
+    };
+}
+
+
+
+
+        /**
+         * Populate Spin Up and Spin Down atoms based on the spin configuration using magneticAtomInfo.
+         * @param {Array<number>} spinConfiguration - Array of spins (+1 for spin up, -1 for spin down).
+         * @param {string} magneticAtomInfo - Formatted string containing magnetic atom details.
+         */
+        function populateSpinAtoms(spinConfiguration, magneticAtomInfo) {
+           // Parse the magneticAtomInfo into an array of atom details
+           const magneticAtoms = magneticAtomInfo
+               .split("\n") // Split the string into lines
+               .map(line => {
+                   const match = line.match(/Index: (\d+), Element: (\w+), Coordinates: \(([-\d.]+), ([-\d.]+), ([-\d.]+)\)/);
+                   if (match) {
+                       return {
+                           index: parseInt(match[1], 10), // Extract index as an integer
+                       };
+                   }
+                   return null; // Skip lines that don't match the expected format
+               })
+               .filter(atom => atom !== null); // Remove any null entries
+      
+           // Get the input fields
+           const spinUpInput = document.getElementById("atomlist1");
+           const spinDownInput = document.getElementById("atomlist2");
+      
+           if (!spinUpInput || !spinDownInput) {
+               console.error("One or both input fields (atomlist1, atomlist2) are missing!");
+               return;
+           }
+      
+           // Initialize arrays to hold spin up and spin down atom indices
+           const spinUpAtoms = [];
+           const spinDownAtoms = [];
+      
+           // Loop through the spin configuration and magneticAtoms to assign indices
+           spinConfiguration.forEach((spin, index) => {
+               const atomInfo = magneticAtoms[index]; // Get atom information
+               if (spin === 1) {
+                   spinUpAtoms.push(atomInfo.index); // Push only the index
+               } else if (spin === -1) {
+                   spinDownAtoms.push(atomInfo.index); // Push only the index
+               }
+           });
+      
+           // Populate the input fields with the spin atom information
+           spinUpInput.value = spinUpAtoms.join(" ");
+           spinDownInput.value = spinDownAtoms.join(" ");
+
+          // Trigger change/input events to ensure changes are registered
+          spinUpInput.dispatchEvent(new Event("input"));
+          spinDownInput.dispatchEvent(new Event("input"));
+
+        }
+
 
 
 </script>
@@ -14441,29 +14970,20 @@ document.addEventListener("DOMContentLoaded", function () {
                <p align="center" style="color:#102DB0">Spin Penalty</p>
                <table>
                   <tr> 
-                  <button id="generateSpinPenalty">Generate Spin Penalty Data</button>
                   <input type="button" class="button" id="redrawspin" value="Reset spin color" onClick="jms('select *; color cpk;');"/>  
                   <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" onClick="jms('delete $atomlist*;');"/>  
                   <br><br>
-                  <div id="rotation-matrix-visual">
-                      <h3>Rotation Matrix Generator</h3>
-                      <p>Adjust the angles to generate a rotation matrix:</p>
-                      
-                      <label for="rotateX">Rotate around X-axis (°): </label>
-                      <input type="range" id="rotateX" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
-                      <span id="rotateXValue">0</span>°<br><br>
-                      
-                      <label for="rotateY">Rotate around Y-axis (°): </label>
-                      <input type="range" id="rotateY" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
-                      <span id="rotateYValue">0</span>°<br><br>
-                      
-                      <label for="rotateZ">Rotate around Z-axis (°): </label>
-                      <input type="range" id="rotateZ" min="0" max="360" value="0" step="1" oninput="updateRotationAngles()"> 
-                      <span id="rotateZValue">0</span>°<br><br>
-                 
-                      <button id="applyVisualRotation">Apply Rotation</button>
-                  </div>
+                  <button id="generateSpinPenalty"  onClick="generateJijMatrix();">Generate Spin Penalty Data</button>
+                      <label for="temperature">Initial Temperature:</label> <input type="number" id="temperature" value="100" step="1" min="1" style="width: 80px;">
+                      <label for="coolingRate">Cooling Rate:</label> <input type="number" id="coolingRate" value="0.98" step="0.01" min="0.80" max="1.0" style="width: 80px;">
+                      <label for="maxIterations">Max Iterations:</label> <input type="number" id="maxIterations" value="1000" step="1" min="1" style="width: 80px;">
                   <br> <br>
+
+                  <!-- Placeholder for showing energy -->
+                  <div id="energyDisplay" style="font-weight: bold; margin-top: 10px;">
+                      Energy: <span id="energyValue">Not calculated yet</span>
+                      Multiplicity: <span id="multiplicityValue">Not calculated yet</span>
+                  </div>
                   </tr>
                   <tr> 
                      <td> <select id="colortype1" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)">
@@ -14493,7 +15013,7 @@ document.addEventListener("DOMContentLoaded", function () {
                      </td>
                   </tr> 
                   <tr>
-                     <td> Spin up Atoms: <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
+                     <td> pspspin up Atoms: <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
                   </tr>
                   <tr> 
                      <td> <select id="colortype2" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)">
@@ -14523,7 +15043,7 @@ document.addEventListener("DOMContentLoaded", function () {
                      </td>
                   </tr> 
                   <tr>
-                     <td> Spin Down Atoms: <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"> <br><br></td>
+                     <td> pspspin down Atoms: <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"> <br><br></td>
                   </tr>
                   <tr> 
                      <td> Spin Penalty Data: <br><br> </td>
