@@ -8907,17 +8907,29 @@ ul, li {
         // *       changenwchemmult       *
         // *                              *
         // ********************************
-        function changenwchemmult() {
-           var mult   = document.getElementById("nwchemmult").value;
-           var data   = editor.getValue(); // or session.getValue
-           var oldblk  = "mult " + data.split("mult ")[1].split("\n")[0];
-           var oldblk2 = "mult=" + data.split("mult=")[1].split("\"")[0];
+        function changenwchemmult(element) {
+            // Get the value of the input that triggered the event
+            var mult = element.value;
 
-           var data   = editor.getValue(); // or session.getValue
-           data = data.replace(oldblk,"mult " + mult.toString());
-           data = data.replace(oldblk2,"mult=" + mult.toString());
-           editor.setValue(data,1);
+            // Retrieve the current editor content
+            var data = editor.getValue(); // or session.getValue
+
+            // Find and replace the old multiplicity blocks
+            var oldblk = data.match(/mult \d+/)?.[0]; // Matches "mult X" pattern
+            var oldblk2 = data.match(/mult=\d+/)?.[0]; // Matches "mult=X" pattern
+
+            if (oldblk) {
+                data = data.replace(oldblk, "mult " + mult.toString());
+            }
+
+            if (oldblk2) {
+                data = data.replace(oldblk2, "mult=" + mult.toString());
+            }
+
+            // Update the editor content
+            editor.setValue(data, 1);
         }
+
 
         // ********************************
         // *                              *
@@ -13662,10 +13674,10 @@ ul, li {
                                     onChange="changenwchemcharge()" oninput="cacheInput(this)">
                multiplicity: <input type="number" 
                                     name="nwchemmult" 
-                                    id="nwchemmult" 
-                                    title=": set number nwchemmult  :"
+                                    id="nwchemmult1" 
+                                    title=": set number nwchemmult1  :"
                                     size="3" min="1" max="100" step="1" value="1" 
-                                    onChange="changenwchemmult()" 
+                                    onChange="changenwchemmult(this)" 
                                     oninput="cacheInput(this)"> 
                virtual:      <input type="number" 
                                     name="nwchemvirt" 
@@ -14025,7 +14037,7 @@ ul, li {
                  <input type="button" VALUE="Builder" onClick="SwapDivsWithClick(1,'swapper-first','swapper-crystal','swapper-surface','swapper-other')" style="background-color:#f8f8ff; color:#102DB0; font-size: 14px; font-weight:bold"/>
                  <input type="button" VALUE="Lattice" onClick="SwapDivsWithClick(2,'swapper-first','swapper-crystal','swapper-surface','swapper-other')" style="background-color:#f8f8ff; color:#102DB0; font-size: 14px; font-weight:bold"/>
                  <input type="button" VALUE="Bulk-Surface" onClick="SwapDivsWithClick(3,'swapper-first','swapper-crystal','swapper-surface','swapper-other')" style="background-color:#f8f8ff; color:#102DB0; font-size: 14px; font-weight:bold"/>
-                 <input type="button" VALUE="Spin Penalty" onClick="SwapDivsWithClick(4,'swapper-first','swapper-crystal','swapper-surface','swapper-other')" style="background-color:#f8f8ff; color:#102DB0; font-size: 14px; font-weight:bold"/>
+                 <input type="button" VALUE="Magnetic Spin Structure" onClick="SwapDivsWithClick(4,'swapper-first','swapper-crystal','swapper-surface','swapper-other')" style="background-color:#f8f8ff; color:#102DB0; font-size: 14px; font-weight:bold"/>
              <!--/p -->
           </td>
        </tr> 
@@ -14219,7 +14231,7 @@ ul, li {
                </div>
 
 
-                <!-- Spin Penalty Javascipt -->
+                <!-- Magnetic Spin Structure Javascipt -->
 <script>
 
        const MAGNETIC_ELEMENTS = [
@@ -14292,7 +14304,8 @@ ul, li {
           
                console.log("HELLOE Jij and Dij Matrices and Magnetic Atom Info successfully displayed.");
 
-               const result = solveSpinStates(jijMatrix, magneticAtomInfo, null, temperature, coolingRate, maxIterations);
+               const initial_mult = document.getElementById("nwchemmult2");
+               const result = solveSpinStates(jijMatrix, magneticAtomInfo, initial_mult, temperature, coolingRate, maxIterations);
                console.log("Optimal Spin Configuration:", result.spins);
                console.log("Minimum Energy:", result.energy);
                console.log("Multiplicity:", result.multiplicity);
@@ -14304,8 +14317,10 @@ ul, li {
                // Display the energy
                const energyValueElement = document.getElementById("energyValue");
                const multiplicityValueElement = document.getElementById("multiplicityValue");
+               const intrisicValueElement = document.getElementById("intrisicValue");
                energyValueElement.textContent = result.energy.toFixed(4); // Update energy display
                multiplicityValueElement.textContent = result.multiplicity; // Update multiplicity display
+               intrisicValueElement.textContent = result.totalIntrinsicSpin;
 
             } catch (error) {
                 console.error("Error generating Jij Matrix:", error);
@@ -14780,12 +14795,13 @@ function solveSpinStates(JijMatrix, multiplicity = null, temperature = 100, cool
  * Solve for spin states given a Jij matrix, enforcing intrinsic spin constraints.
  * @param {Array<Array<number>>} JijMatrix - The Jij interaction matrix.
  * @param {string} magneticAtomInfo - Formatted string containing magnetic atom details.
+ * @param {number|null} [multiplicity=null] - Optional desired multiplicity. If null, no constraint is applied.
  * @param {number} temperature - Initial temperature for annealing.
  * @param {number} coolingRate - Rate of temperature reduction.
  * @param {number} maxIterations - Maximum number of iterations.
  * @returns {Object} Optimal spin configuration, energy, and resulting multiplicity.
  */
-function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
+function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
     const N = JijMatrix.length;
 
     // Parse magneticAtomInfo to extract magnetic atom data
@@ -14805,23 +14821,27 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
         .filter(atom => atom !== null);
 
     const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0);
-    const targetSpinDifference = 2 * totalIntrinsicSpin;
+    const targetSpinDifference = multiplicity ? (multiplicity - 1) : null;
 
     // Initialize random spin configuration
     let spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
 
+    // Function to calculate the energy of the spin configuration
     function calculateEnergy(spins) {
         let energy = 0;
         for (let i = 0; i < N; i++) {
             for (let j = 0; j < N; j++) {
-                energy += -JijMatrix[i][j] * spins[i] * spins[j];
+                const Si = spins[i] * magneticAtoms[i].spin;
+                const Sj = spins[j] * magneticAtoms[j].spin;
+                energy += -JijMatrix[i][j] * Si * Sj;
             }
         }
         return energy / 2;
     }
 
+    // Function to calculate spin difference (N_up - N_down)
     function calculateSpinDifference(spins) {
-        return spins.reduce((sum, spin) => sum + spin, 0);
+        return spins.reduce((sum, spin, i) => sum + spin * magneticAtoms[i].spin, 0);
     }
 
     let currentEnergy = calculateEnergy(spins);
@@ -14829,6 +14849,7 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
     let bestSpins = [...spins];
     let bestEnergy = currentEnergy;
 
+    // Simulated annealing loop
     for (let iteration = 0; iteration < maxIterations; iteration++) {
         for (let step = 0; step < N * 10; step++) {
             const randomIndex = Math.floor(Math.random() * N);
@@ -14837,8 +14858,12 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
             const newEnergy = calculateEnergy(spins);
             const newSpinDifference = calculateSpinDifference(spins);
 
-            const spinDifferencePenalty = Math.abs(newSpinDifference - targetSpinDifference);
-            const currentPenalty = Math.abs(currentSpinDifference - targetSpinDifference);
+            const spinDifferencePenalty = targetSpinDifference !== null
+                ? Math.abs(newSpinDifference - targetSpinDifference)
+                : 0;
+            const currentPenalty = targetSpinDifference !== null
+                ? Math.abs(currentSpinDifference - targetSpinDifference)
+                : 0;
 
             if (
                 (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) ||
@@ -14860,7 +14885,8 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
         if (temperature < 1e-6) break;
     }
 
-    const resultingMultiplicity = Math.abs(currentSpinDifference) + 1;
+    // Calculate resulting multiplicity
+    const resultingMultiplicity = 2 * Math.abs(currentSpinDifference) + 1;
 
     return {
         spins: bestSpins,
@@ -14869,6 +14895,10 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
         totalIntrinsicSpin,
     };
 }
+
+
+
+
 
         /**
          * Populate Spin Up and Spin Down atoms based on the spin configuration using magneticAtomInfo.
@@ -14929,15 +14959,26 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
 
 
 
-                <!-- Spin Penalty -->
+                <!-- Magnetic Spin Structure -->
                <div id="swapper-other" style="display:none; border:2px dashed; border-color: #102DB0; background-color: white; padding:10px;">
-               <p align="center" style="color:#102DB0">Spin Penalty</p>
+               <!--p align="center" style="color:#102DB0">Magnetic Spin Structure</p>
+               <p align="center" style="color:#102DB0">(Ising Model using GKA Rules)</p-->
+               <h1 class="title">Magnetic Spin Structure</h1>
                <table>
                   <tr> 
                   <input type="button" class="button" id="redrawspin" value="Reset spin color" onClick="jms('select *; color cpk;');"/>  
                   <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" onClick="jms('delete $atomlist*;');"/>  
+                  <div class="dropdown">
+                      <select id="spinmethod" oninput="cacheInput(this)">
+                          <option value="Ising Model using GKA Rules" selected="selected">Ising Model using GKA Rules</option>
+                          <option value="Ising Model using superexchange Rules">Ising Model using superexchange Rules</option>
+                          <option value="AI Model">AI Model</option>
+                      </select>
+                  </div>
                   <br><br>
-                  <button id="generateSpinPenalty"  onClick="generateJijMatrix();">Generate Spin Penalty Data</button>
+
+                  <button id="generateMagneticSpin"  onClick="generateJijMatrix();">Generate Magnetic Spin Data</button>
+                      <label for="mult">multiplicity:</label> <input type="number" name="nwchemmult" id="nwchemmult2" title=": set number nwchemmult2  :" size="3" min="1" max="100" step="1" value="1" onChange="changenwchemmult(this)" oninput="cacheInput(this)">
                       <label for="temperature">Initial Temperature:</label> <input type="number" id="temperature" value="100" step="1" min="1" style="width: 80px;">
                       <label for="coolingRate">Cooling Rate:</label> <input type="number" id="coolingRate" value="0.98" step="0.01" min="0.80" max="1.0" style="width: 80px;">
                       <label for="maxIterations">Max Iterations:</label> <input type="number" id="maxIterations" value="1000" step="1" min="1" style="width: 80px;">
@@ -14947,6 +14988,7 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
                   <div id="energyDisplay" style="font-weight: bold; margin-top: 10px;">
                       Energy: <span id="energyValue">Not calculated yet</span>
                       Multiplicity: <span id="multiplicityValue">Not calculated yet</span>
+                      Total Intrisic Spin: <span id="intrisicValue">Not calculated yet</span>
                   </div>
                   </tr>
                   <tr> 
@@ -14977,7 +15019,7 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
                      </td>
                   </tr> 
                   <tr>
-                     <td> pspspin up Atoms: <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
+                     <td> Spin Up Atoms (spin penalty down): <input type="atomarray" id="atomlist1"  size="70" value="" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)"> <br><br></td>
                   </tr>
                   <tr> 
                      <td> <select id="colortype2" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)">
@@ -15007,10 +15049,10 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, temperature = 100, cooling
                      </td>
                   </tr> 
                   <tr>
-                     <td> pspspin down Atoms: <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"> <br><br></td>
+                     <td> Spin Down Atoms (spin penalty up): <input type="atomarray" id="atomlist2"  size="70" value="" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)"> <br><br></td>
                   </tr>
                   <tr> 
-                     <td> Spin Penalty Data: <br><br> </td>
+                     <td> Spin Structure Data: <br><br> </td>
                   </tr> 
                   <tr> 
                      <td> 
