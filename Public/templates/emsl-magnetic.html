@@ -14266,6 +14266,22 @@ ul, li {
 
        const BOND_THRESHOLD = 3.0; // Maximum bond distance for interaction in Å
 
+    function handleGenerateMagneticSpin() {
+        try {
+            // Log the action for debugging
+            console.log("Generating Magnetic Spin Data...");
+
+            // Call the function
+            generateJijMatrix();
+
+            // Confirm success
+            console.log("Magnetic Spin Data generated successfully.");
+        } catch (error) {
+            // Handle any errors gracefully
+            console.error("Error while generating Magnetic Spin Data:", error);
+        }
+    }
+
        /**
          * Generate Jij Matrix based on GKA rules
          */
@@ -14304,8 +14320,17 @@ ul, li {
           
                console.log("HELLOE Jij and Dij Matrices and Magnetic Atom Info successfully displayed.");
 
-               const initial_mult = document.getElementById("nwchemmult2");
-               const result = solveSpinStates(jijMatrix, magneticAtomInfo, initial_mult, temperature, coolingRate, maxIterations);
+               let initial_mult = 0;
+               const multElement = document.getElementById("nwchemmult2");
+
+               if (multElement && multElement.value > 0) {
+                   initial_mult = parseInt(multElement.value, 10); // Convert the value to an integer
+               } else {
+                   initial_mult = null;
+               }
+               console.log("HELLOF ", initial_mult, dijMatrix, jijMatrix);
+             
+               const result = solveSpinStates(jijMatrix, magneticAtomInfo, initial_mult, temperature, coolingRate, maxIterations, MAGNETIC_ION_SPINS);
                console.log("Optimal Spin Configuration:", result.spins);
                console.log("Minimum Energy:", result.energy);
                console.log("Multiplicity:", result.multiplicity);
@@ -14790,18 +14815,31 @@ function solveSpinStates(JijMatrix, multiplicity = null, temperature = 100, cool
 }
 */
 
-
 /**
  * Solve for spin states given a Jij matrix, enforcing intrinsic spin constraints.
  * @param {Array<Array<number>>} JijMatrix - The Jij interaction matrix.
- * @param {string} magneticAtomInfo - Formatted string containing magnetic atom details.
- * @param {number|null} [multiplicity=null] - Optional desired multiplicity. If null, no constraint is applied.
- * @param {number} temperature - Initial temperature for annealing.
- * @param {number} coolingRate - Rate of temperature reduction.
- * @param {number} maxIterations - Maximum number of iterations.
- * @returns {Object} Optimal spin configuration, energy, and resulting multiplicity.
+ * @param {string} magneticAtomInfo - Multiline string describing magnetic atoms in the system.
+ * @param {number|null} [multiplicity=null] - Desired multiplicity for the system. If null, no constraint is enforced.
+ * @param {number} temperature - Initial temperature for the annealing process.
+ * @param {number} coolingRate - Rate at which the temperature decreases.
+ * @param {number} maxIterations - Maximum number of iterations for the annealing process.
+ * @param {Object} MAGNETIC_ION_SPINS - Mapping of element symbols to intrinsic spin values.
+ * @returns {Object} Resulting spin configuration, energy, and properties.
  */
-function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, temperature = 100, coolingRate = 0.98, maxIterations = 1000) {
+function solveSpinStates(
+    JijMatrix,
+    magneticAtomInfo,
+    multiplicity = null,
+    temperature = 100,
+    coolingRate = 0.98,
+    maxIterations = 1000,
+    MAGNETIC_ION_SPINS = {},
+    numFlips = null // Default to null for dynamic determination
+) {
+    if (!Array.isArray(JijMatrix) || JijMatrix.length === 0 || JijMatrix.some(row => row.length !== JijMatrix.length)) {
+        throw new Error("Invalid JijMatrix: Must be a non-empty square matrix.");
+    }
+
     const N = JijMatrix.length;
 
     // Parse magneticAtomInfo to extract magnetic atom data
@@ -14820,13 +14858,44 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
         })
         .filter(atom => atom !== null);
 
+    if (magneticAtoms.length === 0) {
+        throw new Error("No valid magnetic atoms found in magneticAtomInfo.");
+    }
+
     const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0);
-    const targetSpinDifference = multiplicity ? (multiplicity - 1) : null;
 
-    // Initialize random spin configuration
-    let spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
+    const targetNetIntrinsicSpin = multiplicity ? (multiplicity - 1) / 2 : null;
+    const targetSpinDifference = targetNetIntrinsicSpin ? targetNetIntrinsicSpin * 2 : null;
 
-    // Function to calculate the energy of the spin configuration
+    // Determine the number of flips if numFlips is null
+    if (numFlips === null) {
+        numFlips = Math.min(2, N); // Default to flipping at least 2 spins but no more than the total number of spins
+        console.log(`Dynamic numFlips set to: ${numFlips}`);
+    }
+
+    function generateValidConfiguration() {
+        let spins = Array(N).fill(1);
+        let allocatedDownSpin = 0;
+
+        const requiredDownSpin = targetSpinDifference !== null
+            ? (totalIntrinsicSpin - targetSpinDifference) / 2
+            : totalIntrinsicSpin / 2;
+
+        const spinIndices = magneticAtoms.map((atom, i) => ({ index: i, spin: atom.spin }));
+        spinIndices.sort((a, b) => b.spin - a.spin);
+
+        for (const { index, spin } of spinIndices) {
+            if (allocatedDownSpin + spin <= requiredDownSpin) {
+                spins[index] = -1;
+                allocatedDownSpin += spin;
+            }
+        }
+
+        return spins;
+    }
+
+    let spins = generateValidConfiguration();
+
     function calculateEnergy(spins) {
         let energy = 0;
         for (let i = 0; i < N; i++) {
@@ -14839,43 +14908,53 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
         return energy / 2;
     }
 
-    // Function to calculate spin difference (N_up - N_down)
-    function calculateSpinDifference(spins) {
-        return spins.reduce((sum, spin, i) => sum + spin * magneticAtoms[i].spin, 0);
+    function flipMultipleSpins(spins, numFlips) {
+        const upSpins = [];
+        const downSpins = [];
+
+        spins.forEach((spin, i) => {
+            if (spin === 1) upSpins.push(i);
+            else downSpins.push(i);
+        });
+
+        const flippedIndices = [];
+        for (let flip = 0; flip < numFlips / 2; flip++) {
+            if (upSpins.length === 0 || downSpins.length === 0) break;
+
+            // Randomly select one "up" and one "down" spin to flip
+            const upIndex = upSpins.splice(Math.floor(Math.random() * upSpins.length), 1)[0];
+            const downIndex = downSpins.splice(Math.floor(Math.random() * downSpins.length), 1)[0];
+
+            // Flip the selected spins
+            spins[upIndex] *= -1;
+            spins[downIndex] *= -1;
+
+            flippedIndices.push(upIndex, downIndex);
+        }
+
+        console.log(`Flipped spins at indices: ${flippedIndices.join(", ")}`);
+
+        return spins;
     }
 
     let currentEnergy = calculateEnergy(spins);
-    let currentSpinDifference = calculateSpinDifference(spins);
     let bestSpins = [...spins];
     let bestEnergy = currentEnergy;
 
-    // Simulated annealing loop
     for (let iteration = 0; iteration < maxIterations; iteration++) {
-        for (let step = 0; step < N * 10; step++) {
-            const randomIndex = Math.floor(Math.random() * N);
-            spins[randomIndex] *= -1;
+        for (let step = 0; step < N; step++) {
+            const oldSpins = [...spins];
+            spins = flipMultipleSpins(spins, numFlips);
 
             const newEnergy = calculateEnergy(spins);
-            const newSpinDifference = calculateSpinDifference(spins);
 
-            const spinDifferencePenalty = targetSpinDifference !== null
-                ? Math.abs(newSpinDifference - targetSpinDifference)
-                : 0;
-            const currentPenalty = targetSpinDifference !== null
-                ? Math.abs(currentSpinDifference - targetSpinDifference)
-                : 0;
-
-            if (
-                (spinDifferencePenalty <= currentPenalty && newEnergy < currentEnergy) ||
-                Math.random() < Math.exp((currentEnergy - newEnergy) / temperature)
-            ) {
+            if (newEnergy < currentEnergy || Math.random() < Math.exp((currentEnergy - newEnergy) / temperature)) {
                 currentEnergy = newEnergy;
-                currentSpinDifference = newSpinDifference;
             } else {
-                spins[randomIndex] *= -1;
+                spins = oldSpins; // Revert the flip if not accepted
             }
 
-            if (spinDifferencePenalty === 0 && currentEnergy < bestEnergy) {
+            if (currentEnergy < bestEnergy) {
                 bestSpins = [...spins];
                 bestEnergy = currentEnergy;
             }
@@ -14885,8 +14964,7 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
         if (temperature < 1e-6) break;
     }
 
-    // Calculate resulting multiplicity
-    const resultingMultiplicity = 2 * Math.abs(currentSpinDifference) + 1;
+    const resultingMultiplicity = 2 * Math.abs(spins.reduce((sum, spin, i) => sum + spin * magneticAtoms[i].spin, 0)) + 1;
 
     return {
         spins: bestSpins,
@@ -14895,6 +14973,9 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
         totalIntrinsicSpin,
     };
 }
+
+
+
 
 
 
@@ -14977,8 +15058,8 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
                   </div>
                   <br><br>
 
-                  <button id="generateMagneticSpin"  onClick="generateJijMatrix();">Generate Magnetic Spin Data</button>
-                      <label for="mult">multiplicity:</label> <input type="number" name="nwchemmult" id="nwchemmult2" title=": set number nwchemmult2  :" size="3" min="1" max="100" step="1" value="1" onChange="changenwchemmult(this)" oninput="cacheInput(this)">
+                  <button id="generateMagneticSpin" onClick="handleGenerateMagneticSpin();"> Generate Magnetic Spin Data </button>
+                      <label for="mult">multiplicity:</label> <input type="number" name="nwchemmult" id="nwchemmult2" title=": set number nwchemmult2  :" size="3" min="0" max="100" step="1" value="1" onChange="changenwchemmult(this)" oninput="cacheInput(this)">
                       <label for="temperature">Initial Temperature:</label> <input type="number" id="temperature" value="100" step="1" min="1" style="width: 80px;">
                       <label for="coolingRate">Cooling Rate:</label> <input type="number" id="coolingRate" value="0.98" step="0.01" min="0.80" max="1.0" style="width: 80px;">
                       <label for="maxIterations">Max Iterations:</label> <input type="number" id="maxIterations" value="1000" step="1" min="1" style="width: 80px;">
