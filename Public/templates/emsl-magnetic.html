@@ -14862,10 +14862,77 @@ function solveSpinStates(
         throw new Error("No valid magnetic atoms found in magneticAtomInfo.");
     }
 
-    const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0);
+    const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0);       // sum of the spin values for all atoms
 
-    const targetNetIntrinsicSpin = multiplicity ? (multiplicity - 1) / 2 : null;
-    const targetSpinDifference = targetNetIntrinsicSpin ? targetNetIntrinsicSpin * 2 : null;
+    const targetNetIntrinsicSpin = multiplicity ? (multiplicity - 1) / 2 : null;             // net intrinsic spin of a system based on multiplicity
+    const targetSpinDifference = targetNetIntrinsicSpin ? targetNetIntrinsicSpin * 2 : null; // total difference between the number of "up" spins and "down" spins in the system
+
+    // given multiplicity define nkatom(ia), natom(ia), natomup(ia), natomdown(ia)
+    function analyzeIonCountsCorrected(multiplicity, magneticAtoms,  MAGNETIC_ION_SPINS) {
+        if (magneticAtoms.length === 0) {
+            throw new Error("No valid magnetic atoms found in magneticAtomInfo.");
+        }
+
+        const natoms = {};
+        magneticAtoms.forEach(atom => {
+            natoms[atom.element] = (natoms[atom.element] || 0) + 1;
+        });
+
+        const targetNetIntrinsicSpin = multiplicity ? (multiplicity - 1) / 2 : null;        // net intrinsic spin of a system based on multiplicity
+        const totalIntrinsicSpin = magneticAtoms.reduce((sum, atom) => sum + atom.spin, 0); // sum of the spin values for all atoms
+        const targetSpinDifference = targetNetIntrinsicSpin * 2;                            // total difference between the number of "up" spins and "down" spins in the system
+
+        let remainingUpSpin = (totalIntrinsicSpin + targetSpinDifference) / 2;
+        let remainingDownSpin = (totalIntrinsicSpin - targetSpinDifference) / 2;
+
+        const natomup = {};
+        const natomdown = {};
+
+        Object.entries(natoms).forEach(([element, count]) => {
+            const spin = MAGNETIC_ION_SPINS[element];
+
+            // Assign "up" spins
+            const maxUp = Math.min(count, Math.floor(remainingUpSpin / spin));
+            //const maxUp = Math.min(count, Math.ceil(remainingUpSpin / spin));
+            natomup[element] = maxUp;
+            remainingUpSpin -= maxUp * spin;
+
+            // Assign remaining to "down" spins
+            const maxDown = count - maxUp;
+            natomdown[element] = maxDown;
+            remainingDownSpin -= maxDown * spin;
+        });
+
+        console.log("multiplicity=", multiplicity, " natoms=",natoms);
+        console.log("natomup=",natomup," natomdown=",natomdown);
+        let totalUpSpin = 0;
+        let totalDownSpin = 0;
+
+         // Iterate over each element to compute total up and down spins
+        for (const element in natomup) {
+            const upAtoms = natomup[element] || 0;
+            const downAtoms = natomdown[element] || 0;
+            const spin = MAGNETIC_ION_SPINS[element] || 0;
+
+            totalUpSpin += upAtoms * spin;
+            totalDownSpin += downAtoms * spin;
+        }
+        const netSpin = (totalUpSpin - totalDownSpin);
+        const newmult = 2 * netSpin + 1;
+        console.log("totalUp=", totalUpSpin, " totaldown=",totalDownSpin, " netSpin=", netSpin, "  newmult=",newmult);
+
+        return {
+            natoms: natoms,
+            natomup: natomup,
+            natomdown: natomdown,
+            newmult: newmult,
+        };
+    }
+    console.log("into anylizeIonCorrected, multiplicity=", multiplicity);
+    const natomresult = analyzeIonCountsCorrected(multiplicity,magneticAtoms, MAGNETIC_ION_SPINS);
+    console.log("natoms=",natomresult.natoms,"  natomup=",natomresult.natomup,"  natomdown=",natomresult.natomdown,"  newmult=",natomresult.newmult);
+
+
 
     // Determine the number of flips if numFlips is null
     if (numFlips === null) {
