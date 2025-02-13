@@ -918,7 +918,7 @@ def text2speech(foo):
    try:
       os.system(chemdb_say  + "\'" + foo + "\'")
    except:
-      print("chemdb_add_nwout7: text2speech failed")
+      print("solid_add_nwout: text2speech failed")
 
 
 
@@ -4511,6 +4511,7 @@ def delete_esmiles(hup,dbfile,table,esmiles):
          cur.execute(sqldelete,checklist)
 
 
+
 def print_wannier_table(wannier_data, wannier_magnetization):
     """
     Prints a formatted table of Wannier data and magnetization.
@@ -4519,8 +4520,8 @@ def print_wannier_table(wannier_data, wannier_magnetization):
         wannier_data (dict): Dictionary containing atom types and spin counts.
         wannier_magnetization (dict): Dictionary containing Wannier magnetization values.
     """
-    print(f"{'Atom':<6} {'Type':<4} {'Up':<5} {'Down':<5} {'Magnetization':<12}")
-    print("=" * 40)
+    print(f"{'Atom':<6} {'Type':<4} {'Wannier Up':<12} {'Wannier Down':<14} {'Wannier Magnetization':<20}")
+    print("=" * 60)
     
     for atom_id in sorted(wannier_data.keys()):
         atom_type = wannier_data[atom_id]['type']
@@ -4528,7 +4529,8 @@ def print_wannier_table(wannier_data, wannier_magnetization):
         down = wannier_data[atom_id]['down']
         magnetization = wannier_magnetization[atom_id]['wannier_magnetization']
         
-        print(f"{atom_id:<6} {atom_type:<4} {up:<5} {down:<5} {magnetization:<12}")
+        print(f"{atom_id:<6} {atom_type:<4} {up:<12} {down:<14} {magnetization:<20}")
+
 
 
 
@@ -4751,9 +4753,9 @@ nwmachine_aimd = archivemachine+"/aimd_simulations/%d/%d/%d/%d/%d/" % (a,b,c,d,e
 print()
 print()
 print()
-print("+---------------------------------+")
-print("| chemdb_add_nwout7 mysql version |")
-print("+---------------------------------+")
+print("+-------------------------------+")
+print("| solid_add_nwout mysql version |")
+print("+-------------------------------+")
 print()
 tt = time.localtime()
 dd = "-%d-%d-%d-%d:%d.%d" % (tt[0],tt[1],tt[2],tt[3],tt[4],tt[5])
