@@ -1396,7 +1396,7 @@ periodic_table_charge = {
 
 def mformula_foundHZ(mformula):
    foundHZ = False
-   for aa in re.findall('[^\d ]+', mformula):
+   for aa in re.findall(r'[^\d ]+', mformula):
      if (periodic_table_charge[aa]>=21):
         foundHZ = True
 
@@ -3352,6 +3352,106 @@ def parse_matrix_elements(outfile):
    return mdict
 
 
+def parse_wannier_centers(file_path):
+    """
+    Parses the final position of Wannier centers from an NWChem output file.
+    Groups them by atom number and labels them with atom types.
+    
+    Args:
+        file_path (str): Path to the NWChem output file.
+
+    Returns:
+        dict: Dictionary containing atom numbers, atom types, and Wannier orbital counts.
+    """
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    
+    # Find the last occurrence of 'final position of Wannier centers' for spin up and down
+    up_start, down_start = None, None
+    for i in range(len(lines) - 1, -1, -1):
+        if "final position of Wannier centers" in lines[i]:
+            if down_start is None:
+                down_start = i
+            elif up_start is None:
+                up_start = i
+                break
+
+    if up_start is None or down_start is None:
+        raise ValueError("Could not find 'final position of Wannier centers' for both spins.")
+
+    def extract_wannier_data(start_line):
+        """Extracts Wannier data from the given section."""
+        wannier_dict = {}
+        pattern = re.compile(r"psi\s+\d+\s+\(.*\)\s+-\s+spin\s+(up|down)\s+orbital, nearest ion=\s*([A-Za-z]+)\s+(\d+)")
+
+        for line in lines[start_line:]:
+            match = pattern.search(line)
+            if match:
+                spin = match.group(1)  # "up" or "down"
+                atom_type = match.group(2)  # Atomic symbol (e.g., Fe, O, Ru)
+                atom_num = int(match.group(3))  # Atom number
+
+                if atom_num not in wannier_dict:
+                    wannier_dict[atom_num] = {"type": atom_type, "up": 0, "down": 0}
+                
+                # Increment spin count
+                if spin == "up":
+                    wannier_dict[atom_num]["up"] += 1
+                else:
+                    wannier_dict[atom_num]["down"] += 1
+
+            elif "== Center of Charge ==" in line:
+                break  # Stop parsing when reaching the next section
+
+        return wannier_dict
+
+    # Extract Wannier data for spin up and spin down
+    up_wannier = extract_wannier_data(up_start)
+    down_wannier = extract_wannier_data(down_start)
+
+    # Merge up and down spin data
+    combined_wannier = {}
+    for atom in set(up_wannier.keys()).union(down_wannier.keys()):
+        combined_wannier[atom] = {
+            "type": up_wannier.get(atom, {}).get("type", down_wannier.get(atom, {}).get("type", "Unknown")),
+            "up": up_wannier.get(atom, {}).get("up", 0),
+            "down": down_wannier.get(atom, {}).get("down", 0)
+        }
+
+    return combined_wannier
+
+
+def compute_wannier_magnetization(wannier_data):
+    """
+    Computes the Wannier magnetization for each atom.
+
+    Args:
+        wannier_data (dict): Dictionary containing atom numbers, atom types, 
+                             and counts of spin-up and spin-down Wannier orbitals.
+
+    Returns:
+        dict: Dictionary where keys are atom numbers and values contain atom type and magnetization.
+    """
+    magnetization_data = {}
+
+    for atom_num, data in wannier_data.items():
+        spin_up = data["up"]
+        spin_down = data["down"]
+        atom_type = data["type"]
+
+        # Compute Wannier-based magnetization
+        magnetization = spin_up - spin_down
+
+        # Store results
+        magnetization_data[atom_num] = {
+            "type": atom_type,
+            "wannier_magnetization": magnetization
+        }
+
+    return magnetization_data
+
+
+
 
 def parse_qsharp_norbs(outfile):
    norbs = 2
@@ -4411,6 +4511,28 @@ def delete_esmiles(hup,dbfile,table,esmiles):
          cur.execute(sqldelete,checklist)
 
 
+def print_wannier_table(wannier_data, wannier_magnetization):
+    """
+    Prints a formatted table of Wannier data and magnetization.
+
+    Args:
+        wannier_data (dict): Dictionary containing atom types and spin counts.
+        wannier_magnetization (dict): Dictionary containing Wannier magnetization values.
+    """
+    print(f"{'Atom':<6} {'Type':<4} {'Up':<5} {'Down':<5} {'Magnetization':<12}")
+    print("=" * 40)
+    
+    for atom_id in sorted(wannier_data.keys()):
+        atom_type = wannier_data[atom_id]['type']
+        up = wannier_data[atom_id]['up']
+        down = wannier_data[atom_id]['down']
+        magnetization = wannier_magnetization[atom_id]['wannier_magnetization']
+        
+        print(f"{atom_id:<6} {atom_type:<4} {up:<5} {down:<5} {magnetization:<12}")
+
+
+
+
 
 
 ###############################################
@@ -4437,6 +4559,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
   myjob = {}
   myjob['xyz'] = " "
   myjob['cif'] = " "
+  myjob['iupac'] = " "
   myjob['theory'] = " "
   myjob['datetime'] = " "
   myjob['k_point_grid'] = " "
@@ -4506,13 +4629,13 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
    
 
       myjob['xyzblob']  = parse_xyz_data(outfile_without_hash)
-      myjob['smiles']   = xyz2smiles(myjob['xyzblob'])
-      myjob['InChI']    = smiles2InChI(myjob['smiles'])
+      #myjob['smiles']   = xyz2smiles(myjob['xyzblob'])
+      #myjob['InChI']    = smiles2InChI(myjob['smiles'])
       myjob['InChIKey'] = xyz2InChIKey(myjob['xyzblob'])
 
-      myjob['cid']      = pubchem_smiles2cid(myjob['smiles'])
-      myjob['cas']      = pubchem_smiles2cas(myjob['smiles'])
-      myjob['kegg']     = pubchem_smiles2kegg(myjob['smiles'])
+      #myjob['cid']      = pubchem_smiles2cid(myjob['smiles'])
+      #myjob['cas']      = pubchem_smiles2cas(myjob['smiles'])
+      #myjob['kegg']     = pubchem_smiles2kegg(myjob['smiles'])
       #synonyms = pubchem_smiles2synonyms(myjob['smiles'])
       #InChI2 = xyz2InChI(xyzfile)
       myjob['mformula'] = xyz_molecular_formula(myjob['xyzblob'])
@@ -4520,11 +4643,11 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
    
       myjob['client']    = parse_client(outfile_without_hash)
 
-      myjob['iupac']  = pubchem_smiles2iupac(myjob['smiles'])
-      if (myjob['iupac']==''): myjob['iupac'] = myjob['smiles']
+      #myjob['iupac']  = pubchem_smiles2iupac(myjob['smiles'])
+      #if (myjob['iupac']==''): myjob['iupac'] = myjob['smiles']
 
-      myjob['smiles2'] = cannonicalsmiles(myjob['smiles'])
-      myjob['chemical_structure_asciiart'] = smiles2ascii(myjob['smiles'])
+      #myjob['smiles2'] = cannonicalsmiles(myjob['smiles'])
+      #myjob['chemical_structure_asciiart'] = smiles2ascii(myjob['smiles'])
 
       if (myjob['mult']==2): myjob['iupac'] += " doublet radical"
       if (myjob['mult']==3): myjob['iupac'] += " triplet radical"
@@ -4550,8 +4673,19 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       #honig    = ehd
       #ASA      = sum(msurface[0])
       #SAV      = sum(msurface[1])
+      wannier_data = parse_wannier_centers(outfile_without_hash)
+      wannier_magnetization = compute_wannier_magnetization(wannier_data)
+      #print("DEBUG: Parsed Wannier Data =", wannier_data)  # Debugging
+      #print("DEBUG: Parsed Wannier wannier magnetization =", wannier_magnetization)  # Debugging
+      myjob['wannier'] = wannier_data
+      myjob['wannier_magnetization'] = wannier_data
 
-      print("myjob=",myjob)
+      print_wannier_table(wannier_data, wannier_magnetization)
+
+
+      #print("myjob=",myjob)
+
+      #print("wannier=", myjob['wannier'])
 
        
 
