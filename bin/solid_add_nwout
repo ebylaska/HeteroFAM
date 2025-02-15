@@ -24,6 +24,7 @@ MY_ENV                = os.environ.copy()
 MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 
 #babel       = "/usr/bin/env babel"
+bader = ARROWS_HOME + "/bader/bader/bader "
 obabel      = "/usr/bin/env obabel "
 myxyz2smiles = ARROWS_HOME + "/bin/myxyz2smiles "
 esmiles2xyz  = ARROWS_HOME + "/bin/esmiles2xyz "
@@ -4617,6 +4618,218 @@ def delete_esmiles(hup,dbfile,table,esmiles):
 
 
 
+def parse_cube_files(nwchem_output_file):
+    """
+    Parses an NWChem output file to extract cube file names for different densities.
+
+    Args:
+        nwchem_output_file (str): Path to the NWChem output file.
+
+    Returns:
+        dict: A dictionary mapping density types to their respective cube file names.
+    """
+    cube_files = {}
+
+    # Define patterns for each density type
+    patterns = {
+        "difference": r"writing difference density to filename:\s*(\S+)",
+        "alpha": r"writing alpha density to filename:\s*(\S+)",
+        "beta": r"writing beta density to filename:\s*(\S+)",
+        "total": r"writing total density to filename:\s*(\S+)"
+    }
+
+    with open(nwchem_output_file, "r") as file:
+        for line in file:
+            for key, pattern in patterns.items():
+                match = re.search(pattern, line)
+                if match:
+                    cube_files[key] = match.group(1)
+
+    return cube_files
+
+
+def validate_cube_files(nwchem_output_file, extradata_files):
+    """
+    Parses an NWChem output file to extract cube file names and checks if they exist in extradata_files.
+
+    Args:
+        nwchem_output_file (str): Path to the NWChem output file.
+        extradata_files (str): A string containing a list of available filenames.
+
+    Returns:
+        dict: A dictionary indicating whether each cube file is found in extradata_files.
+    """
+    # Parse the cube files from the NWChem output
+    cube_files = parse_cube_files(nwchem_output_file)
+
+    # Convert extradata_files string into a set of filenames
+    available_files = set(extradata_files.split())
+
+    # Check if each cube file is in extradata_files
+    validation_results = {}
+    for key, filename in cube_files.items():
+        validation_results[key] = filename in available_files
+
+    return validation_results
+
+
+
+def are_all_cube_files_present(nwchem_output_file, extradata_files):
+    """
+    Parses an NWChem output file to extract cube file names and checks if all required cube files exist in extradata_files.
+
+    Args:
+        nwchem_output_file (str): Path to the NWChem output file.
+        extradata_files (str): A string containing a list of available filenames.
+
+    Returns:
+        bool: True if all cube files are present, False otherwise.
+        list: List of missing cube files (if any).
+    """
+    # Parse the cube files from the NWChem output
+    cube_files = parse_cube_files(nwchem_output_file)
+
+    # Convert extradata_files string into a set of filenames
+    available_files = set(extradata_files.split())
+
+    # Determine missing files
+    missing_files = [filename for filename in cube_files.values() if filename not in available_files]
+
+    # Return True if all files are present, otherwise False with the missing files list
+    return len(missing_files) == 0, missing_files
+
+
+
+def get_full_cube_filenames(jjjj, extradata_files):
+    """
+    Finds the complete filenames in extradata_files that match cube file names from jjjj.
+
+    Args:
+        jjjj (dict): Dictionary containing expected cube file names (e.g., {'difference': 'diff.cube', ...}).
+        extradata_files (str): A space-separated string containing all available filenames.
+
+    Returns:
+        dict: A dictionary mapping cube file types (difference, alpha, beta, total) to their full filenames.
+    """
+    # Convert extradata_files into a list of filenames
+    available_files = extradata_files.split()
+
+    # Map cube file types to their complete filenames
+    full_filenames = {}
+
+    for key, filename in jjjj.items():
+        # Find the full filename that matches the expected filename
+        matching_files = [f for f in available_files if filename in f]
+
+        # If a match is found, store it
+        if matching_files:
+            full_filenames[key] = matching_files[0]  # Take the first match
+
+    return full_filenames
+
+
+
+def extract_atom_names_from_cube(cube_filename):
+    """
+    Parses a Gaussian Cube file to extract atom names based on atomic numbers.
+
+    Args:
+        cube_filename (str): Path to the Gaussian Cube file.
+
+    Returns:
+        dict: Dictionary mapping atom indices (starting from 1) to atom names (symbols).
+    """
+    atom_names = {}
+    
+    # Complete Periodic Table Mapping (Atomic Number -> Element Symbol)
+    periodic_table = {
+        1: "H",  2: "He", 3: "Li", 4: "Be", 5: "B", 6: "C", 7: "N", 8: "O", 9: "F", 10: "Ne",
+        11: "Na", 12: "Mg", 13: "Al", 14: "Si", 15: "P", 16: "S", 17: "Cl", 18: "Ar",
+        19: "K",  20: "Ca", 21: "Sc", 22: "Ti", 23: "V", 24: "Cr", 25: "Mn", 26: "Fe", 27: "Co", 28: "Ni",
+        29: "Cu", 30: "Zn", 31: "Ga", 32: "Ge", 33: "As", 34: "Se", 35: "Br", 36: "Kr",
+        37: "Rb", 38: "Sr", 39: "Y",  40: "Zr", 41: "Nb", 42: "Mo", 43: "Tc", 44: "Ru", 45: "Rh", 46: "Pd",
+        47: "Ag", 48: "Cd", 49: "In", 50: "Sn", 51: "Sb", 52: "Te", 53: "I",  54: "Xe",
+        55: "Cs", 56: "Ba", 57: "La", 58: "Ce", 59: "Pr", 60: "Nd", 61: "Pm", 62: "Sm", 63: "Eu", 64: "Gd",
+        65: "Tb", 66: "Dy", 67: "Ho", 68: "Er", 69: "Tm", 70: "Yb", 71: "Lu",
+        72: "Hf", 73: "Ta", 74: "W",  75: "Re", 76: "Os", 77: "Ir", 78: "Pt", 79: "Au", 80: "Hg",
+        81: "Tl", 82: "Pb", 83: "Bi", 84: "Po", 85: "At", 86: "Rn",
+        87: "Fr", 88: "Ra", 89: "Ac", 90: "Th", 91: "Pa", 92: "U",  93: "Np", 94: "Pu", 95: "Am", 96: "Cm",
+        97: "Bk", 98: "Cf", 99: "Es", 100: "Fm", 101: "Md", 102: "No", 103: "Lr",
+        104: "Rf", 105: "Db", 106: "Sg", 107: "Bh", 108: "Hs", 109: "Mt", 110: "Ds", 111: "Rg",
+        112: "Cn", 113: "Nh", 114: "Fl", 115: "Mc", 116: "Lv", 117: "Ts", 118: "Og"
+    }
+
+    with open(cube_filename, "r") as file:
+        lines = file.readlines()
+
+        # The third line contains the number of atoms
+        num_atoms = int(lines[2].split()[0])  # First value in the third line
+        
+        # Atom data starts at line 6, extract each atom
+        for i in range(num_atoms):
+            parts = lines[6 + i].split()
+            atomic_number = int(parts[0])  # Atomic number (first column)
+            atom_names[i + 1] = periodic_table.get(atomic_number, "Unknown")  # Map to symbol
+
+    return atom_names
+
+
+
+
+
+def extract_bader_charges(acf_text):
+    """
+    Extracts Bader charges from ACF.dat file content.
+
+    Args:
+        acf_text (str): Content of the ACF.dat file as a string.
+
+    Returns:
+        dict: A dictionary mapping atom numbers to Bader charges (floats).
+    """
+    bader_charges = {}
+
+    for line in acf_text.splitlines():
+        match = re.match(r"\s*(\d+)\s+([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)\s+([-.\d]+)", line)
+        if match:
+            atom_number = int(match.group(1))  # Atom number
+            charge = float(match.group(5))  # Bader charge
+            bader_charges[atom_number] = charge
+
+    return bader_charges
+
+
+def compute_bader_magnetization(alpha_bader, beta_bader, atom_names):
+    """
+    Computes the magnetization (alpha charge - beta charge) for each atom and includes atom names.
+
+    Args:
+        alpha_bader (dict): Dictionary of alpha Bader charges with atom numbers as keys.
+        beta_bader (dict): Dictionary of beta Bader charges with atom numbers as keys.
+        atom_names (dict): Dictionary mapping atom numbers to atom names.
+
+    Returns:
+        dict: A dictionary mapping atom numbers to a tuple (atom name, magnetization value).
+    """
+    magnetization = {}
+
+    for atom_number in alpha_bader.keys():
+        if atom_number in beta_bader:
+            magnetization[atom_number] = (atom_names.get(atom_number, "Unknown"), 
+                                          alpha_bader[atom_number] - beta_bader[atom_number])
+        else:
+            print(f"Warning: Atom {atom_number} is missing in beta Bader charges!")
+
+    return magnetization
+
+
+
+
+
+
+
+
+
 def print_wannier_table(wannier_data, wannier_magnetization):
     """
     Prints a formatted table of Wannier data and magnetization.
@@ -4635,6 +4848,65 @@ def print_wannier_table(wannier_data, wannier_magnetization):
         magnetization = wannier_magnetization[atom_id]['wannier_magnetization']
         
         print(f"{atom_id:<6} {atom_type:<4} {up:<12} {down:<14} {magnetization:<20}")
+
+
+def print_bader_analysis(bader_alpha, bader_beta, bader_total, bader_magnetization):
+    """
+    Prints a formatted table of Bader alpha, beta, total charges, and magnetization.
+
+    Args:
+        bader_alpha (dict): Mapping of atom index to Bader alpha charge.
+        bader_beta (dict): Mapping of atom index to Bader beta charge.
+        bader_total (dict): Mapping of atom index to total Bader charge.
+        bader_magnetization (dict): Mapping of atom index to (Element Symbol, Bader Magnetization) tuple.
+    """
+    print("\n=== Bader Charge and Magnetization Analysis ===")
+    print(f"{'Atom #':<8}{'Element':<8}{'Alpha Charge':<15}{'Beta Charge':<15}{'Total Charge':<15}{'Bader Mag':<15}")
+    print("=" * 80)
+
+    for atom_id in sorted(bader_total.keys()):
+        alpha_charge = bader_alpha.get(atom_id, 0.0)
+        beta_charge = bader_beta.get(atom_id, 0.0)
+        total_charge = bader_total.get(atom_id, 0.0)
+        bader_entry = bader_magnetization.get(atom_id, ("Unknown", 0.0))
+
+        if isinstance(bader_entry, tuple) and len(bader_entry) == 2:
+            element, bader_mag = bader_entry
+        else:
+            element, bader_mag = "Unknown", 0.0  # Handle missing or incorrect data gracefully
+
+        print(f"{atom_id:<8}{element:<8}{alpha_charge:<15.4f}{beta_charge:<15.4f}{total_charge:<15.4f}{bader_mag:<15.4f}")
+
+    print("=" * 80)
+
+
+def print_both_magnetization(wannier_data, wannier_magnetization, bader_magnetization):
+    """
+    Prints both Wannier and Bader magnetization for each atom.
+
+    Args:
+        wannier_data (dict): Dictionary containing atom types.
+        wannier_magnetization (dict): Mapping of atom index to Wannier magnetization (float).
+        bader_magnetization (dict): Mapping of atom index to (Element Symbol, Bader Magnetization) tuple.
+    """
+    print("\n=== Wannier and Bader Magnetization per Atom ===")
+    print(f"{'Atom #':<8}{'Element':<8}{'Wannier Mag':<15}{'Bader Mag':<15}")
+    print("=" * 50)
+
+    for atom_id in sorted(set(wannier_magnetization.keys()) | set(bader_magnetization.keys())):
+        # Ensure atom_id exists in both dictionaries
+        wannier_mag = wannier_magnetization.get(atom_id, {}).get('wannier_magnetization', 0.0)
+        bader_entry = bader_magnetization.get(atom_id, ("Unknown", 0.0))
+        
+        if isinstance(bader_entry, tuple) and len(bader_entry) == 2:
+            element, bader_mag = bader_entry
+        else:
+            element, bader_mag = "Unknown", 0.0  # Handle incorrect format gracefully
+
+        print(f"{atom_id:<8}{element:<8}{wannier_mag:<15.4f}{bader_mag:<15.4f}")
+
+    print("=" * 50)
+
 
 
 
@@ -4691,6 +4963,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
   myjob['bader_charges'] = " "
  
   
+  print("extra_datafiles=", extra_datafiles)
 
 
   if (os.path.exists(outfile)):
@@ -4726,6 +4999,8 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       myjob['mult']   = parse_mult(outfile_without_hash)
 
       myjob['spin_penalty'] = parse_spin_penalty(outfile_without_hash)
+
+
 
       #theory = parse_theory(outfile)
       myjob['xc']     = parse_xc(outfile)
@@ -4785,14 +5060,71 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       #print("DEBUG: Parsed Wannier Data =", wannier_data)  # Debugging
       #print("DEBUG: Parsed Wannier wannier magnetization =", wannier_magnetization)  # Debugging
       myjob['wannier'] = wannier_data
-      myjob['wannier_magnetization'] = wannier_data
+      myjob['wannier_magnetization'] = wannier_magnetization
 
       print_wannier_table(wannier_data, wannier_magnetization)
 
 
-      #print("myjob=",myjob)
+      if  (are_all_cube_files_present(outfile_without_hash, extra_datafiles)):
+         myjob['cube_files']   = parse_cube_files(outfile_without_hash)
+         jjjj =  parse_cube_files(outfile_without_hash)
+
+         alphacube =  get_full_cube_filenames(parse_cube_files(outfile_without_hash),extra_datafiles)['alpha']
+         betacube =  get_full_cube_filenames(parse_cube_files(outfile_without_hash),extra_datafiles)['beta']
+         totalcube =  get_full_cube_filenames(parse_cube_files(outfile_without_hash),extra_datafiles)['total']
+         diffcube =  get_full_cube_filenames(parse_cube_files(outfile_without_hash),extra_datafiles)['difference']
+         atom_names = extract_atom_names_from_cube(alphacube)
+         
+         #print("alphacube=",alphacube)
+         #print("betacube=",betacube)
+         #print("totalcube=",totalcube)
+         #print("diffcube=",diffcube)
+
+         cmd = bader + alphacube
+         alpha_result = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+         alpha_acf = ''
+         with open("ACF.dat",'r') as ff:
+            alpha_acf += ff.read()
+
+         cmd = bader + betacube
+         result = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+         beta_acf = ''
+         with open("ACF.dat",'r') as ff:
+            beta_acf += ff.read()
+
+         cmd = bader + totalcube
+         result = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+         total_acf = ''
+         with open("ACF.dat",'r') as ff:
+            total_acf += ff.read()
+
+         bader_alpha = extract_bader_charges(alpha_acf)
+         bader_beta  = extract_bader_charges(beta_acf)
+         bader_total = extract_bader_charges(total_acf)
+         #print("Alpha Bader Charges:", bader_alpha)
+         #print("Beta Bader Charges:", bader_beta)
+         #print("Total Bader Charges:", bader_total)
+         bader_magnetization = compute_bader_magnetization(bader_alpha, bader_beta,atom_names)
+         myjob['bader_alpha'] = bader_alpha
+         myjob['bader_beta']  = bader_beta
+         myjob['bader_total'] = bader_total
+         myjob['bader_magnetization'] = bader_magnetization
+         #print("bader magnetization:", bader_magnetization)
+
+         print_bader_analysis(bader_alpha, bader_beta, bader_total, bader_magnetization)
+         print_both_magnetization(wannier_data, wannier_magnetization, bader_magnetization)
+
+         # Print Results
+         #print("Bader Magnetization per Atom:")
+         #for atom, (name, mag) in bader_magnetization.items():
+         #    print(f"Atom {atom} ({name}): {mag:.4f}")
+
+         
+
 
       #print("wannier=", myjob['wannier'])
+
+      print("myjob=",myjob)
 
        
 
@@ -4903,6 +5235,8 @@ for i in range(len(args)):
    nwofiles.append(args[i])
 
 
+print("nwofile=",nwofiles)
+print("extradatafiles=",extra_datafiles)
 
 
 for outfile in nwofiles:
