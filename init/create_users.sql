@@ -23,9 +23,9 @@ SOURCE /docker-entrypoint-initdb.d/backup/eric3.sql;
 CREATE USER IF NOT EXISTS 'hetero'@'%' IDENTIFIED BY 'solid';
 GRANT ALL PRIVILEGES ON HeteroFAM_Project.* TO 'hetero'@'%';
 
--- Load eric4.sql into HeteroFAM_Project
+-- Load eric5.sql into HeteroFAM_Project
 USE HeteroFAM_Project;
-SOURCE /docker-entrypoint-initdb.d/backup/eric4.sql;
+SOURCE /docker-entrypoint-initdb.d/backup/eric5.sql;
 
 
 -- Grant user 'arrows' access to the 'HeteroFAM_Project' database
