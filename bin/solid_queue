@@ -2,7 +2,7 @@
 
 #import sys,os,time,pickle,math,urllib2,getopt,subprocess,pexpect,random,operator,pymongo,json
 import sys,os,time,pickle,math,urllib.request,getopt,subprocess,pexpect,random,operator,pymongo,json
-import datetime,re
+import datetime,re,pymatgen
 from bson.objectid import ObjectId
 from math import *
 
@@ -119,7 +119,7 @@ else:
    ismongo      = False
 
 # Define the TinyMongo collections
-arrows_db                        = nosql_client.Arrows
+arrows_db                        = nosql_client.Solids
 chemdb_queue_collection0         = CustomCollection(arrows_db.chemdb_queue_collection0, ismongo)
 chemdb_queue_collection          = CustomCollection(arrows_db.chemdb_queue_collection, ismongo)
 chemdb_finished_queue_collection = CustomCollection(arrows_db.chemdb_finished_queue_collection, ismongo)
@@ -144,12 +144,12 @@ wrkdir           = ARROWS_HOME + "/Work"
 tmpxyz1          = "chemdb_queue.xyz" 
 tmpinchi1        = "chemdb_queue.inchi" 
 curdir           = os.getcwd()
-lockfilename     = ARROWS_HOME + "/Work/chemdbqueue1.lockfile"
+lockfilename     = ARROWS_HOME + "/Work/solidqueue1.lockfile"
 ############## machine parameters #########################
 ###################### PARAMETERS ###########################
 
 def use_arrows_api(prog):
-   return prog + "--arrows_api=" + ARROWS_API_HOME + " "
+   return prog + "--heterofam_api=" + ARROWS_API_HOME + " "
 
 
 def evalnum(s):
@@ -414,6 +414,14 @@ periodic_table_valence_charge = {
 }
 
 
+# Add a function to parse CIF or POSCAR files
+def parse_cif_or_poscar(file_path):
+    with open(file_path, 'r') as f:
+        data = f.read()
+    # Parse the structure (e.g., using pymatgen or ASE)
+    from pymatgen.core import Structure
+    structure = Structure.from_file(file_path)
+    return structure
 
 
 

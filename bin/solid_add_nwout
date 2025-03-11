@@ -2,6 +2,9 @@
 
 import sys,os,time,pickle,math,urllib,pexpect,getopt,subprocess,random,operator,re,yaml,sqlite3,tempfile
 import pymysql as MySQLdb
+import numpy as np
+from datetime import datetime
+
 
 import shutil
 import uuid
@@ -621,7 +624,6 @@ def xyz_bond_string0(mformula,symbol,n,adjmat,indx1,indx2):
 
    #return  mformula + ":bond:" + bonding + ":" + bonding2 + ":" + bonding3 + ":" + bonding3r + ":" + bonding4r + ":" + bonding5r + ":" + neighbors
    return  mformula + ":bond:" + bonding + ":" + bonding2 + ":" + bonding3 + ":" + bonding3r + ":" + bonding4r + ":" + bonding5r 
-
 
 
 
@@ -1836,6 +1838,249 @@ def inchihasHZ(inchi):
 
    return hasHZ
 
+def parse_job_info_datetime(file_path):
+    """
+    Parses the job start datetime from the 'Job information' section in an NWChem output file.
+
+    Args:
+        file_path (str): Path to the NWChem output file.
+
+    Returns:
+        datetime: Parsed job start datetime or None if not found.
+    """
+    # Regex pattern to match the date line
+    date_pattern = re.compile(r"\s*date\s*=\s*(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})")
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            match = date_pattern.search(line)
+            if match:
+                date_str = match.group(1)
+                try:
+                    # Parse the matched date string into a datetime object
+                    job_datetime = datetime.strptime(date_str, "%a %b %d %H:%M:%S %Y")
+                    return job_datetime
+                except ValueError:
+                    print(f"Failed to parse datetime: {date_str}")
+                    return None
+
+    print("No job start datetime found in the file.")
+    return None
+
+
+
+def parse_detailed_pseudopotentials(file_path):
+    """
+    Parses detailed pseudopotentials from an NWChem output file.
+
+    Args:
+        file_path (str): Path to the NWChem output file.
+
+    Returns:
+        dict: Dictionary with element symbols as keys and pseudopotential details as values.
+    """
+    pseudopotentials = {}
+    current_element = None
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Match element and basic properties
+            element_match = re.match(r"\s*\d+:\s*([A-Za-z]{1,2})\s+valence charge:\s+([-0-9.]+)\s+lmax=\s+(\d+)", line)
+            if element_match:
+                current_element = element_match.group(1)
+                pseudopotentials[current_element] = {
+                    "valence_charge": float(element_match.group(2)),
+                    "lmax": int(element_match.group(3)),
+                    "comment": "",
+                    "pseudopotential_type": None,
+                    "highest_angular_component": None,
+                    "local_potential_used": None,
+                    "non_local_projections": None,
+                    "semicore_corrections": None,
+                    "cutoff": []
+                }
+                continue
+
+            # Match comment line
+            comment_match = re.match(r"\s*comment\s*:\s*(.*)", line)
+            if comment_match and current_element:
+                pseudopotentials[current_element]["comment"] = comment_match.group(1).strip()
+                continue
+
+            # Match pseudopotential type
+            psp_type_match = re.match(r"\s*pseudpotential type\s*:\s*(\d+)", line)
+            if psp_type_match and current_element:
+                pseudopotentials[current_element]["pseudopotential_type"] = int(psp_type_match.group(1))
+                continue
+
+            # Match highest angular component
+            angular_match = re.match(r"\s*highest angular component\s*:\s*(\d+)", line)
+            if angular_match and current_element:
+                pseudopotentials[current_element]["highest_angular_component"] = int(angular_match.group(1))
+                continue
+
+            # Match local potential used
+            local_pot_match = re.match(r"\s*local potential used\s*:\s*(\d+)", line)
+            if local_pot_match and current_element:
+                pseudopotentials[current_element]["local_potential_used"] = int(local_pot_match.group(1))
+                continue
+
+            # Match number of non-local projections
+            nonlocal_proj_match = re.match(r"\s*number of non-local projections:\s*(\d+)", line)
+            if nonlocal_proj_match and current_element:
+                pseudopotentials[current_element]["non_local_projections"] = int(nonlocal_proj_match.group(1))
+                continue
+
+            # Match semicore corrections
+            semicore_match = re.match(r"\s*semicore corrections included\s*:\s*([-0-9.]+)\s*\(radius\)\s*([-0-9.]+)\s*\(charge\)", line)
+            if semicore_match and current_element:
+                pseudopotentials[current_element]["semicore_corrections"] = {
+                    "radius": float(semicore_match.group(1)),
+                    "charge": float(semicore_match.group(2))
+                }
+                continue
+
+            # Match cutoff values
+            cutoff_match = re.match(r"\s*cutoff\s*=\s*([-0-9.]+)\s+([-0-9.]+)\s*([-0-9.]*)", line)
+            if cutoff_match and current_element:
+                cutoff_values = [float(val) for val in cutoff_match.groups() if val]
+                pseudopotentials[current_element]["cutoff"] = cutoff_values
+                continue
+
+    return pseudopotentials
+
+
+
+def parse_space_group(file_path):
+    """
+    Parses space group information from an NWChem output file.
+    Defaults to 'P1' if no space group is found.
+
+    Args:
+        file_path (str): Path to the NWChem output file.
+
+    Returns:
+        dict: A dictionary containing space group information (name and number).
+    """
+    # Default to P1 (space group number 1)
+    space_group_data = {
+        "space_group_name": "P1",
+        "space_group_number": 1
+    }
+
+    # Regular expressions to match space group details
+    space_group_name_pattern = re.compile(r"\s*Space\s+Group\s*:\s*([A-Za-z0-9\-/]+)")
+    space_group_number_pattern = re.compile(r"\s*Space\s+Group\s+Number\s*:\s*(\d+)")
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            # Match space group name
+            name_match = space_group_name_pattern.search(line)
+            if name_match:
+                space_group_data["space_group_name"] = name_match.group(1)
+
+            # Match space group number
+            number_match = space_group_number_pattern.search(line)
+            if number_match:
+                space_group_data["space_group_number"] = int(number_match.group(1))
+
+    return space_group_data
+
+
+def parse_lattice_parameters(unitcell):
+    """
+    Parses lattice parameters from a unit cell dictionary.
+
+    Args:
+        unitcell (dict): Dictionary containing unit cell parameters.
+
+    Returns:
+        dict: Parsed lattice parameters including lengths, angles, and lattice vectors.
+    """
+    lattice_parameters = {
+        "a": unitcell.get("a", 0.0),
+        "b": unitcell.get("b", 0.0),
+        "c": unitcell.get("c", 0.0),
+        "alpha": unitcell.get("alpha", 90.0),
+        "beta": unitcell.get("beta", 90.0),
+        "gamma": unitcell.get("gamma", 90.0),
+        "lattice_vectors": unitcell.get("lattice_vectors", [])
+    }
+
+    return lattice_parameters
+
+
+def parse_lattice_type(unitcell, tol=1e-3):
+    """
+    Determines the lattice type based on unit cell parameters.
+
+    Args:
+        unitcell (dict): Dictionary containing unit cell parameters.
+        tol (float): Tolerance for floating-point comparisons.
+
+    Returns:
+        str: Lattice type (e.g., Cubic, Tetragonal, Hexagonal, etc.)
+    """
+    # Extract parameters
+    a = unitcell.get("a", 0.0)
+    b = unitcell.get("b", 0.0)
+    c = unitcell.get("c", 0.0)
+    alpha = unitcell.get("alpha", 90.0)
+    beta = unitcell.get("beta", 90.0)
+    gamma = unitcell.get("gamma", 90.0)
+
+    # Helper function for float comparisons
+    def is_close(x, y):
+        return abs(x - y) < tol
+
+    # Lattice type identification
+    if is_close(a, b) and is_close(b, c):
+        if is_close(alpha, 90) and is_close(beta, 90) and is_close(gamma, 90):
+            return "Cubic"
+        elif is_close(alpha, beta) and is_close(beta, gamma) and not is_close(alpha, 90):
+            return "Rhombohedral (Trigonal)"
+    elif is_close(a, b) and not is_close(c, a):
+        if is_close(alpha, 90) and is_close(beta, 90) and is_close(gamma, 90):
+            return "Tetragonal"
+        elif is_close(alpha, 90) and is_close(beta, 90) and is_close(gamma, 120):
+            return "Hexagonal"
+    elif not is_close(a, b) and not is_close(b, c):
+        if is_close(alpha, 90) and is_close(beta, 90) and is_close(gamma, 90):
+            return "Orthorhombic"
+        elif is_close(alpha, 90) and not is_close(beta, 90) and is_close(gamma, 90):
+            return "Monoclinic"
+        else:
+            return "Triclinic"
+
+    return "Unknown"
+
+
+def parse_total_pspw_energy(file_path):
+    """
+    Parses the Total PSPW energy from an NWChem output file.
+
+    Args:
+        file_path (str): Path to the NWChem output file.
+
+    Returns:
+        float: Total PSPW energy if found, else None.
+    """
+    energy_pattern = re.compile(r"Total PSPW energy\s*:\s*([-+]?\d*\.\d+|\d+)[eEdD]?([-+]?\d+)?")
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            match = energy_pattern.search(line)
+            if match:
+                base = float(match.group(1))
+                exponent = int(match.group(2)) if match.group(2) else 0
+                total_energy = base * (10 ** exponent)
+                return total_energy
+
+    # Return None if the pattern is not found
+    return None
+
+
+
 
 
 def parse_unitcell_calculation(filename):
@@ -1856,6 +2101,68 @@ def parse_unitcell_calculation(filename):
       if ('alpha=' in ll) and ('beta=' in ll) and ('gamma' in ll): cell[4] = ll
 
    return '\n'.join(cell)
+
+
+
+def parse_unitcell_from_string(unitcell_string):
+    """
+    Parses unit cell information from a string into a dictionary.
+    """
+    # Regex for lattice constants
+    constants_pattern = re.search(r'a=\s*([\d\.]+)\s*b=\s*([\d\.]+)\s*c=\s*([\d\.]+)', unitcell_string)
+    angles_pattern = re.search(r'alpha=\s*([\d\.]+)\s*beta=\s*([\d\.]+)\s*gamma=\s*([\d\.]+)', unitcell_string)
+    
+    # Regex for lattice vectors (allow flexible spaces and signs)
+    lattice_vectors = []
+    for i in range(1, 4):
+        vector_pattern = re.search(r'a{}\s*=<\s*([-\d\.]+)\s+([-\d\.]+)\s+([-\d\.]+)\s*>'.format(i), unitcell_string)
+        if vector_pattern:
+            lattice_vectors.append([float(coord) for coord in vector_pattern.groups()])
+        else:
+            raise ValueError(f"❌ Error: Could not parse lattice vector a{i}. Line: {unitcell_string}")
+
+    if not constants_pattern or not angles_pattern:
+        raise ValueError("❌ Error: Lattice constants or angles not found.")
+
+    a, b, c = map(float, constants_pattern.groups())
+    alpha, beta, gamma = map(float, angles_pattern.groups())
+
+    return {
+        'a': a, 'b': b, 'c': c,
+        'alpha': alpha, 'beta': beta, 'gamma': gamma,
+        'lattice_vectors': lattice_vectors
+    }
+
+def convert_unitcell_to_angstrom(unitcell):
+    """
+    Converts unit cell dimensions and lattice vectors from Bohrs to Ångströms.
+
+    Args:
+        unitcell (dict): Unit cell dictionary with keys 'a', 'b', 'c', 'alpha', 'beta', 'gamma', and 'lattice_vectors'.
+
+    Returns:
+        dict: Converted unit cell in Ångströms.
+    """
+    bohr_to_angstrom = 0.529177
+
+    # Convert lattice constants
+    converted_cell = {
+        'a': unitcell['a'] * bohr_to_angstrom,
+        'b': unitcell['b'] * bohr_to_angstrom,
+        'c': unitcell['c'] * bohr_to_angstrom,
+        'alpha': unitcell['alpha'],
+        'beta': unitcell['beta'],
+        'gamma': unitcell['gamma'],
+        'lattice_vectors': []
+    }
+
+    # Convert lattice vectors
+    for vector in unitcell['lattice_vectors']:
+        converted_vector = [coord * bohr_to_angstrom for coord in vector]
+        converted_cell['lattice_vectors'].append(converted_vector)
+
+    return converted_cell
+
 
 
 
@@ -2755,6 +3062,121 @@ def parse_spin_penalty(file_path):
     return spin_data
 
 
+def apply_spin_penalty(initial_magnetic_moments, spin_penalty):
+    """
+    Applies spin penalties to the initial magnetic moments.
+
+    Args:
+        initial_magnetic_moments (dict): Atom index to initial magnetic moment.
+        spin_penalty (dict): Spin penalty with 'up' and 'down' indices.
+
+    Returns:
+        dict: Atom index to corrected magnetic moment.
+    """
+
+    # Extract up and down penalty indices
+    up_indices = set(spin_penalty.get('up', {}).get('indices', []))
+    down_indices = set(spin_penalty.get('down', {}).get('indices', []))
+
+    corrected_moments = {}
+
+    for atom_index, moment in initial_magnetic_moments.items():
+        if atom_index in up_indices:
+            # Up-spin penalized: favor down-spin (negative moment)
+            corrected_moments[atom_index] = -abs(moment)
+        elif atom_index in down_indices:
+            # Down-spin penalized: favor up-spin (positive moment)
+            corrected_moments[atom_index] = abs(moment)
+        else:
+            # No penalty applied
+            corrected_moments[atom_index] = moment
+
+    return corrected_moments
+
+
+
+
+def compute_magnetic_moments_nwout(nwout_file):
+    """
+    Parses an NWChem output file to extract atoms and spin penalties,
+    and computes initial magnetic moments using predefined MAGNETIC_ION_SPINS.
+
+    Args:
+        nwout_file (str): Path to the NWChem output file.
+
+    Returns:
+        dict: Atom index mapped to initial magnetic moment.
+    """
+
+    # Predefined magnetic moments for elements
+    MAGNETIC_ION_SPINS = {
+        # Transition Metals
+        'Sc': 0.0, 'Ti': 1.0, 'V': 1.5, 'Cr': 1.5, 'Mn': 2.5, 'Fe': 2.5, 'Co': 1.5, 'Ni': 1.0, 'Cu': 0.5, 'Zn': 0.0,
+        'Y': 0.0, 'Zr': 0.5, 'Nb': 1.0, 'Mo': 1.5, 'Tc': 2.0, 'Ru': 1.5, 'Rh': 1.0, 'Pd': 0.0, 'Ag': 0.0, 'Cd': 0.0,
+        'Hf': 0.5, 'Ta': 1.0, 'W': 1.5, 'Re': 2.0, 'Os': 1.5, 'Ir': 1.0, 'Pt': 0.0, 'Au': 0.5, 'Hg': 0.0,
+
+        # Lanthanides
+        'La': 0.0, 'Ce': 1.0, 'Pr': 1.5, 'Nd': 2.0, 'Pm': 2.5, 'Sm': 2.5, 'Eu': 3.0, 'Gd': 3.5, 'Tb': 3.0,
+        'Dy': 2.5, 'Ho': 2.0, 'Er': 1.5, 'Tm': 1.0, 'Yb': 0.5, 'Lu': 0.0,
+
+        # Actinides
+        'Th': 0.0, 'Pa': 0.5, 'U': 1.0, 'Np': 1.5, 'Pu': 2.0, 'Am': 2.5, 'Cm': 3.0, 'Bk': 3.5, 'Cf': 4.0,
+        'Es': 3.5, 'Fm': 3.0, 'Md': 2.5, 'No': 2.0, 'Lr': 0.5
+    }
+
+    atom_list = []
+    spin_penalty = {'up': {'penalty_value': 1.0, 'indices': []},
+                    'down': {'penalty_value': -1.0, 'indices': []}}
+    initial_moments = {}
+
+    # Regex patterns to parse atoms and spin_penalty
+    atom_pattern = re.compile(r'^\s*(\d+)\s+([A-Z][a-z]?)\s+.*$')
+    spin_penalty_pattern = re.compile(r'spin_penalty\s*=\s*(\{.*?\})', re.DOTALL)
+
+    with open(nwout_file, 'r') as file:
+        content = file.read()
+
+        # Step 1: Extract spin_penalty as a JSON-like string
+        spin_penalty_match = spin_penalty_pattern.search(content)
+        if spin_penalty_match:
+            spin_penalty_str = spin_penalty_match.group(1)
+            try:
+                # Convert string to dictionary
+                spin_penalty = json.loads(spin_penalty_str.replace("'", '"'))
+            except json.JSONDecodeError:
+                print("Error parsing spin_penalty from NWChem output.")
+
+        # Step 2: Parse atom list
+        for line in content.splitlines():
+            match = atom_pattern.match(line)
+            if match:
+                atom_index = int(match.group(1))
+                element = match.group(2)
+                atom_list.append((atom_index, element))
+
+    # Step 3: Extract penalty indices
+    up_indices = set(spin_penalty.get('up', {}).get('indices', []))
+    down_indices = set(spin_penalty.get('down', {}).get('indices', []))
+
+    # Step 4: Compute magnetic moments
+    for index, element in atom_list:
+        moment = MAGNETIC_ION_SPINS.get(element, 0.0)  # Default moment
+
+        # Apply spin penalties with corrected logic
+        if index in up_indices:
+            # If up-spin is penalized, atom prefers down-spin (negative moment)
+            initial_moments[index] = -abs(moment)
+        elif index in down_indices:
+            # If down-spin is penalized, atom prefers up-spin (positive moment)
+            initial_moments[index] = abs(moment)
+        else:
+            # No penalty applied, use default moment
+            initial_moments[index] = moment
+
+    return initial_moments
+
+
+
 
 #def parse_xyz_data(file_path):
 #    """
@@ -2780,9 +3202,10 @@ def parse_spin_penalty(file_path):
 #    return xyz_data
 #
 
-def parse_xyz_data(file_path):
+
+def parse_output_to_xyz(file_path):
     """
-    Parses XYZ coordinates from a given output file and returns an XYZ format string.
+    Parses XYZ coordinates from a formatted output file and returns an XYZ format string.
 
     Args:
         file_path (str): Path to the output file.
@@ -2791,21 +3214,50 @@ def parse_xyz_data(file_path):
         str: XYZ formatted string.
     """
     xyz_data = []
-    
+    parsing_atoms = False
+    before_parsing_atoms = False
+    counter = 0
+
     with open(file_path, "r") as file:
         for line in file:
-            # Match lines that contain atomic elements followed by three coordinates
-            match = re.match(r"^\s*([A-Za-z]+)\s+([-0-9.]+)\s+([-0-9.]+)\s+([-0-9.]+)", line)
-            if match:
-                element = match.group(1)  # Atomic element symbol
-                x, y, z = map(float, match.groups()[1:])  # Convert coordinates to float
-                xyz_data.append((element, x, y, z))
+            # Start parsing when the line indicates atomic positions
+            if " XYZ format geometry" in line:
+                before_parsing_atoms = True
+                counter = 0 
+                #continue
+
+            if before_parsing_atoms:
+               counter += 1
+               print("counter=",counter," line=",line)
+               if (counter>=5):
+                  parsing_atoms = True
+                  before_parsing_atoms = False
+                  print("parsing_atoms=",parsing_atoms)
+
+        
+
+            # Detect end of atomic coordinate block
+            #if parsing_atoms and not re.match(r"\s*\d+\s+[A-Za-z]{1,2}\s+[-0-9.]+\s+[-0-9.]+\s+[-0-9.]+\s+[-0-9.]+", line):
+            if parsing_atoms and re.match(r"=========================", line):
+                parsing_atoms = False
+                print("2parsing_atoms=",parsing_atoms)
+
+            # If parsing, extract the atomic data
+            if parsing_atoms:
+                #match = re.match(r"\s*(\d+)\s+([A-Za-z]{1,2})\s+[-0-9.]+\s+([-0-9.]+)\s+([-0-9.]+)\s+([-0-9.]+)", line)
+                match = re.match(r"\s*([A-Za-z]{1,2})\s+([-0-9.]+)\s+([-0-9.]+)\s+([-0-9.]+)", line)
+                if match:
+                    element = match.group(1)
+                    x, y, z = map(float, match.groups()[1:])
+                    xyz_data.append((element, x, y, z))
 
     # Convert to XYZ format string
     xyz_string = f"{len(xyz_data)}\nXYZ file generated from output\n"
     xyz_string += "\n".join(f"{element} {x:.6f} {y:.6f} {z:.6f}" for element, x, y, z in xyz_data)
 
     return xyz_string
+
+
 
 
 def parse_xyzblob(outfile,tmpxyzfile):
@@ -2831,6 +3283,8 @@ def parse_xyzblob(outfile,tmpxyzfile):
               if (not done):
                  if (count>=0):
                     count += 1
+                 if (line.find(" XYZ format geometry") != -1):
+                    ofound = True
                  if (line.find("Optimization converged") != -1):
                     ofound = True
                  if (line.find("Failed to converge in maximum number of steps") != -1):
@@ -2841,9 +3295,9 @@ def parse_xyzblob(outfile,tmpxyzfile):
                     xyzdat = []
          ofile.close()
 
-         #print("xyzdat=",xyzdat)
+         print("xyzdat=",xyzdat)
 
-         #print("Generating xyzfile = ",xyzfile)
+         print("Generating xyzfile = ",xyzfile)
          n = len(xyzdat)
          xfile = open(tmpxyzfile,'w')
          xfile.write("%d\n\n" % n)
@@ -2861,6 +3315,83 @@ def parse_xyzblob(outfile,tmpxyzfile):
          print("Cannot generate xyzblob ")
 
    return xyzblob
+
+
+def nwchem_output_to_cif_string(unitcell_data, xyzblob):
+    """
+    Generates CIF formatted string from unitcell data and xyz blob.
+
+    Args:
+        unitcell_data (dict): Contains lattice constants and lattice vectors.
+        xyzblob (str): XYZ data in string format.
+
+    Returns:
+        str: CIF formatted data.
+    """
+    import numpy as np
+
+    # Parse unitcell data
+    a = unitcell_data['a']
+    b = unitcell_data['b']
+    c = unitcell_data['c']
+    alpha = unitcell_data['alpha']
+    beta = unitcell_data['beta']
+    gamma = unitcell_data['gamma']
+    lattice_vectors = unitcell_data['lattice_vectors']
+
+    # Parse xyzblob into a structured list
+    atom_list = []
+    xyz_lines = xyzblob.strip().split('\n')
+
+    try:
+        n_atoms = int(xyz_lines[0])  # First line is the number of atoms
+    except ValueError:
+        raise ValueError("❌ Error: XYZ blob format is incorrect. First line should be the atom count.")
+
+    # The actual atom data starts from the third line
+    for line in xyz_lines[2:2 + n_atoms]:
+        parts = line.strip().split()
+        if len(parts) < 4:
+            continue  # Skip invalid lines
+        element = parts[0]
+        x, y, z = map(float, parts[1:4])
+        atom_list.append({'element': element, 'x': x, 'y': y, 'z': z})
+
+    # Start CIF string construction
+    cif_lines = []
+    cif_lines.append("data_generated_from_nwchem")
+    cif_lines.append("_symmetry_space_group_name_H-M   'P1'")
+    cif_lines.append("_symmetry_Int_Tables_number     1")
+    cif_lines.append(f"_cell_length_a    {a:.6f}")
+    cif_lines.append(f"_cell_length_b    {b:.6f}")
+    cif_lines.append(f"_cell_length_c    {c:.6f}")
+    cif_lines.append(f"_cell_angle_alpha {alpha:.2f}")
+    cif_lines.append(f"_cell_angle_beta  {beta:.2f}")
+    cif_lines.append(f"_cell_angle_gamma {gamma:.2f}\n")
+
+    cif_lines.append("loop_")
+    cif_lines.append("_atom_site_label")
+    cif_lines.append("_atom_site_type_symbol")
+    cif_lines.append("_atom_site_fract_x")
+    cif_lines.append("_atom_site_fract_y")
+    cif_lines.append("_atom_site_fract_z")
+
+    # Convert cartesian coordinates to fractional using lattice vectors
+    lattice_matrix = np.array(lattice_vectors).T  # 3x3 matrix with columns as lattice vectors
+    inv_lattice = np.linalg.inv(lattice_matrix)
+
+    for idx, atom in enumerate(atom_list, start=1):
+        cart_coords = np.array([atom['x'], atom['y'], atom['z']])
+        frac_coords = np.dot(inv_lattice, cart_coords)
+        element = atom['element']
+        cif_lines.append(f"{element}{idx} {element} {frac_coords[0]:.6f} {frac_coords[1]:.6f} {frac_coords[2]:.6f}")
+
+    # Combine all CIF lines into a single string
+    cif_content = "\n".join(cif_lines)
+    return cif_content
+
+
+
 
 
 
@@ -3365,6 +3896,7 @@ def parse_matrix_elements(outfile):
    return mdict
 
 
+
 def parse_wannier_centers(file_path):
     """
     Parses the final position of Wannier centers from an NWChem output file.
@@ -3390,7 +3922,8 @@ def parse_wannier_centers(file_path):
                 break
 
     if up_start is None or down_start is None:
-        raise ValueError("Could not find 'final position of Wannier centers' for both spins.")
+        #raise ValueError("Could not find 'final position of Wannier centers' for both spins.")
+        return
 
     def extract_wannier_data(start_line):
         """Extracts Wannier data from the given section."""
@@ -3432,6 +3965,46 @@ def parse_wannier_centers(file_path):
         }
 
     return combined_wannier
+
+
+
+def parse_dly_wannier_centers(file_path):
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+
+    dly_data = {}
+    inside_dly_block = False
+
+    # Identify start of DLY block
+    for line in lines:
+        if "Damle-Lin-Ying Algorithm" in line:
+            inside_dly_block = True
+            continue
+
+        if inside_dly_block:
+            # Terminate on reaching the end of DLY section
+            if "== Center of Charge ==" in line or "output psi filename" in line:
+                break
+
+            # Match DLY orbital data
+            match = re.search(r"psi\s+\d+\s+\(.*\)\s+-\s+spin\s+(up|down)\s+orbital, nearest ion=\s*([A-Za-z]+)\s+(\d+)", line)
+            if match:
+                spin = match.group(1)
+                atom_type = match.group(2)
+                atom_num = int(match.group(3))
+
+                if atom_num not in dly_data:
+                    dly_data[atom_num] = {"type": atom_type, "up": 0, "down": 0}
+
+                if spin == "up":
+                    dly_data[atom_num]["up"] += 1
+                else:
+                    dly_data[atom_num]["down"] += 1
+
+    return dly_data
+
+
+
 
 
 def compute_wannier_magnetization(wannier_data):
@@ -4757,6 +5330,28 @@ def print_wannier_table(wannier_data, wannier_magnetization):
         print(f"{atom_id:<6} {atom_type:<4} {up:<12} {down:<14} {magnetization:<20}")
 
 
+def print_dly_table(dly_data, dly_magnetization):
+    """ 
+    Prints a formatted table of dly data and magnetization.
+
+    Args:
+        dly_data (dict): Dictionary containing atom types and spin counts.
+        dly_magnetization (dict): Dictionary containing dly magnetization values.
+    """
+    print(f"{'Atom':<6} {'Type':<4} {'DLY Up':<12} {'DLY Down':<14} {'DLY Magnetization':<20}")
+    print("=" * 60)
+    
+    for atom_id in sorted(dly_data.keys()):
+        atom_type = dly_data[atom_id]['type']
+        up = dly_data[atom_id]['up']
+        down = dly_data[atom_id]['down']
+        magnetization = dly_magnetization[atom_id]['wannier_magnetization']
+        
+        print(f"{atom_id:<6} {atom_type:<4} {up:<12} {down:<14} {magnetization:<20}")
+
+
+
+
 def print_bader_analysis(bader_alpha, bader_beta, bader_total, bader_magnetization):
     """
     Prints a formatted table of Bader alpha, beta, total charges, and magnetization.
@@ -4814,6 +5409,162 @@ def print_both_magnetization(wannier_data, wannier_magnetization, bader_magnetiz
 
     print("=" * 50)
 
+
+
+def clean_input(nwinput_str):
+    """Removes comments and empty lines from the input file."""
+    return "\n".join(line.split("#")[0].strip() for line in nwinput_str.splitlines() if line.strip())
+
+def parse_geometry(nwinput_str):
+    """Extracts atomic coordinates and unit cell information from the geometry block."""
+    if "geometry" not in nwinput_str:
+        return ""
+
+    geometry_blk = nwinput_str.split("geometry", 1)[1]
+    lattice_blk = ""
+
+    if "system crystal" in geometry_blk:
+        lattice_blk, geometry_blk = geometry_blk.split("end", 1)
+    else:
+        geometry_blk = geometry_blk.split("end", 1)[0]
+
+    atom_lines = [line.strip() for line in geometry_blk.split("\n") if line.strip()]
+
+    # ✅ Ensure only atom coordinates are in `fractionaldata{}` (Remove `task` commands)
+    valid_atoms = [line.split() for line in atom_lines if len(line.split()) == 4 and "task" not in line.lower()]
+
+    xyz_data = [f"{symb} {x} {y} {z}" for symb, x, y, z in valid_atoms]
+
+    if lattice_blk:
+        lattice_lines = [line.strip() for line in lattice_blk.split("\n") if line.strip()]
+        lattice = " | ".join(lattice_lines[1:])  # Skip 'lattice_vectors' line
+        geometry = f"fractionaldata{{{' | '.join(xyz_data)}}} unitcell{{{lattice}}}"
+    else:
+        geometry = f"xyzdata{{{' | '.join(xyz_data)}}}"
+
+    return geometry
+
+def parse_nwpw_block(nwinput_str):
+    """Parses the `nwpw` block for xc, mult, cutoff, pspspin, and uterm values."""
+    nwinput_str = clean_input(nwinput_str)
+
+    match = re.search(r"nwpw(.*?)end\s*\n", nwinput_str, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return ""
+
+    nwpw_block = match.group(1).strip()
+    output = []
+
+    patterns = {
+        "xc": r"\bxc\s+(\S+)",
+        "mult": r"\bmult\s+(\d+)",
+        "cutoff": r"\bcutoff\s+([\d\.]+)"
+    }
+
+    for key, pattern in patterns.items():
+        match = re.search(pattern, nwpw_block, re.IGNORECASE)
+        if match:
+            value = match.group(1).strip()
+            output.append(f"{key}{{{value}}}" if key != "cutoff" else f"basis{{{value}}}")
+
+    # Extract pspspin up/down
+    pspspin_up = re.findall(r"pspspin\s+up\s+d\s+(-?\d+\.?\d*)\s+([\d\s:]+)", nwpw_block, re.IGNORECASE)
+    pspspin_down = re.findall(r"pspspin\s+down\s+d\s+(-?\d+\.?\d*)\s+([\d\s:]+)", nwpw_block, re.IGNORECASE)
+
+    if pspspin_up:
+        spin_value, indices = pspspin_up[0]
+        output.append(f"pspspin{{up d {spin_value} {indices.strip()}}}")
+
+    if pspspin_down:
+        spin_value, indices = pspspin_down[0]
+        output.append(f"pspspin{{down d {spin_value} {indices.strip()}}}")
+
+    # Extract `uterm` values
+    #uterms = re.findall(r"uterm d (.*?)\n", nwpw_block, re.IGNORECASE)
+    uterms = re.findall(r"uterm\s+d\s+([\d\.\s:]+)", nwpw_block, re.IGNORECASE | re.MULTILINE)
+    for uterm in uterms:
+        output.append(f"uterm{{d {uterm.strip()}}}")
+
+    return " ".join(output)
+
+def parse_dplot(nwinput_str):
+    """Extracts the `dplot` block and formats it for `pspw_dplot{}` inside `calculation_type{}`."""
+    dplot_match = re.search(r"dplot(.*?)end", nwinput_str, re.DOTALL | re.IGNORECASE)
+    if not dplot_match:
+        return ""
+
+    dplot_block = dplot_match.group(1).strip()
+    densities = re.findall(r"density\s+(\w+)\s+([\w\.]+)", dplot_block, re.IGNORECASE)
+
+    if not densities:
+        return ""
+
+    dplot_entries = [f"density {density} {file}" for density, file in densities]
+    return f"pspw_dplot{{{' | '.join(dplot_entries)}}}"
+
+def parse_calculation(nwinput_str):
+    """Parses task commands, set commands, and embeds dplot inside `calculation_type{}` while maintaining the order."""
+    tasks = nwinput_str.split("task")
+    calculations = []
+    #set_commands = []
+    include_pspspin_off = False
+    dplot_entry = parse_dplot(nwinput_str)
+
+    # Step 2: Process tasks **IN ORIGINAL ORDER**
+    for task in tasks[1:]:  # Skip the first split part before 'task'
+        lines = task.strip().split("\n")
+        first_line = lines[0].strip()
+        calc_type = first_line.replace("pspw ", "").replace("ignore", "").strip()
+
+        if calc_type == "pspw_dplot" and dplot_entry:
+            calculations.append(dplot_entry)
+        elif calc_type and calc_type != "pspw_dplot":
+            calculations.append(calc_type)
+
+        # Extract `set` commands before second and later tasks
+        for line in lines:
+            if line.startswith("set "):
+                calculations.append(f"set{{{line[4:].strip()}}}")
+            if line.startswith("uterm "):
+                calculations.append("uterm{" + line.replace("uterm","").strip()+"}")
+            if line.startswith("pspspin off"):
+                calculations.append("pspspin{off}")
+
+        #if calc_type == "pspw_dplot" and dplot_entry:
+        #    calculations.append(dplot_entry)
+        #elif calc_type and calc_type != "pspw_dplot":
+        #    calculations.append(calc_type)
+
+    return f"calculation_type{{{'-'.join(calculations)}}}" if calculations else "calculation_type{}"
+
+def parse_theory(nwinput_str):
+    """Determines the theory used (pspw or band). Default to pspw for NWPW calculations."""
+    if "nwpw" in nwinput_str.lower():
+        return "theory{pspw}"
+    return "theory{band}"
+
+def parse_nw_file_to_esmiles(nwinput_str):
+    """Reads and parses an NWChem input string to eSMILES."""
+    nwinput_str = clean_input(nwinput_str)
+    mygeom = parse_geometry(nwinput_str)
+    nwpw_settings = parse_nwpw_block(nwinput_str)
+    calculations = parse_calculation(nwinput_str)
+    theory = parse_theory(nwinput_str)
+
+    esmiles = f"{mygeom} {nwpw_settings} {theory} {calculations}"
+    return esmiles
+
+def parse_nwinput_to_esmiles(nwoutput):
+    # Example Run
+    nwinput_str = ""
+    with open(nwoutput, "r") as f:
+        nwinput_str = f.read()
+
+    nwinput_str = nwinput_str.split("============================== echo of input deck ==============================")[1]
+    nwinput_str = nwinput_str.split("================================================================================")[0]
+
+    esmiles_output = parse_nw_file_to_esmiles(nwinput_str)
+    return esmiles_output
 
 
 
@@ -4892,13 +5643,14 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       ### add yaml file ###
       myjob['theory'] = parse_theory(outfile)
 
+      myjob['datetime'] = parse_job_info_datetime(outfile_without_hash)
 
       myjob['jobok']    = parse_calculation_ok(outfile_without_hash)
       myjob['program']  = parse_program(outfile_without_hash)
       myjob['machine']  = parse_machine(outfile_without_hash)
       myjob['ncpu']     = parse_ncpu(outfile_without_hash)
       myjob['wall_time']= parse_wall_time(outfile_without_hash)
-      myjob['energy']   = parse_energy(outfile_without_hash)
+      #myjob['energy']   = parse_energy(outfile_without_hash)
       myjob['enthalpy'] = parse_enthalpy(outfile_without_hash)
       myjob['entropy']  = parse_entropy(outfile_without_hash)
 
@@ -4906,6 +5658,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       myjob['mult']   = parse_mult(outfile_without_hash)
 
       myjob['spin_penalty'] = parse_spin_penalty(outfile_without_hash)
+      myjob['initial_magnetic_moments'] = apply_spin_penalty(compute_magnetic_moments_nwout(outfile_without_hash), myjob['spin_penalty'])
 
 
 
@@ -4913,14 +5666,24 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       myjob['xc']     = parse_xc(outfile)
       myjob['basis']  = parse_basis(False,outfile)
 
+      myjob['pseudopotentials'] =  parse_detailed_pseudopotentials(outfile_without_hash)
 
-      myjob['unitcell'] = parse_unitcell_calculation(outfile_without_hash)
+      raw_unitcell = parse_unitcell_calculation(outfile_without_hash)
+      print("raw=",raw_unitcell)
+      myjob['unitcell'] = convert_unitcell_to_angstrom(parse_unitcell_from_string(raw_unitcell))
+      print("unitcell=",myjob['unitcell']);
+      myjob['lattice_parameters']  = parse_lattice_parameters(myjob['unitcell'])
+      myjob['lattice_type']  = parse_lattice_type(myjob['unitcell'])
    
 
-      myjob['xyzblob']  = parse_xyz_data(outfile_without_hash)
+      myjob['xyzblob']  = parse_output_to_xyz(outfile_without_hash)
+      #myjob['xyzblob'] =  parse_xyzblob(outfile_without_hash,"hello.xyz")
+      myjob['cif']      = nwchem_output_to_cif_string(myjob['unitcell'],myjob['xyzblob'])
       #myjob['smiles']   = xyz2smiles(myjob['xyzblob'])
       #myjob['InChI']    = smiles2InChI(myjob['smiles'])
       myjob['InChIKey'] = xyz2InChIKey(myjob['xyzblob'])
+      myjob['space_group']  = parse_space_group(outfile_without_hash)
+      myjob['energy'] = parse_total_pspw_energy(outfile_without_hash)
 
       #myjob['cid']      = pubchem_smiles2cid(myjob['smiles'])
       #myjob['cas']      = pubchem_smiles2cas(myjob['smiles'])
@@ -4929,6 +5692,8 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       #InChI2 = xyz2InChI(xyzfile)
       myjob['mformula'] = xyz_molecular_formula(myjob['xyzblob'])
       #(bonding_string, covalent_string) = xyz_bonding_strings(xyzfile)
+
+      myjob['esmiles'] = parse_nwinput_to_esmiles(outfile_without_hash)
    
       myjob['client']    = parse_client(outfile_without_hash)
 
@@ -4963,16 +5728,29 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       #ASA      = sum(msurface[0])
       #SAV      = sum(msurface[1])
       wannier_data = parse_wannier_centers(outfile_without_hash)
-      wannier_magnetization = compute_wannier_magnetization(wannier_data)
+      print("wannier_data=",wannier_data)  
+      if (wannier_data!=None):
+         wannier_magnetization = compute_wannier_magnetization(wannier_data)
+         myjob['wannier'] = wannier_data
+         myjob['wannier_magnetization'] = wannier_magnetization
+         print_wannier_table(wannier_data, wannier_magnetization)
+
       #print("DEBUG: Parsed Wannier Data =", wannier_data)  # Debugging
       #print("DEBUG: Parsed Wannier wannier magnetization =", wannier_magnetization)  # Debugging
-      myjob['wannier'] = wannier_data
-      myjob['wannier_magnetization'] = wannier_magnetization
-
-      print_wannier_table(wannier_data, wannier_magnetization)
 
 
-      if  (are_all_cube_files_present(outfile_without_hash, extra_datafiles)):
+      dly_data = parse_dly_wannier_centers(outfile_without_hash)
+      print("dly_data=",dly_data)
+      if ((dly_data!=None) and (len(dly_data)>0)):
+         dly_magnetization = compute_wannier_magnetization(dly_data)
+         myjob['dly'] = dly_data
+         myjob['dly_magnetization'] = dly_magnetization
+         print_dly_table(dly_data, dly_magnetization)
+      
+
+
+      if (len(extra_datafiles)>0):
+       if  (are_all_cube_files_present(outfile_without_hash, extra_datafiles)):
          myjob['cube_files']   = parse_cube_files(outfile_without_hash)
          jjjj =  parse_cube_files(outfile_without_hash)
 
@@ -5032,6 +5810,48 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       #print("wannier=", myjob['wannier'])
 
       print("myjob=",myjob)
+
+      print()
+      print(" xyzblob             =",myjob['xyzblob']);
+      print(" cif                 =",myjob['cif']);
+      print(" unitcell            =",myjob['unitcell']);
+      print(" mformula            =",myjob['mformula'])
+      print(" iupac                  =",myjob['iupac'])
+      print(" theory                 =",myjob['theory'])
+      print(" datetime               =",myjob['datetime'])
+      print(" k_point_grid           =",myjob['k_point_grid'])
+      print(" smear_type             =",myjob['smearing_type'])
+      print(" smearing_width         =",myjob['smearing_width'])
+      print(" calculation_type       =",myjob['calculation_type'])
+      print(" machine                =",myjob['machine'])
+      print(" ncpu                   =",myjob['ncpu'])
+      print(" wall_time              =",myjob['wall_time'])
+      print(" pseudopotentials       =",myjob['pseudopotentials'])
+      print(" esmiles                =",myjob['esmiles']);
+      print(" material_name          =",myjob['material_name'])
+      print(" lattice_parameters     =",myjob['lattice_parameters'])
+      print(" lattice_type           =",myjob['lattice_type'])
+      print(" space_group            =",myjob['space_group'])
+      print(" basis                  =",myjob['basis'])
+      print(" energy                 =",myjob['energy'])
+      print(" enthalpy               =",myjob['enthalpy'])
+      print(" entropy                =",myjob['entropy'])
+      print(" hubbard_U              =",myjob['hubbaard_U'])
+      print(" initial_magnetic_moments=",myjob['initial_magnetic_moments'])
+      print(" wannier                =",myjob['wannier'])
+      print(" wannier_magnetization  =",myjob['wannier_magnetization'])
+      if ((dly_data!=None) and (len(dly_data)>0)):
+         print(" dly                    =",myjob['dly'])
+         print(" dly_magnetization      =",myjob['dly_magnetization'])
+      print(" bader_alpha            =",myjob['bader_alpha'])
+      print(" bader_beta             =",myjob['bader_beta'])
+      print(" bader_total            =",myjob['bader_total'])
+      print(" bader_magnetization    =",myjob['bader_magnetization'])
+      print(" jobok                  =",myjob['jobok'])
+      print(" client                 =",myjob['client'])
+      print(" spin penalty           =",myjob['spin_penalty'])
+
+
 
        
 

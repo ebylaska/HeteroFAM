@@ -1,0 +1,30 @@
+charge 0
+
+
+geometry noautoz nocenter noautosym
+C     0.00000    0.00000    0.00000
+H     0.63000    0.63000    0.63000
+H    -0.63000   -0.63000    0.63000
+H    -0.63000    0.63000   -0.63000
+H     0.63000   -0.63000   -0.63000
+end
+
+
+nwpw
+  ### pseudopotential block begin ###
+  ### pseudopotential block end   ###
+  cutoff 50.0
+  mult 1
+  xc pbe96
+  lmbfgs grassman 
+
+  2d-hcurve
+end
+set nwpw:kbpp_ray    .true.
+set nwpw:kbpp_filter .true.
+set nwpw:cif_filename H4C1
+
+task pspw energy ignore
+
+
+
