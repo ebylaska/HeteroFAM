@@ -22,7 +22,6 @@ services:
     container_name: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: 05291999
-      MYSQL_DATABASE: TNT_Project
       MYSQL_USER: hetero
       MYSQL_PASSWORD: solid
     command: --bind-address=0.0.0.0

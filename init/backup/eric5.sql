@@ -1,6 +1,5 @@
 USE HeteroFAM_Project;
 
-
 -- Create the 'materials' table with the additional columns
 CREATE TABLE IF NOT EXISTS materials (
     id INT AUTO_INCREMENT PRIMARY KEY,
