@@ -5617,8 +5617,8 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
   myjob['entropy'] = " "
   myjob['hubbaard_U'] = " "
   myjob['initial_magnetic_moment'] = " "
-  myjob['wannier_charges'] = " "
-  myjob['bader_charges'] = " "
+  myjob['wannier_charges'] = False
+  myjob['bader_charges'] = False
  
   
   print("extra_datafiles=", extra_datafiles)
@@ -5734,6 +5734,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          myjob['wannier'] = wannier_data
          myjob['wannier_magnetization'] = wannier_magnetization
          print_wannier_table(wannier_data, wannier_magnetization)
+         myjob['wannier_charges'] = True
 
       #print("DEBUG: Parsed Wannier Data =", wannier_data)  # Debugging
       #print("DEBUG: Parsed Wannier wannier magnetization =", wannier_magnetization)  # Debugging
@@ -5794,6 +5795,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          myjob['bader_beta']  = bader_beta
          myjob['bader_total'] = bader_total
          myjob['bader_magnetization'] = bader_magnetization
+         myjob['bader_charges'] = True
          #print("bader magnetization:", bader_magnetization)
 
          print_bader_analysis(bader_alpha, bader_beta, bader_total, bader_magnetization)
@@ -5838,15 +5840,17 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       print(" entropy                =",myjob['entropy'])
       print(" hubbard_U              =",myjob['hubbaard_U'])
       print(" initial_magnetic_moments=",myjob['initial_magnetic_moments'])
-      print(" wannier                =",myjob['wannier'])
-      print(" wannier_magnetization  =",myjob['wannier_magnetization'])
+      if (myjob['wannier_charges']):
+         print(" wannier                =",myjob['wannier'])
+         print(" wannier_magnetization  =",myjob['wannier_magnetization'])
       if ((dly_data!=None) and (len(dly_data)>0)):
          print(" dly                    =",myjob['dly'])
          print(" dly_magnetization      =",myjob['dly_magnetization'])
-      print(" bader_alpha            =",myjob['bader_alpha'])
-      print(" bader_beta             =",myjob['bader_beta'])
-      print(" bader_total            =",myjob['bader_total'])
-      print(" bader_magnetization    =",myjob['bader_magnetization'])
+      if (myjob['bader_charges']):
+         print(" bader_alpha            =",myjob['bader_alpha'])
+         print(" bader_beta             =",myjob['bader_beta'])
+         print(" bader_total            =",myjob['bader_total'])
+         print(" bader_magnetization    =",myjob['bader_magnetization'])
       print(" jobok                  =",myjob['jobok'])
       print(" client                 =",myjob['client'])
       print(" spin penalty           =",myjob['spin_penalty'])
