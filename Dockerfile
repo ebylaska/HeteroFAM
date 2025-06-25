@@ -17,7 +17,7 @@
 #<none>                  <none>    a784918828d1   53 minutes ago      2.16GB
 #mongo                   latest    9001035f35d3   11 days ago         624MB
 
-FROM python:3-slim-buster
+FROM python:3-slim
 
 WORKDIR /HeteroFAM
 
@@ -29,6 +29,8 @@ ENV NO_PROXY=localhost,127.0.0.1
 # Set up proxy for apt-get
 RUN echo 'Acquire::http::Proxy "http://proxy01.pnl.gov:3128";' >> /etc/apt/apt.conf.d/99proxy
 
+# Add your .nwchemrc to the container
+COPY .nwchemrc /root/.nwchemrc
 
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
@@ -36,10 +38,11 @@ RUN pip3 install -r requirements.txt
 # Install Open Babel
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openbabel gnuplot \
-    && apt-get install -y openjdk-11-jdk vim \
+    && apt-get install -y  --no-install-recommends openjdk-17-jdk vim nwchem \
     && rm -rf /var/lib/apt/lists/*
 
 
 COPY . .
 
-CMD [ "python3", "Public/app9.py"]
+#CMD [ "python3", "Public/app9.py"]
+CMD [ "python3", "-u", "Public/app9.py"]
