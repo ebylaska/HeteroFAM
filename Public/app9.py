@@ -3,24 +3,46 @@
 from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory, Response, session
 from flask import abort
 from werkzeug.utils import secure_filename
-import os,subprocess,urllib,time,random,requests,zipfile,math,yaml
+import os,subprocess,urllib,time,random,requests,zipfile,re,math,yaml
 import paramiko,secrets
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 ###################### HeteroFAM Locations #######################
 #HeteroFAM_HOME     = '/Users/bylaska/Public/TinyHeteroFAM'
-HeteroFAM_HOME     = __file__.split("HeteroFAM")[0] + "HeteroFAM"
+#HeteroFAM_HOME     = __file__.split("HeteroFAM")[0] + "HeteroFAM"
+#HeteroFAM_HOME     = '/HeteroFAM'
+try:
+    HeteroFAM_HOME = __file__.split("HeteroFAM")[0] + "HeteroFAM"
+    if not os.path.exists(HeteroFAM_HOME):
+        HeteroFAM_HOME = '/HeteroFAM'
+except:
+    HeteroFAM_HOME = '/HeteroFAM'
+
 
 print("HeteroFAM_HOME=",HeteroFAM_HOME)
 
-HeteroFAM_API_HOME = 'http://localhost:8080/api/'
+#HeteroFAM_API_HOME = 'http://localhost:8080/api/'
 #HeteroFAM_API_HOME = 'http://heterofam.pnnl.gov/api/'
+HeteroFAM_API_HOME = 'https://heterofam.pnnl.gov/api/'
 ###################### HeteroFAM Locations #######################
 
+UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #UPLOAD_FOLDER = '/tmp/'
-UPLOAD_FOLDER = HeteroFAM_HOME + '/Public/uploads/'
-ALLOWED_EXTENSIONS = set(['cube', 'out', 'nwout', 'nwo', 'nw', 'eap', 'xyz', 'emotion', 'ion_motion', 'fei','eigmotion','dipole_motion','POWER_SPECTRUM','dipole_powerspectrum','VELOCITY_SPECTRUM','yaml','note','txt', 'inp', 'dat', 'mol', 'psp', 'hist', 'gr', 'cif', 'meta_gaussians','neb_epath','neb_final_epath', 'json','csv','PAIR_DISTRIBUTION'])
+#UPLOAD_FOLDER = HeteroFAM_HOME + '/Public/uploads/'
 
-print("UPLOAD_FOLDER=",UPLOAD_FOLDER);
+ALLOWED_EXTENSIONS = {
+    'cube', 'out', 'nwout', 'nwo', 'nw', 'eap', 'xyz', 'emotion', 'ion_motion',
+    'fei', 'eigmotion', 'dipole_motion', 'POWER_SPECTRUM', 'dipole_powerspectrum',
+    'VELOCITY_SPECTRUM', 'yaml', 'note', 'txt', 'inp', 'dat', 'mol', 'psp', 'hist',
+    'gr', 'cif', 'meta_gaussians', 'neb_epath', 'neb_final_epath', 'json', 'csv',
+    'PAIR_DISTRIBUTION'
+}
+
+print("HeteroFAM_HOME =", HeteroFAM_HOME)
+print("UPLOAD_FOLDER =", UPLOAD_FOLDER)
 
 tar                     = "/bin/tar -czf " 
 chemdb_fetch_reactions  = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " -e "
@@ -39,6 +61,7 @@ chemdb_osra             = HeteroFAM_HOME + "/bin/chemdb_osra  "
 chemdb_molcalc          = HeteroFAM_HOME + "/bin/chemdb_molcalc "
 queue_nwchem3           = HeteroFAM_HOME + "/bin/queue_nwchem3 -s -a"
 cifocd_gennw            = HeteroFAM_HOME + "/bin/cifocd_gennw "
+cifocd_runnw            = HeteroFAM_HOME + "/bin/cifocd_runnw "
 esmiles2xyz             = HeteroFAM_HOME + "/bin/esmiles2xyz "
 wrkdir                  = HeteroFAM_HOME + "/Work"
 templatedir             = HeteroFAM_HOME + "/Public/templates"
@@ -59,7 +82,7 @@ headerfigure = [ '<a href="{{url_for(\'static\', filename=\'arrows-static/banner
 
 ##### define the arrows logos #####
 HeteroFAMHeader = '''
-   <head> <meta http-equiv="content-type" content="text/html; charset=UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, target-densitydpi=device-dpi"> <meta charset="utf-8"><link rel="icon" type="image/png" sizes="32x32" href="%sarrows-static/favicon-32x32.png"><link rel="icon" type="image/png" sizes="96x96" href="%sarrows-static/favicon-96x96.png"><link rel="icon" type="image/png" sizes="16x16" href="%sarrows-static/favicon-16x16.png"><style type="text/css"> </style> </head>
+   <head> <meta http-equiv="content-type" content="text/html; charset=UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"> <meta charset="utf-8"><link rel="icon" type="image/png" sizes="32x32" href="%sarrows-static/favicon-32x32.png"><link rel="icon" type="image/png" sizes="96x96" href="%sarrows-static/favicon-96x96.png"><link rel="icon" type="image/png" sizes="16x16" href="%sarrows-static/favicon-16x16.png"><style type="text/css"> </style> </head>
 
    <center> <font color="74A52B" size="+2"><p><b>Results from an HeteroFAM Request</b></p></font></center>
    <center> <p>Making molecular modeling accessible by combining NWChem, databases, web APIs (<a href="%s">%s</a>), and email (arrows@emsl.pnnl.gov)</p> </center>
@@ -902,6 +925,7 @@ def increment_apivisited():
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = secrets.token_hex(32)
+print("CONFIG UPLOAD_FOLDER =", app.config['UPLOAD_FOLDER'])
 
 
 tasks = [
@@ -2005,6 +2029,31 @@ def get_crystal_input_deck(ocd0):
     return data
 
 
+@app.route('/api/generate_crystal_cif/<ocd0>', methods=['GET'])
+def generate_crystal(ocd0):
+    global namecount
+    name = "tmp/reaction%d.html" % namecount
+    namecount += 1
+    try:
+       ocd0 = ocd0.replace("\"",'')
+       ocd0 = ocd0.replace("\'",'')
+       cmd7 = cifocd_runnw +  ocd0 
+       data = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       if len(data) == 0: data=ocd0 + " not generated\n"
+
+       htmlfile1 = templatedir + "/"+name
+
+       html = "<html>\n" 
+       html += HeteroFAMHeader
+       html += "<pre style=\"font-size:1.0em;color:black\">\n"
+       html += data
+       html += "</pre> </html>"
+       with open(htmlfile1,'w') as ff: ff.write(html)
+       data =  render_template(name)
+    except:
+       data = "Input generation failed\n"
+    return data
+
 
 
 @app.route('/api/calculation/', methods=['GET'])
@@ -2039,7 +2088,7 @@ def list_queue_nwchem3():
    return html
 
 
-############################ queue        ###############################
+############################ solid_queue ###############################
 @app.route('/api/solid_queue/', methods=['GET'])
 def solid_queue():
    global namecount
@@ -2067,6 +2116,239 @@ def solid_queue():
 
    return data
 
+@app.route('/api/solid_queue_html/', methods=['GET'])
+def list_solid_html():
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-l'
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "heteroFAM solid queue not found\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   for ln in calcs.split("\n"):
+      ss = ln.split()
+      if (len(ss)==0):
+         html += ln + "\n"
+      elif ss[0].isdigit():
+         restln = ln.split(ss[0])[1]
+         link   = HeteroFAM_API_HOME + "queue_view/"+ss[0]
+         hlink  = "<a href=\"" + link + "\">%s</a>" % ss[0]
+         nspace = 11-len(ss[0])
+         html += " " * nspace
+         html += hlink + restln + "\n"
+      else:
+         html += ln + "\n"
+   #html += calcs
+   html += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data =  render_template(name)
+
+   return data
+
+@app.route('/api/solid_queue_prequeue/', methods=['GET'])
+def submit_solid_prequeue():
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-c'
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "arrows queue not found\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += calcs
+   #html += "</pre> </html>"
+   calcs += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + calcs
+
+   return data
+
+
+@app.route('/api/solid_queue_reset/<esmiles>', methods=['GET'])
+def add_solid_reset(esmiles):
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      esmiles = esmiles.replace("\"",'')
+      esmiles = esmiles.replace("\'",'')
+      esmiles = esmiles.replace("%2F",'/')
+      if ("M" in esmiles):
+         cmd8 = solid_queue + '-m ' + '\"' +  esmiles + '\"'
+      else:
+         cmd8 = solid_queue + '-r ' + '\"' +  esmiles + '\"'
+      #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      result = "queue_reset = " + esmiles + " was not reset on arrows queue.\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += result
+   #html += "</pre> </html>"
+   result += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + result
+
+   return data
+
+
+@app.route('/api/solid_queue_delete/<esmiles>', methods=['GET'])
+def add_solid_delete(esmiles):
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      esmiles = esmiles.replace("\"",'')
+      esmiles = esmiles.replace("\'",'')
+      esmiles = esmiles.replace("%2F",'/')
+      cmd8 = solid_queue + '-d ' + '\"' +  esmiles + '\"'
+      #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      result = "queue_delete = " + esmiles + " was not removed from arrows queue.\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += result
+   #html += "</pre> </html>"
+   result += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + result
+
+   return data
+
+
+
+@app.route('/api/solid_queue_add/<esmiles>', methods=['GET'])
+def add_solid_queue(esmiles):
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      esmiles = esmiles.replace("\"",'')
+      esmiles = esmiles.replace("\'",'')
+      esmiles = esmiles.replace("%2F",'/')
+      cmd8 = solid_queue + '-a ' + '\"' +  esmiles + '\"'
+      #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      result = "queue_add = " + esmiles + " was not added to arrows queue.\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += result
+   #html += "</pre> </html>"
+   result += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + result
+
+   return data
+
+
+@app.route('/api/solid_queue_fetch/<jobid>', methods=['GET'])
+def fetch_solid_queue(jobid):
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-f ' + jobid
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "queue_entry = " + jobid + " was not found in arrows queue.\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   #html += calcs
+   #html += "</pre> </html>"
+   calcs += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data =  render_template(name) + calcs
+
+   return data
+
+
+@app.route('/api/solid_queue_view/<jobid>', methods=['GET'])
+def view_solid_queue(jobid):
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-q ' + jobid
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "queue_entry = " + jobid + " was not found in arrows queue.\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   if "START NWCHEM INPUT DECK - NWJOB" in calcs:
+      queuenumber = calcs.split("START NWCHEM INPUT DECK - NWJOB")[1].split("#")[0].strip()
+   else:
+      queuenumber = "unknown"
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   if queuenumber!="unknown":
+      link   = HeteroFAM_API_HOME + "queue_html"
+      hlink  = "HeteroFAM <a href=\"" + link + "\">queue</a> entry:" + queuenumber
+      html += hlink + "\n"
+      html += nwinput2jsmol("0x8c0101",calcs)
+   #html += calcs
+   #html += "</pre> </html>"
+   calcs += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data = render_template(name) + calcs
+
+   return data
+
+
+
+
+############################ queue        ###############################
 @app.route('/api/queue/', methods=['GET'])
 def list_queue():
    global namecount
@@ -2159,6 +2441,35 @@ def submit_queue():
    data =  render_template(name)
 
    return data
+
+
+@app.route('/api/solid_queue_submit/', methods=['GET'])
+def submit_solid_queue():
+   global namecount
+   name = "tmp/molecule%d.html" % namecount
+   namecount += 1
+   try:
+      increment_apivisited()
+      cmd8 = solid_queue + '-s'
+      #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+   except:
+      calcs = "arrows queue not found\n"
+
+   htmlfile1 = templatedir + "/"+name
+
+   html = "<html>\n"
+   html += HeteroFAMHeader
+   html += "<pre style=\"font-size:1.0em;color:black\">\n"
+   html += calcs
+   html += "</pre> </html>"
+
+   with open(htmlfile1,'w') as ff: ff.write(html)
+   data =  render_template(name)
+
+   return data
+
+
 
 @app.route('/api/queue_prequeue/', methods=['GET'])
 def submit_queue_prequeue():
@@ -2529,14 +2840,19 @@ def submit_output_deck(datafiles):
 @app.route('/api/upload/', methods=['GET','POST'])
 def index():
     #print "i am here", request
+    app.logger.debug("Request received: %s", request)
     if request.method == 'POST':
         #print "after post"
         file = request.files['file']
         #print "FILE=",file
         #print "file.filename=",file.filename, " file=",file
+        app.logger.debug("Uploaded file object: %s", file)
+        app.logger.debug("Filename: %s", file.filename)
+        print("secure_filename=", secure_filename(file.filename))
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            app.logger.info("File saved: %s", filename)
             return redirect(url_for('index'))
     return """
     <!doctype html>
@@ -2548,6 +2864,25 @@ def index():
     </form>
     <p>%s</p>
     """ % "<br>".join(os.listdir(app.config['UPLOAD_FOLDER'],))
+
+#@app.route('/api/upload/', methods=['GET', 'POST'])
+#def index():
+#    print("UPLOAD request method:", request.method)
+#    if request.method == 'POST':
+#        file = request.files.get('file')
+#        print("Received file object:", file)
+#        if file:
+#            print("Raw filename:", file.filename)
+#        if file and allowed_file(file.filename):
+#            filename = secure_filename(file.filename)
+#            full_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#            print("Saving file to:", full_path)
+#            file.save(full_path)
+#            print("Save successful.")
+#            return redirect(url_for('index'))
+#        else:
+#            print("Upload failed. Invalid or missing file.")
+#            return "Invalid file", 400
 
 
 ############################ queue        ###############################
@@ -2705,32 +3040,73 @@ def list_queue_nwchem_check(qname):
 
 
 
+#@app.route('/api/queue_nwchem_add/<filename>', methods=['GET'])
+#def add_queue_nwchem(filename):
+#   increment_apivisited()
+#   #print "filename=",filename
+#   filename = filename.replace("\"",'')
+#   filename = filename.replace("\'",'')
+#
+#   nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
+#
+#   #### call chemdb_queue ###
+#   if nwfilename != '':
+#      msg = "Submited " + nwfilename
+#      cmd1 = chemdb_queue_nwchem + "-a " +  nwfilename
+#      print("cmd1=",cmd1)
+#      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+#      print("result=",result)
+#
+#      print("==== queue_nwchem_add result ====")
+#      print(result)
+#      print("=================================")
+#
+#      if "QUEUE_ENTRY:" not in result:
+#          print("Error: QUEUE_ENTRY not found in result")
+#          return "QUEUE_ENTRY missing\n\n" + result, 500
+#
+#      qqnum = result.split("QUEUE_ENTRY:")[1].split(":QUEUE_ENTRY")[0]
+#
+#      msg += " - queue_entry = " + qqnum + "\n"
+#
+#   else:
+#      msg = "Nothing was submited"
+#
+#   #### clean the upload directory ####
+#   clean_upload_directory()
+#
+#   return msg
+
 @app.route('/api/queue_nwchem_add/<filename>', methods=['GET'])
 def add_queue_nwchem(filename):
-   increment_apivisited()
-   #print "filename=",filename
-   filename = filename.replace("\"",'')
-   filename = filename.replace("\'",'')
+    increment_apivisited()
+    filename = filename.replace("\"",'')
+    filename = filename.replace("\'",'')
+    filename = secure_filename(filename.strip('"\''))  # Clean input safely
 
-   nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
+    nwfilename = os.path.join(UPLOAD_FOLDER, filename)
 
-   #### call chemdb_queue ###
-   if nwfilename != '':
-      msg = "Submited " + nwfilename
-      cmd1 = chemdb_queue_nwchem + "-a " +  nwfilename
-      print("cmd1=",cmd1)
-      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
-      print("result=",result)
-      qqnum = result.split("QUEUE_ENTRY:")[1].split(":QUEUE_ENTRY")[0]
-      msg += " - queue_entry = " + qqnum + "\n"
+    if nwfilename != '':
+        msg = "Submitted " + nwfilename
+        cmd1 = chemdb_queue_nwchem + " -a " + nwfilename
+        print("cmd1=", cmd1)
+        result = subprocess.check_output(cmd1, shell=True, stderr=subprocess.STDOUT).decode("utf-8")
+        print("==== queue_nwchem_add result ====")
+        print(result)
+        print("=================================")
 
-   else:
-      msg = "Nothing was submited"
+        if "QUEUE_ENTRY:" not in result:
+            print("Error: QUEUE_ENTRY not found in result")
+            return "QUEUE_ENTRY missing\n\n" + result, 500
 
-   #### clean the upload directory ####
-   clean_upload_directory()
+        qqnum = result.split("QUEUE_ENTRY:")[1].split(":QUEUE_ENTRY")[0]
+        msg += " - queue_entry = " + qqnum + "\n"
+    else:
+        msg = "Nothing was submitted"
 
-   return msg
+    clean_upload_directory()
+    return msg
+
 
 
 @app.route('/api/queue_nwchem_fetch/<jobid>', methods=['GET'])
@@ -2939,87 +3315,172 @@ def download_datafiler0(datafile):
    return send_from_directory(directory='chemdb_hold', filename=ddfile,as_attachment=True)
 
 
+#@app.route('/api/submit_output_nwchem/<datafiles>', methods=['GET'])
+#def submit_output_nwchem_deck(datafiles):
+#   #
+#   print("datafiles=",datafiles)
+#   increment_apivisited()
+#   datafiles = datafiles.replace("\"",'')
+#   datafiles = datafiles.replace("\'",'')
+#
+#   print("datafiles2=",datafiles)
+#
+#
+#   #tt1 = time.localtime()
+#   #dd1 = "-%d-%d-%d-%d-%d-%d" % (tt1[0],tt1[1],tt1[2],tt1[3],tt1[4],tt1[5])
+#   ddrand = random.randint(0,999999)
+#   dd1 = "-%d" % (ddrand)
+#
+#   #### copy data to chemdbdir and find nwoutfile and datafiles ####
+#   nwoutfile = ''
+#   nwoutfile0 = ''
+#   string_of_datafiles = ''
+#   string_of_datafiles0 = ''
+#   for filename in datafiles.split():
+#      nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
+#      nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]+dd1
+#
+#      #nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]
+#      #if "." in nwfilename1:
+#      #   ppre  = ".".join(nwfilename1.split(".")[0:-1])
+#      #   ppost = nwfilename1.split(".")[-1]
+#      #   nwfilename1 = ppre + dd + "." + ppost
+#      #else:
+#      #   nwfilename1 = nwfilename1+dd1
+#
+#      nwfilename1 = nwfilename1.replace(",","-")
+#      print("FILENAME,nwfilename=",filename,nwfilename,nwfilename1)
+#      if os.path.exists(nwfilename):
+#         ### copy data to chemdbdir ###
+#         with open(nwfilename, 'r') as ff: tdata = ff.read()
+#         with open(nwfilename1,'w') as ff: ff.write(tdata)
+#
+#         ### look for nwout file  or datafile ###
+#         if ('.out' in filename) or ('.nwo' in filename):
+#            nwoutfile  = nwfilename1
+#            nwoutfile0 = filename
+#
+#            ### check for yaml ###
+#            if ("begin_two_electron_integrals" in tdata):
+#               myyamlfile = chemdbdir + "/" + "microsoft_qsharp_chem.yaml" + dd1
+#               string_of_datafiles += " " + myyamlfile 
+#               matrix_elements = parse_matrix_elements(nwfilename)
+#               if (len(matrix_elements)>0):
+#                  matrix_elements_blob = '\n' + '\n"$schema": https://raw.githubusercontent.com/Microsoft/Quantum/master/Chemistry/Schema/broombridge-0.1.schema.json\n\n'
+#                  matrix_elements_blob += yaml.dump(matrix_elements)
+#                  with open(myyamlfile,'w') as ff:
+#                     ff.write(matrix_elements_blob)
+#
+#         else:
+#            string_of_datafiles  += nwfilename1 + " "
+#            string_of_datafiles0 += filename  + " "
+#   string_of_datafiles  = string_of_datafiles.strip()
+#   string_of_datafiles0 = string_of_datafiles0.strip()
+#
+#  #### call chemdb_queue ###
+#   if nwoutfile != '':
+#      msg = "Submited " + nwoutfile0
+#      cmd1 = chemdb_queue_nwchem + "-w " +  nwoutfile
+#      if string_of_datafiles!='':
+#         cmd1 +=  " -z \""+string_of_datafiles+"\""
+#         msg  += " with the following extra datafiles=" + string_of_datafiles0
+#
+#      print("cmd1=",cmd1)
+#      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+#      print("upload RESULT=",result)
+#
+#   else:
+#      msg = "Nothing was submited"
+#
+#   #### clean the upload directory ####
+#   clean_upload_directory()
+#
+#   return msg
+
+import sys
+
 @app.route('/api/submit_output_nwchem/<datafiles>', methods=['GET'])
 def submit_output_nwchem_deck(datafiles):
-   #
-   print("datafiles=",datafiles)
-   increment_apivisited()
-   datafiles = datafiles.replace("\"",'')
-   datafiles = datafiles.replace("\'",'')
+    print("Raw datafiles input =", datafiles, flush=True)
+    increment_apivisited()
 
-   print("datafiles2=",datafiles)
+    # Clean URL-encoded and quoted input
+    datafiles = urllib.parse.unquote(datafiles).replace('"', '').replace("'", '')
+    print("Sanitized datafiles =", datafiles)
 
+    ddrand = random.randint(0, 999999)
+    dd1 = f"-{ddrand}"
 
-   #tt1 = time.localtime()
-   #dd1 = "-%d-%d-%d-%d-%d-%d" % (tt1[0],tt1[1],tt1[2],tt1[3],tt1[4],tt1[5])
-   ddrand = random.randint(0,999999)
-   dd1 = "-%d" % (ddrand)
+    nwoutfile = ''
+    nwoutfile0 = ''
+    string_of_datafiles = ''
+    string_of_datafiles0 = ''
 
-   #### copy data to chemdbdir and find nwoutfile and datafiles ####
-   nwoutfile = ''
-   nwoutfile0 = ''
-   string_of_datafiles = ''
-   string_of_datafiles0 = ''
-   for filename in datafiles.split():
-      nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
-      nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]+dd1
+    for filename in datafiles.split():
+        fname_clean = secure_filename(filename.strip())
+        nwfilename = os.path.join(UPLOAD_FOLDER, fname_clean)
+        nwfilename1 = os.path.join(chemdbdir, f"{fname_clean}{dd1}").replace(",", "-")
 
-      #nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]
-      #if "." in nwfilename1:
-      #   ppre  = ".".join(nwfilename1.split(".")[0:-1])
-      #   ppost = nwfilename1.split(".")[-1]
-      #   nwfilename1 = ppre + dd + "." + ppost
-      #else:
-      #   nwfilename1 = nwfilename1+dd1
+        print("Processing file:", fname_clean, flush=True)
+        print("Source:", nwfilename, flush=True)
+        print("Dest:  ", nwfilename1, flush=True)
 
-      nwfilename1 = nwfilename1.replace(",","-")
-      print("FILENAME,nwfilename=",filename,nwfilename,nwfilename1)
-      if os.path.exists(nwfilename):
-         ### copy data to chemdbdir ###
-         with open(nwfilename, 'r') as ff: tdata = ff.read()
-         with open(nwfilename1,'w') as ff: ff.write(tdata)
+        if os.path.exists(nwfilename):
+            with open(nwfilename, 'r') as ff:
+                tdata = ff.read()
+            with open(nwfilename1, 'w') as ff:
+                ff.write(tdata)
 
-         ### look for nwout file  or datafile ###
-         if ('.out' in filename) or ('.nwo' in filename):
-            nwoutfile  = nwfilename1
-            nwoutfile0 = filename
+            #if fname_clean.endswith('.out') or fname_clean.endswith('.nwo') or fname_clean.endswith('.out00'):
+            if filename.endswith('.nwo') or re.search(r'\.out\d*$', filename) or filename.endswith('.out'):
 
-            ### check for yaml ###
-            if ("begin_two_electron_integrals" in tdata):
-               myyamlfile = chemdbdir + "/" + "microsoft_qsharp_chem.yaml" + dd1
-               string_of_datafiles += " " + myyamlfile 
-               matrix_elements = parse_matrix_elements(nwfilename)
-               if (len(matrix_elements)>0):
-                  matrix_elements_blob = '\n' + '\n"$schema": https://raw.githubusercontent.com/Microsoft/Quantum/master/Chemistry/Schema/broombridge-0.1.schema.json\n\n'
-                  matrix_elements_blob += yaml.dump(matrix_elements)
-                  with open(myyamlfile,'w') as ff:
-                     ff.write(matrix_elements_blob)
+                nwoutfile = nwfilename1
+                nwoutfile0 = fname_clean
 
-         else:
-            string_of_datafiles  += nwfilename1 + " "
-            string_of_datafiles0 += filename  + " "
-   string_of_datafiles  = string_of_datafiles.strip()
-   string_of_datafiles0 = string_of_datafiles0.strip()
+                if "begin_two_electron_integrals" in tdata:
+                    myyamlfile = os.path.join(chemdbdir, f"microsoft_qsharp_chem.yaml{dd1}")
+                    string_of_datafiles += " " + myyamlfile
+                    matrix_elements = parse_matrix_elements(nwfilename)
+                    if matrix_elements:
+                        matrix_elements_blob = (
+                            '\n\n"$schema": https://raw.githubusercontent.com/Microsoft/Quantum/master/'
+                            'Chemistry/Schema/broombridge-0.1.schema.json\n\n'
+                        )
+                        matrix_elements_blob += yaml.dump(matrix_elements)
+                        with open(myyamlfile, 'w') as ff:
+                            ff.write(matrix_elements_blob)
+            else:
+                string_of_datafiles += nwfilename1 + " "
+                string_of_datafiles0 += fname_clean + " "
+        else:
+            print("File does not exist:", nwfilename, flush=True)
 
-  #### call chemdb_queue ###
-   if nwoutfile != '':
-      msg = "Submited " + nwoutfile0
-      cmd1 = chemdb_queue_nwchem + "-w " +  nwoutfile
-      if string_of_datafiles!='':
-         cmd1 +=  " -z \""+string_of_datafiles+"\""
-         msg  += " with the following extra datafiles=" + string_of_datafiles0
+    string_of_datafiles = string_of_datafiles.strip()
+    string_of_datafiles0 = string_of_datafiles0.strip()
 
-      print("cmd1=",cmd1)
-      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
-      print("upload RESULT=",result)
+    # Submit job
+    if nwoutfile:
+        msg = f"Submitted {nwoutfile0}"
+        cmd1 = f"{chemdb_queue_nwchem} -w {nwoutfile}"
+        if string_of_datafiles:
+            cmd1 += f' -z "{string_of_datafiles}"'
+            msg += f" with the following extra datafiles = {string_of_datafiles0}"
 
-   else:
-      msg = "Nothing was submited"
+        print("cmd1 =", cmd1, flush=True)
+        #result = subprocess.check_output(cmd1, shell=True, stderr=subprocess.STDOUT).decode("utf-8")
+        try:
+           result = subprocess.check_output(cmd1, shell=True, stderr=subprocess.STDOUT).decode("utf-8")
+           print("Upload RESULT:\n", result, flush=True)
+        except subprocess.CalledProcessError as e:
+           print("Command failed:\n", e.output.decode("utf-8"), flush=True)
+           return "Submission failed:\n" + e.output.decode("utf-8"), 500
+        print("Upload RESULT:\n", result, flush=True)
+    else:
+        msg = "Nothing was submitted"
 
-   #### clean the upload directory ####
-   clean_upload_directory()
+    clean_upload_directory()
+    return msg
 
-   return msg
 
 
 
@@ -3064,6 +3525,10 @@ def arrows_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3183,6 +3648,10 @@ def arrows_reaction_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3290,6 +3759,10 @@ def arrows_3dbuilder_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3400,6 +3873,10 @@ def arrows_qsharp_chem_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3509,6 +3986,10 @@ def arrows_expert_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3620,6 +4101,10 @@ def arrows_periodic_draw_post():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3719,6 +4204,10 @@ def parsing_text():
        text2 = ireplace("FOR","for",text)
        ocd = text2.split('for')[1]
        return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
     elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
        text2 = ireplace("FOR","for",text)
        esmiles = text2.split('for')[1]
@@ -3825,6 +4314,20 @@ def arrows_magnetic_draw_post():
     return parsing_text(text)
 
 
+@app.route('/api/moire')
+def arrows_moire_draw_form():
+   increment_apivisited()
+   calcs = arrowsjobsrun()
+   molcalcs = calculationscount()
+   avisits = apivisited()
+   return render_template("emsl-moire.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+
+@app.route('/api/moire', methods=['POST'])
+def arrows_moire_draw_post():
+    text = request.form['smi']
+    text = text.replace("\"","")
+    text =  " ".join(text.split())
+    return parsing_text(text)
 
 
 @app.route('/api/arrows_input/')
@@ -4217,4 +4720,4 @@ if __name__ == '__main__':
     #app.run(debug=True,threaded=True)
     #app.run(host='0.0.0.0', threaded=True)
     #app.run(debug=True,host='0.0.0.0',port=5000,threaded=True)
-    app.run(debug=True,host='0.0.0.0',port=8080,threaded=True)
+    app.run(host='0.0.0.0',port=8080,threaded=True)

@@ -131,7 +131,7 @@ def pubchem_cid2InChI(cid):
     return result
 
 def ocd_get(ocd):
-    result = geturlresult("http://www.crystallography.net/" + ocd + ".cif")
+    result = geturlresult("http://www.crystallography.net/cod/" + ocd + ".cif")
     return result
 
 
@@ -407,7 +407,11 @@ while (not done):
 x = eval(a) 
 y = eval(b) 
 z = eval(c)
-xyzmax = max(x,y,z)
+try:
+   xyzmax = max(x,y,z)
+except:
+   x = y = z = 1.0
+   xyzmax = 1.0
 nx = int(round(xyzmax/x))
 ny = int(round(xyzmax/y))
 nz = int(round(xyzmax/z))
@@ -433,9 +437,9 @@ nwinput += 'symmetry ' + gname + eln
 nwinput += 'end' + eln+eln
 nwinput += 'set nwpw:kbpp_ray    .true.' + eln
 nwinput += 'set nwpw:kbpp_filter .true.' + eln
-nwinput += 'set includestress  .true.              #this option tells driver to optimize the unit cell' + eln
-nwinput += 'set includelattice .true.              #this option tells driver to optimize cell using a,b,c,alpha,beta,gamma' + eln
-nwinput += 'set nwpw:frozen_lattice:thresh 999.0   #large number guarentees the lattice gridding does not adjust during optimization' + eln
+nwinput += '#set includestress  .true.              #this option tells driver to optimize the unit cell' + eln
+nwinput += '#set includelattice .true.              #this option tells driver to optimize cell using a,b,c,alpha,beta,gamma' + eln
+nwinput += '#set nwpw:frozen_lattice:thresh 999.0   #large number guarentees the lattice gridding does not adjust during optimization' + eln
 nwinput += 'set nwpw:cif_filename  nwcif_' + cifocd.strip('.cif') + eln + eln
 nwinput += 'nwpw' + eln
 nwinput += '   xc pbe96' + eln
@@ -444,10 +448,10 @@ nwinput += '   lmbfgs' + eln
 nwinput += 'end' + eln
 nwinput += 'driver; clear; maxiter 20; end; task pspw optimize ignore' + eln + eln
 for k in range(1,4):
-   nwinput += 'nwpw' + eln
-   nwinput += '   monkhorst-pack %d %d %d' % (nx*k,ny*k,nz*k) + eln
-   nwinput += 'end' + eln
-   nwinput += 'driver; clear; maxiter 20; end; task band optimize ignore' + eln+eln
+   nwinput += '#nwpw' + eln
+   nwinput += '#   monkhorst-pack %d %d %d' % (nx*k,ny*k,nz*k) + eln
+   nwinput += '#end' + eln
+   nwinput += '#driver; clear; maxiter 20; end; task band optimize ignore' + eln+eln
 
 print(nwinput)
 

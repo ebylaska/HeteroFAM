@@ -17,7 +17,7 @@ GRANT ALL PRIVILEGES ON TNT_Project.* TO 'arrows'@'%';
 
 -- Load eric3.sql into TNT_Project
 USE TNT_Project;
-SOURCE /docker-entrypoint-initdb.d/backup/eric3.sql;
+SOURCE /docker-entrypoint-initdb.d/eric3.sql;
 
 -- Create user 'hetero' with access to 'HeteroFAM_Project'
 CREATE USER IF NOT EXISTS 'hetero'@'%' IDENTIFIED BY 'solid';
@@ -25,7 +25,7 @@ GRANT ALL PRIVILEGES ON HeteroFAM_Project.* TO 'hetero'@'%';
 
 -- Load eric4.sql into HeteroFAM_Project
 USE HeteroFAM_Project;
-SOURCE /docker-entrypoint-initdb.d/backup/eric4.sql;
+SOURCE /docker-entrypoint-initdb.d/eric4.sql;
 
 
 -- Grant user 'arrows' access to the 'HeteroFAM_Project' database
