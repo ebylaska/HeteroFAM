@@ -105,9 +105,9 @@ MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 ARROWS_API_HOME = 'http://localhost:8080/api/'
 #ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
 
-print("ARROWS_HOME=", ARROWS_HOME)
-print("MY_ENV=", MY_ENV)
-print("ARROWS_API_HOME=", ARROWS_API_HOME)
+#print("ARROWS_HOME=", ARROWS_HOME)
+#print("MY_ENV=", MY_ENV)
+#print("ARROWS_API_HOME=", ARROWS_API_HOME)
 
 
 ####################### mongoDB #############################
@@ -818,7 +818,6 @@ extra_datafiles = ''
 nwinputfile      = ''
 nwoutfile      = ''
 label          = ''
-nwfile          = ''
 vtag            = ''
 opts, args = getopt.getopt(sys.argv[1:], "a:b:d:e:f:q:w:z:v:r:m:lskh", ['help','arrows_api=','heterofam_api='])
 for o, a in opts:
@@ -932,7 +931,7 @@ if (listqueues):
    ss = []
    for entry in queue:
       if ('queue_number' in entry):
-         ss.append("%11d %8d    \"%s\" hash=%s" % (entry['queue_number'],entry['fetched'],entry['mformula],entry['hash']))
+         ss.append("%11d %8d    \"%s\" hash=%s" % (entry['queue_number'],entry['fetched'],entry['mformula'],entry['hash']))
 
    ss.sort()
    for entry in ss:
@@ -943,9 +942,8 @@ if (listqueues2):
    echeck = {}
    if ismongo:
       echeck['queue_number'] = 1
-      echeck['smiles'] = 1
-      echeck['theory'] = 1
-      echeck['basis'] = 1
+      echeck['mformula'] = 1
+      echeck['hash'] = 1
       echeck['nwchem_output'] = 1
       echeck['extra_datafiles'] = 1
    queue2 = solid_finished_queue_collection.find(check,echeck)
@@ -1130,13 +1128,13 @@ if (getqueue):
    data1 += "#########################  END   NWCHEM INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
    print(data1)
 
-if (nwfile!=''):
+if (nwoutfile!=''):
 
-   if ("/" not in nwfile): nwfile = curdir +"/" + nwfile
-   nwfileexist = os.path.exists(nwfile)
+   if ("/" not in nwoutfile): nwoutfile = curdir +"/" + nwoutfile
+   nwfileexist = os.path.exists(nwoutfile)
    if (nwfileexist):
       ### fetch nwchem output for parsing ###
-      with open(nwfile,'r') as ff: 
+      with open(nwoutfile,'r') as ff: 
          nwchemoutput = ff.read()
 
       extra_datafiles2 = ''
@@ -1198,7 +1196,7 @@ if (nwfile!=''):
 
       newentry = {}
       newentry['queue_number']     = queue_number00
-      newentry['nwchem_output']    = nwfile
+      newentry['nwchem_output']    = nwoutfile
       newentry['extra_datafiles']  = extra_datafiles
       newentry['mformula'] = mformula
       newentry['lattice']  = lattice
