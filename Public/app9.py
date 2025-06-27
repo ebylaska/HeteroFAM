@@ -7,6 +7,7 @@ import os,subprocess,urllib,time,random,requests,zipfile,re,math,yaml
 import paramiko,secrets
 import logging
 
+
 logging.basicConfig(level=logging.DEBUG)
 
 ###################### HeteroFAM Locations #######################
@@ -32,6 +33,9 @@ UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #UPLOAD_FOLDER = '/tmp/'
 #UPLOAD_FOLDER = HeteroFAM_HOME + '/Public/uploads/'
+
+ERIC_UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'eric_data')
+os.makedirs(ERIC_UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {
     'cube', 'out', 'nwout', 'nwo', 'nw', 'eap', 'xyz', 'emotion', 'ion_motion',
@@ -2003,6 +2007,9 @@ def get_input_deck(esmiles0):
        data = "Input generation failed\n"
     return data
 
+
+
+
 @app.route('/api/crystal_input/<ocd0>', methods=['GET'])
 def get_crystal_input_deck(ocd0):
     global namecount
@@ -2039,6 +2046,9 @@ def generate_crystal(ocd0):
        ocd0 = ocd0.replace("\'",'')
        cmd7 = cifocd_runnw +  ocd0 
        data = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       #ocd0 = urllib.parse.unquote_plus(ocd0).replace("\"", '').replace("'", '')
+       #cmd7 = [cifocd_runnw, ocd0]  # safer
+       #data = subprocess.check_output(cmd7).decode("utf-8")
        if len(data) == 0: data=ocd0 + " not generated\n"
 
        htmlfile1 = templatedir + "/"+name
@@ -2053,6 +2063,62 @@ def generate_crystal(ocd0):
     except:
        data = "Input generation failed\n"
     return data
+
+
+@app.route('/api/generate_crystal_cif_conventional/<ocd0>', methods=['GET'])
+def generate_crystal_conventional(ocd0):
+    global namecount
+    name = "tmp/reaction%d.html" % namecount
+    namecount += 1
+    try:
+       ocd0 = ocd0.replace("\"",'')
+       ocd0 = ocd0.replace("\'",'')
+       cmd7 = cifocd_runnw +  ocd0 + " conventional"
+       data = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       if len(data) == 0: data=ocd0 + " not generated\n"
+
+       htmlfile1 = templatedir + "/"+name
+
+       html = "<html>\n"
+       html += HeteroFAMHeader
+       html += "<pre style=\"font-size:1.0em;color:black\">\n"
+       html += data
+       html += "</pre> </html>"
+       with open(htmlfile1,'w') as ff: ff.write(html)
+       data =  render_template(name)
+    except:
+       data = "Input generation failed\n"
+    return data
+
+
+@app.route('/api/generate_crystal_cif_primitive/<ocd0>', methods=['GET'])
+def generate_crystal_primitive(ocd0):
+    global namecount
+    name = "tmp/reaction%d.html" % namecount
+    namecount += 1
+    try:
+       ocd0 = ocd0.replace("\"",'')
+       ocd0 = ocd0.replace("\'",'')
+       cmd7 = cifocd_runnw +  ocd0 + " primitive"
+       data = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       if len(data) == 0: data=ocd0 + " not generated\n"
+
+       htmlfile1 = templatedir + "/"+name
+
+       html = "<html>\n"
+       html += HeteroFAMHeader
+       html += "<pre style=\"font-size:1.0em;color:black\">\n"
+       html += data
+       html += "</pre> </html>"
+       with open(htmlfile1,'w') as ff: ff.write(html)
+       data =  render_template(name)
+    except:
+       data = "Input generation failed\n"
+    return data
+
+
+
+
 
 
 
@@ -4712,6 +4778,36 @@ def ssh_tunnel_route():
     return render_template('ssh_tunnel.html', heterofam_api=HeteroFAM_API_HOME, output_textbox=output_textbox)
 
 
+
+@app.route('/api/eric_upload', methods=['POST'])
+def eric_upload():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in request'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    save_path = os.path.join(ERIC_UPLOAD_FOLDER, file.filename)
+    file.save(save_path)
+    return jsonify({'message': f'File {file.filename} uploaded successfully'}), 200
+
+
+@app.route('/api/eric_download/<filename>', methods=['GET'])
+def eric_download(filename):
+    file_path = os.path.join(ERIC_UPLOAD_FOLDER, filename)
+    if not os.path.exists(file_path):
+        return abort(404, description="File not found")
+
+    def generate_and_delete():
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        os.remove(file_path)
+        yield data
+
+    return Response(
+        generate_and_delete(),
+        mimetype='application/octet-stream',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
 
 
 

@@ -13,6 +13,7 @@ services:
       - ../MyHeteroFAM/Projects:/HeteroFAM/Projects
       - /home/bylaska/Public/HeteroFAM/Public/uploads:/HeteroFAM/Public/uploads
       - /home/bylaska/Public/HeteroFAM/Public/chemdb_hold:/HeteroFAM/Public/chemdb_hold
+      - /home/bylaska/Public/HeteroFAM/Public/eric_data:/HeteroFAM/Public/eric_data
     environment:
       - NWCHEM_EXTRA_GROPUS=/HeteroFAM/static/nwchem/extragroups.dat
     depends_on:

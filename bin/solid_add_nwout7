@@ -33,11 +33,11 @@ myxyz2smiles = ARROWS_HOME + "/bin/myxyz2smiles "
 esmiles2xyz  = ARROWS_HOME + "/bin/esmiles2xyz "
 tnt_submit   = ARROWS_HOME + "/bin/tnt_submit5 "
 bader        = ARROWS_HOME + "/bader/bader/bader "
-chemdb_queue = ARROWS_HOME + "/bin/chemdb_queue "
+soliddb_queue = ARROWS_HOME + "/bin/solid_queue "
 chemdb_say   = ARROWS_HOME + "/bin/chemdb_say "
 wrkdir       = ARROWS_HOME + "/Work"
 calculationscountfilename  = ARROWS_HOME + "/Public/counters/calculationscount"
-chemdbfile     = ARROWS_HOME + "/bin/.chemdb-en"
+soliddbfile     = ARROWS_HOME + "/bin/.soliddb-en"
 ddrand = random.randint(0,999999)
 tmpsmi1 = "tmpsmi1-%d.smi" % ddrand
 tmpsmi2 = "tmpsmi2-%d.smi" % ddrand
@@ -971,10 +971,6 @@ def pubchem_smiles2canonicalsmiles(smiles):
     return result
 
 
-#### pubchem_smiles2iupac function ####
-def pubchem_smiles2iupac(smiles):
-    result = geturlresult("http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/%s/property/IUPACName/TXT" % smiles)
-    return result
 
 #### pubchem_smiles2cid function ####
 def pubchem_smiles2cid(smiles):
@@ -1558,229 +1554,6 @@ vdw = {
 
 
 
-def generate_sphere_points(n):
-    """
-    Returns list of 3d coordinates of points on a sphere using the
-    Golden Section Spiral algorithm.
-    """
-    points = []
-    inc = math.pi * (3 - math.sqrt(5))
-    offset = 2 / float(n)
-    for k in range(int(n)):
-        y = k * offset - 1 + (offset / 2)
-        r = math.sqrt(1 - y*y)
-        phi = k * inc
-        points.append([math.cos(phi)*r, y, math.sin(phi)*r])
-    return points
-
-
-def find_neighbor_indices(atoms, probe, k):
-    """
-    Returns list of indices of atoms within probe distance to atom k.
-    """
-    neighbor_indices = []
-    atom_k = atoms[k]
-    radius = vdw[atom_k[0]] + probe + probe
-    indices = range(k)
-    indices.extend(range(k+1, len(atoms)))
-    for i in indices:
-        atom_i = atoms[i]
-        dx = atom_i[1] - atom_k[1]
-        dy = atom_i[2] - atom_k[2]
-        dz = atom_i[3] - atom_k[3]
-        dist = math.sqrt(dx*dx + dy*dy + dz*dz)
-        if (dist <  (radius+vdw[atom_i[0]])):
-            neighbor_indices.append(i)
-    return neighbor_indices
-
-
-
-def calculate_asa(atoms, probe, n_sphere_point=960):
-    """
-    Returns list of accessible surface areas of the atoms, using the probe
-    and atom radius to define the surface.
-    """
-    sphere_points = generate_sphere_points(n_sphere_point)
-
-    const = 4.0 * math.pi / len(sphere_points)
-    areas = []
-    for i in range(len(atoms)):
-
-        atom_i = atoms[i]
-        neighbor_indices = find_neighbor_indices(atoms, probe, i)
-        n_neighbor = len(neighbor_indices)
-        j_closest_neighbor = 0
-        radius = probe + vdw[atoms[i][0]]
-
-        n_accessible_point = 0
-        for point in sphere_points:
-            is_accessible = True
-
-            x = point[0]*radius + atom_i[1]
-            y = point[1]*radius + atom_i[2]
-            z = point[2]*radius + atom_i[3]
-
-            cycled_indices = range(j_closest_neighbor, n_neighbor)
-            cycled_indices.extend(range(j_closest_neighbor))
-
-            for j in cycled_indices:
-                atom_j = atoms[neighbor_indices[j]]
-                r = vdw[atom_j[0]] + probe
-                dx = atom_j[1] - x
-                dy = atom_j[2] - y
-                dz = atom_j[3] - z
-                diff_sq = dx*dx + dy*dy + dz*dz
-                if diff_sq < r*r:
-                    j_closest_neighbor = j
-                    is_accessible = False
-                    break
-            if is_accessible:
-                n_accessible_point += 1
-
-        area = const*n_accessible_point*radius*radius
-        areas.append(area)
-    return areas
-
-def calculate_sav(atoms, probe, n_sphere_point=960):
-    """
-    Returns list of solvent accessible volume of the atoms, using the probe
-    and atom radius to define the surface.
-    """
-    sphere_points = generate_sphere_points(n_sphere_point)
-
-    const = 4.0 * math.pi / (3.0*len(sphere_points))
-    volumes = []
-    for i in range(len(atoms)):
-
-        atom_i = atoms[i]
-        neighbor_indices = find_neighbor_indices(atoms, probe, i)
-        n_neighbor = len(neighbor_indices)
-        j_closest_neighbor = 0
-        radius = probe + vdw[atoms[i][0]]
-
-        n_accessible_point = 0
-        for point in sphere_points:
-            is_accessible = True
-
-            x = point[0]*radius + atom_i[1]
-            y = point[1]*radius + atom_i[2]
-            z = point[2]*radius + atom_i[3]
-
-            cycled_indices = range(j_closest_neighbor, n_neighbor)
-            cycled_indices.extend(range(j_closest_neighbor))
-
-            for j in cycled_indices:
-                atom_j = atoms[neighbor_indices[j]]
-                r = vdw[atom_j[0]] + probe
-                dx = atom_j[1] - x
-                dy = atom_j[2] - y
-                dz = atom_j[3] - z
-                diff_sq = dx*dx + dy*dy + dz*dz
-                if diff_sq < r*r:
-                    j_closest_neighbor = j
-                    is_accessible = False
-                    break
-            if is_accessible:
-                n_accessible_point += 1
-
-        volume = const*n_accessible_point*radius*radius*radius
-        volumes.append(volume)
-    return volumes
-
-
-def calculate_sav(atoms, probe, n_sphere_point=960):
-    """
-    Returns list of solvent accessible volume of the atoms, using the probe
-    and atom radius to define the surface.
-    """
-    sphere_points = generate_sphere_points(n_sphere_point)
-
-    const = 4.0 * math.pi / (3.0*len(sphere_points))
-    volumes = []
-    for i in range(len(atoms)):
-
-        atom_i = atoms[i]
-        neighbor_indices = find_neighbor_indices(atoms, probe, i)
-        n_neighbor = len(neighbor_indices)
-        j_closest_neighbor = 0
-        radius = probe + vdw[atoms[i][0]]
-
-        n_accessible_point = 0
-        for point in sphere_points:
-            is_accessible = True
-
-            x = point[0]*radius + atom_i[1]
-            y = point[1]*radius + atom_i[2]
-            z = point[2]*radius + atom_i[3]
-
-            cycled_indices = range(j_closest_neighbor, n_neighbor)
-            cycled_indices.extend(range(j_closest_neighbor))
-
-            for j in cycled_indices:
-                atom_j = atoms[neighbor_indices[j]]
-                r = vdw[atom_j[0]] + probe
-                dx = atom_j[1] - x
-                dy = atom_j[2] - y
-                dz = atom_j[3] - z
-                diff_sq = dx*dx + dy*dy + dz*dz
-                if diff_sq < r*r:
-                    j_closest_neighbor = j
-                    is_accessible = False
-                    break
-            if is_accessible:
-                n_accessible_point += 1
-
-        volume = const*n_accessible_point*radius*radius*radius
-        volumes.append(volume)
-    return volumes
-
-
-
-def gen_surfaceareas(outfile):
-   msurface=[[0.0],[0.0]]
-   if (os.path.exists(outfile)):
-      count = -1
-      xyzdat = []
-      ofound = False
-      gfound = False
-      done = False
-      ofile = open(outfile,'r')
-      for line in ofile:
-        if (not done):
-           if (count>0):
-              if (len(line)<=5):
-                 done = True
-              else:
-                 xyzdat.append(line)
-           if (not done):
-              if (count>=0):
-                 count += 1
-              if (line.find("Optimization converged") != -1):
-                 ofound = True
-              if (line.find("Failed to converge in maximum number of steps") != -1):
-                 ofound = True
-              if (ofound and (line.find("No.") != -1)):
-                 gfound = True
-                 count = 0
-      ofile.close()
-      n = len(xyzdat)
-
-      if (n>0):
-         atoms = []
-         for i in range(n):
-            split = xyzdat[i].split()
-            xyz = []
-            xyz.append(split[1])
-            xyz.append(evalnum(split[3]))
-            xyz.append(evalnum(split[4]))
-            xyz.append(evalnum(split[5]))
-            atoms.append(xyz)
-         n_sphere = 9600
-         asas = calculate_asa(atoms, 1.4, n_sphere)
-         savs = calculate_sav(atoms, 1.4, n_sphere)
-         msurface = [asas,savs]
-
-   return msurface
 
 
 
@@ -2204,97 +1977,6 @@ def parse_basis(HZ,outfile):
       if basis=="crenbl": basis="crenbl_ecp"
       if basis=="stuttgart": basis="stuttgart_rsc_1997"
    return basis
-
-def parse_base_basis(HZ,outfile):
-   basis = 'unknown'
-   if (os.path.exists(outfile)):
-      started  = False
-      finished = False
-      count    = 0
-      ofile = open(outfile,'r')
-      for line in ofile:
-
-         if (line.find("#      wavefnc cutoff=") != -1):
-            if (not HZ): basis = "%.1f Ry" % (evalnum(line.split()[3])*2)
-            finished = True
-
-         if (not finished):
-            if (started):
-               count += 1
-               if (line.strip()=='#'):
-                  finished = True
-                  for ll in basisl:
-                     aa = ll.split()[1].strip()
-                     if (aa=='*'):
-                        if (not HZ): basis = ll.split()[2]
-                     else:
-                        if ((not HZ) and (periodic_table_charge[aa]<21)):
-                           basis = ll.split()[2]
-                        if HZ and (periodic_table_charge[aa]>=21):
-                           basis = ll.split()[2]
-               elif (count>=2):
-                  #basis = line.split()[2]
-                  basisl.append(line)
-            else:
-               if (line.find("#       Tag                 Description            Shells   Functions and Types") != -1):
-                  started = True
-                  count = 0
-                  basisl = []
-      ofile.close()
-      if basis=="crenbl": basis="crenbl_ecp"
-      if basis=="stuttgart": basis="stuttgart_rsc_1997"
-   return basis
-
-
-
-def parse_theory(outfile):
-   theory = 'unknown'
-   boundary = 'unknown'
-   paw      = 'unknown'
-   if (os.path.exists(outfile)):
-      ofile = open(outfile,'r')
-      for line in ofile:
-         if (line.find("Quadratically convergent ROHF") != -1):   theory = 'hf'
-         if (line.find("Quadratically convergent UHF") != -1):    theory = 'uhf'
-         if (line.find("NWChem DFT Module") != -1):               theory = 'dft'
-         if (line.find("NWPW PSPW Calculation") != -1):           theory = 'pspw'
-         if (line.find("Total MP2 energy") != -1):                theory = 'mp2'
-         if (line.find("CCSD(T) total energy / hartree") != -1):  theory = 'ccsd(t)'
-         if (line.find("Total CCSD(T) energy:") != -1):           theory = 'ccsd(t)'
-         if (line.find("begin_two_electron_integrals") != -1):             theory = 'qsharp_chem'
-         if (line.find("boundary conditions  = aperiodic   (version4)") != -1): boundary = 'aperiodic'
-         if (line.find("boundary conditions  = periodic    (version3)") != -1): boundary = 'periodic'
-         if (line.find("total paw energy") != -1):  paw = 'paw'
-         if (line.find("MOPACKER theory   = am1") != -1):  theory = "am1"
-         if (line.find("MOPACKER theory   = pm3") != -1):  theory = "pm3"
-         if (line.find("MOPACKER theory   = mndo") != -1): theory = "mndo"
-         if (line.find("MOPACKER theory   = mindo3") != -1): theory = "mindo3"
-      ofile.close()
-      if (theory=='pspw' and boundary=='aperiodic'): theory='pspw4'
-      if (paw=='paw'     and boundary=='aperiodic'): theory='paw4'
-      if (paw=='paw'     and boundary=='periodic'):  theory='paw'
-   return theory
-
-def parse_base_theory(outfile):
-   theory = 'unknown'
-   boundary = 'unknown'
-   paw      = 'unknown'
-   if (os.path.exists(outfile)):
-      ofile = open(outfile,'r')
-      for line in ofile:
-         if (line.find("#         Quadratically convergent ROHF") != -1): theory  = 'hf'
-         if (line.find("#         Quadratically convergent UHF") != -1):  theory  = 'uhf'
-         if (line.find("#                                 NWChem DFT Module") != -1): theory  = 'dft'
-         if (line.find("#          *               NWPW PSPW Calculation") != -1):  theory  = 'pspw'
-         if (line.find("#      boundary conditions  = aperiodic   (version4)") != -1): boundary = 'aperiodic'
-         if (line.find("#      boundary conditions  = periodic    (version3)") != -1): boundary = 'periodic'
-         if (line.find("# total paw energy") != -1):  paw = 'paw'
-      ofile.close()
-      if (theory=='pspw' and boundary=='aperiodic'): theory='pspw4'
-      if (paw=='paw'     and boundary=='aperiodic'): theory='paw4'
-      if (paw=='paw'     and boundary=='periodic'):  theory='paw'
-   return theory
-
 
 
 
@@ -2756,15 +2438,6 @@ def parse_osmiles(outfile):
       ofile.close()
    return osmiles
 
-def parse_client(outfile):
-   client = ""
-   if (os.path.exists(outfile)):
-      ofile = open(outfile,'r')
-      for line in ofile:
-         if (line.find("client:") != -1): 
-            client = line.split("client:")[1].split(":client")[0]
-      ofile.close()
-   return client
 
 def parse_postsmiles(outfile):
    psmiles = ""
@@ -2805,40 +2478,6 @@ def parse_xc(outfile):
          if (line.find("NWChem Property Module") != -1):  notproperty = False
       ofile.close()
       if (xc==None):   xc = 'lda'
-      if (grid!=None):
-         if (grid!='-medium'):
-            xc += grid
-   return xc
-
-def parse_base_xc(outfile):
-   grid = None
-   xc   = 'unknown'
-   notproperty = True
-   if (os.path.exists(outfile)):
-      ofile = open(outfile,'r')
-      for line in ofile:
-         if (line.find("#") != -1):
-            if (line.find("VWN V Correlation Functional  1.000 local") != -1):       xc = 'lda'
-            if (line.find("PerdewBurkeErnzerhof Exchange Functional  1.000") != -1): xc = 'pbe'
-            if (line.find("PBE0 Method XC Functional") != -1):                       xc = 'pbe0'
-            if (line.find("Becke 1988 Exchange Functional  1.000") != -1):           xc = 'blyp'
-            if (line.find("B3LYP Method XC Potential") != -1):                       xc = 'b3lyp'
-            if (line.find("M06-2X Method XC Functional") != -1):                     xc = 'm06-2x'
-            if (line.find("LDA (Vosko et al) parameterization") != -1):      xc = 'lda'
-            if (line.find("HSE (White and Bird) parameterization") != -1):   xc = 'hse'
-            if (line.find("PBE0 (White and Bird) parameterization") != -1):  xc = 'pbe0'
-            if (line.find("BLYP (White and Bird) parameterization") != -1):  xc = 'blyp'
-            if (line.find("B3LYP (White and Bird) parameterization") != -1): xc = 'b3lyp'
-            if (line.find("PBE96 (White and Bird) parameterization") != -1): xc = 'pbe'
-            if (notproperty):
-               if (grid=='None'):
-                  if (line.find("Grid used for XC integration:  medium") != -1): grid = '-medium'
-                  if (line.find("Grid used for XC integration:  coarse") != -1): grid = '-coarse'
-                  if (line.find("Grid used for XC integration:  fine") != -1):   grid = '-fine'
-                  if (line.find("Grid used for XC integration:  xfine") != -1):  grid = '-xfine'
-            if (line.find("NWChem Property Module") != -1):  notproperty = False
-      ofile.close()
-      #if (xc==None):   xc = 'lda'
       if (grid!=None):
          if (grid!='-medium'):
             xc += grid
@@ -3045,7 +2684,7 @@ def parse_cosmo_dielectric(outfile):
 
 
 def parse_spin_penalty(file_path):
-    spin_data = {"up": [], "down": []}
+    spin_data = {"up": {"penalty_value": 0.0, "indices": []}, "down": {"penalty_value": 0.0, "indices": []}}
 
     with open(file_path, "r") as file:
         for line in file:
@@ -4594,126 +4233,6 @@ def replace_hrotor_blob(hrotors_blob,hrotor_blob):
 
       
 
-#############################################
-#                                           #
-#             submit_esmiles_xyz            #
-#                                           #
-#############################################
-def submit_esmiles_xyz(esmiles,xyz,vtag=None,machine=None):
-   xyzfile = wrkdir + "/" + tmpxyz99
-   ofile = open(xyzfile,'w')
-   ofile.write(xyz)
-   ofile.close()
-
-   result = "\nSubmitting the following esmiles,xyz: " + esmiles + "\n"
-   result += "xyz=\n"
-   result += xyz + "\n"
-   cmd0 = ''
-
-   if ((machine!=None) and (machine!='')):   cmd0 += ' -m ' + machine
-
-
-   property = ''
-   theory_property = ''
-   xc_property     = ''
-   basis_property  = ''
-   basisHZ           = ''
-   basisHZ_property  = ''
-   if 'ccsd(t)' in esmiles:
-      theory='ccsd(t)';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';calculation_type='ovc'
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-   elif 'ccsd' in esmiles:
-      theory='ccsd';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';calculation_type='ovc'
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-   elif 'mp2' in esmiles:
-      theory='mp2';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';calculation_type='ovc'
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-   elif 'pspw' in esmiles:
-      theory='pspw';xc='pbe';basis='50.0';solvation_type='None';
-   elif 'paw' in esmiles:
-      theory='paw';xc='pbe';basis='50.0';solvation_type='None';
-   elif 'am1' in esmiles:
-      theory='am1';xc='unknown';basis='semiempirical';solvation_type='COSMO';
-   elif 'pm3' in esmiles:
-      theory='pm3';xc='unknown';basis='semiempirical';solvation_type='COSMO';
-   elif 'mndo' in esmiles:
-      theory='mndo';xc='unknown';basis='semiempirical';solvation_type='COSMO';
-   elif 'mindo3' in esmiles:
-      theory='mindo3';xc='unknown';basis='semiempirical';solvation_type='COSMO';
-   elif 'dft' in esmiles:
-      theory='dft';xc='b3lyp';basis='6-311++G(2d,2p)';solvation_type='COSMO';
-   else:
-      theory='dft';xc='b3lyp';basis='6-311++G(2d,2p)';solvation_type='COSMO';
-
-   if 'theory{' in esmiles: theory = esmiles.split('theory{')[1].split('}')[0]
-   if 'xc{' in esmiles:     xc     = esmiles.split('xc{')[1].split('}')[0]
-
-   charge = smiles2charge(esmiles.strip().split()[0])
-   if '^{' in esmiles:      charge = evalnum(esmiles.split('^{')[1].split('}')[0])
-
-   mult = xyz2mult(xyzfile,charge)
-   print(" submit_esmiles_xyz mult0=",mult)
-   if 'mult{' in esmiles:   mult   = evalnum(esmiles.split('mult{')[1].split('}')[0])
-   print(" submit_esmiles_xyz mult1=",mult)
-
-   if 'solvation_type' in esmiles: solvation_type = esmiles.split('solvation_type{')[1].split('}')[0]
-   if 'property{' in esmiles: property = esmiles.split('property{')[1].split('}')[0]
-   if 'theory_property{' in esmiles: theory_property = esmiles.split('theory_property{')[1].split('}')[0]
-   if 'xc_property{' in esmiles: xc_property = esmiles.split('xc_property{')[1].split('}')[0]
-   if 'basis_property{' in esmiles: basis_property = removespace_basis(esmiles.split('basis_property{')[1].split('}')[0])
-   if 'basisHZ_property{' in esmiles: basisHZ_property = removespace_basis(esmiles.split('basisHZ_property{')[1].split('}')[0])
-   if 'basisHZ{' in esmiles:  basisHZ  = removespace_basis(esmiles.split('basisHZ{')[1].split('}')[0])
-   if 'basis{' in esmiles:  basis  = removespace_basis(esmiles.split('basis{')[1].split('}')[0])
-   if 'ry' in basis.lower():
-      xb = evalnum(basis.strip().split()[0])*0.5
-      basis = '%f' % xb
-   if 'hartree' in basis.lower():
-      xb = evalnum(basis.strip().split()[0])*1.0
-      basis = '%f' % xb
-
-   if 'ry' in basis_property.lower():
-      xb = evalnum(basis_property.strip().split()[0])*0.5
-      basis_property = '%f' % xb
-   if 'hartree' in basis_property.lower():
-      xb = evalnum(basis_property.strip().split()[0])*1.0
-      basis_property = '%f' % xb
-
-   cmd0 += ' -w  -t ' + theory + " -b '" + basis + "' -x " + xc + " -y " + solvation_type 
-   cmd0 += " -s %d" % mult 
-   cmd0 += " -q %d" % charge 
-   if (property!=''): cmd0 += ' -p ' + property
-   if (theory_property!=''): cmd0 += ' -k ' + theory_property
-   if (xc_property!=''):     cmd0 += ' -l ' + xc_property
-   if (basis_property!=''):  cmd0 += ' -o ' + basis_property
-   if (basisHZ_property!=''):cmd0 += ' -n ' + basisHZ_property
-   if (basisHZ!=''):         cmd0 += ' -z ' + basisHZ
-   if ((vtag!=None) and (vtag!='')):  cmd0 += " -v " + vtag
-
-   #ofile = open(xyzfile,'w')
-   #ofile.write(xyz)
-   #ofile.close()
-
-   if machine==None:
-      cmd1 = tnt_submit + cmd0 + " " + xyzfile
-   elif machine.lower()!="shirky":
-      cmd1 = tnt_submit + cmd0 + " " + xyzfile
-   else:
-      tmp_esmiles = xyzfile + " " + " ".join(esmiles.split()[1:])
-      cmd1 = chemdb_queue 
-      if ((vtag!=None) and (vtag!='')):  cmd1 += " -v " + vtag
-      cmd1 +=   ' -a \"' + tmp_esmiles + '\"'
-      #cmd1 = chemdb_queue -a + ' \"' + tmp_esmiles + '\"'
-
-   print("submit esmiles cmd1 = " + cmd1)
-      
-
-   try:
-      result += subprocess.check_output(cmd1,shell=True).decode("utf-8")
-   except:
-      result += "\n\ntnt_submit failed and job was not submitted\n\n"
-   print(result)
-   return result
-
 
 ###############################################
 #                                             #
@@ -4853,248 +4372,6 @@ def insert_abbreviation(hup,dbfile,abrev_table,abbreviation,
 
 
 
-
-#############################################
-#                                           #
-#             delete_esmiles                #
-#                                           #
-#############################################
-
-def delete_esmiles(hup,dbfile,table,esmiles):
-   if (hup=='sqlite3'):
-      issqlite3 = True
-   else:
-      issqlite3 = False
-
-   reaction_hash = ''
-   reaction_gamma = ''
-   reaction_kappa = ''
-   theory_base=''
-   xc_base=''
-   basis_base=''
-   basisHZ_base=''
-   basisHZ=''
-   basisHZ1=''
-   basisHZ2=''
-   basisHZ3=''
-   theory_property = ''
-   xc_property = ''
-   basis_property=''
-   basisHZ_property=''
-   if 'qsharp_chem' in esmiles:
-      theory='qsharp_chem';xc='unknown';basis='sto-3g';solvation_type='COSMO'; charge='0';mult='1';theory_property='';xc_property='';basis_property=''
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-      basisHZ  = 'sto-3g'
-      basisHZ1 = 'sto-3g'
-   elif 'ccsd(t)' in esmiles:
-      theory='ccsd(t)';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';charge='0';mult='1';theory_property='';xc_property='';basis_property=''
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-      basisHZ  = 'aug-cc-pVTZ'
-      basisHZ1 = 'crenbl_ecp'
-      basisHZ2 = 'Def2-TZVP'
-      basisHZ3 = 'stuttgart_rsc_1997'
-   elif 'ccsd' in esmiles:
-      theory='ccsd';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';charge='0';mult='1';theory_property='';xc_property='';basis_property=''
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-      basisHZ  = 'aug-cc-pVTZ'
-      basisHZ1 = 'crenbl_ecp'
-      basisHZ2 = 'Def2-TZVP'
-      basisHZ3 = 'stuttgart_rsc_1997'
-   elif 'mp2' in esmiles:
-      theory='mp2';xc='unknown';basis='6-311++G(2d,2p)';solvation_type='COSMO';charge='0';mult='1';theory_property='';xc_property='';basis_property=''
-      theory_base='dft';xc_base='b3lyp';basis_base='6-311++G(2d,2p)'
-      basisHZ  = 'aug-cc-pVTZ'
-      basisHZ1 = 'crenbl_ecp'
-      basisHZ2 = 'Def2-TZVP'
-      basisHZ3 = 'stuttgart_rsc_1997'
-   elif 'pspw' in esmiles:
-      theory='pspw';xc='pbe';basis='100.0 Ry';solvation_type='None';charge='0';mult='1'; theory_property='';xc_property='';basis_property=''
-   elif 'paw' in esmiles:
-      theory='paw';xc='pbe';basis='100.0 Ry';solvation_type='None';charge='0';mult='1'; theory_property='';xc_property='';basis_property=''
-   elif 'am1' in esmiles:
-      theory='am1';xc='unknown';basis='semiempirical';solvation_type='COSMO';calculation_type='ovc'
-      theory_property='';xc_property='';basis_property=''
-   elif 'pm3' in esmiles:
-      theory='pm3';xc='unknown';basis='semiempirical';solvation_type='COSMO';calculation_type='ovc'
-      theory_property='';xc_property='';basis_property=''
-   elif 'mndo' in esmiles:
-      theory='mndo';xc='unknown';basis='semiempirical';solvation_type='COSMO';calculation_type='ovc'
-      theory_property='';xc_property='';basis_property=''
-   elif 'mindo3' in esmiles:
-      theory='mindo3';xc='unknown';basis='semiempirical';solvation_type='COSMO';calculation_type='ovc'
-      theory_property='';xc_property='';basis_property=''
-   elif 'dft' in esmiles:
-      theory='dft';xc='b3lyp';basis='6-311++G(2d,2p)';solvation_type='COSMO';theory_property='';xc_property='';basis_property=''
-      basisHZ  = 'aug-cc-pVTZ'
-      basisHZ1 = 'crenbl_ecp'
-      basisHZ2 = 'Def2-TZVP'
-      basisHZ3 = 'stuttgart_rsc_1997'
-   else:
-      theory='dft';xc='b3lyp';basis='6-311++G(2d,2p)';solvation_type='COSMO';theory_property='';xc_property='';basis_property=''
-      basisHZ  = 'aug-cc-pVTZ'
-      basisHZ1 = 'crenbl_ecp'
-      basisHZ2 = 'Def2-TZVP'
-      basisHZ3 = 'stuttgart_rsc_1997'
-
-   
-   esmiles1=esmiles.strip()
-   ss = esmiles1.split()
-
-   csmiles = cannonicalsmiles(ss[0])
-   inchi    = smiles2InChI(ss[0])
-   inchikey = smiles2InChIKey(ss[0])
-   xyzfile = wrkdir + "/" + tmpxyz99
-  
-   smiles2xyz(ss[0],xyzfile)
-   
-   inchi2    = xyz2InChI(xyzfile)
-   inchikey2 = xyz2InChIKey(xyzfile)
-
-   if 'theory{' in esmiles: theory = esmiles.split('theory{')[1].split('}')[0]
-   if 'xc{' in esmiles:     xc     = esmiles.split('xc{')[1].split('}')[0]
-   if 'basis{' in esmiles:  basis  = removespace_basis(esmiles.split('basis{')[1].split('}')[0])
-   if 'basisHZ{' in esmiles:  
-       basisHZ  = removespace_basis(esmiles.split('basisHZ{')[1].split('}')[0])
-       basisHZ1 = basisHZ
-       basisHZ2 = basisHZ
-       basisHZ3 = basisHZ
-   if 'theory_base{' in esmiles: theory_base = esmiles.split('theory_base{')[1].split('}')[0]
-   if 'xc_base{' in esmiles:     xc_base     = esmiles.split('xc_base{')[1].split('}')[0]
-   if 'basis_base{' in esmiles:  basis_base  = removespace_basis(esmiles.split('basis_base{')[1].split('}')[0])
-   if 'basisHZ_base{' in esmiles:  basisHZ_base  = removespace_basis(esmiles.split('basisHZ_base{')[1].split('}')[0])
-   if 'theory_property{' in esmiles: theory_property = esmiles.split('theory_property{')[1].split('}')[0]
-   if 'xc_property{' in esmiles:     xc_property     = esmiles.split('xc_property{')[1].split('}')[0]
-   if 'basis_property{' in esmiles:  basis_property  = removespace_basis(esmiles.split('basis_property{')[1].split('}')[0])
-   if 'basisHZ_property{' in esmiles:  basisHZ_property  = removespace_basis(esmiles.split('basisHZ_property{')[1].split('}')[0])
-
-   if 'reaction_hash' in esmiles:  reaction_hash = esmiles.split('reaction_hash{')[1].split('}')[0].strip()
-   if 'reaction_gamma' in esmiles: reaction_gamma = evalnum(esmiles.split('reaction_gamma{')[1].split('}')[0].strip())
-   if 'reaction_kappa' in esmiles: reaction_kappa = evalnum(esmiles.split('reaction_kappa{')[1].split('}')[0].strip())
-   
-   charge = smiles2charge(ss[0])
-   if '^{' in esmiles:      charge = evalnum(esmiles.split('^{')[1].split('}')[0])
-  
-   mult = esmiles2mult_set(ss[0],charge,esmiles)
-   #mult   = smiles2mult(ss[0],charge)
- 
-   #if 'mult{' in esmiles:   mult   = evalnum(esmiles.split('mult{')[1].split('}')[0])
-   if 'solvation_type' in esmiles: solvation_type = esmiles.split('solvation_type{')[1].split('}')[0]
-
-   if (theory_property==''): theory_property = theory
-   if (xc_property==''):     xc_property = xc
-   if (basis_property==''):  basis_property = basis
-   if (basisHZ_property==''):  basisHZ_property = basisHZ
-
-   #hasHZ = inchihasHZ(inchi) and (basis!="semiempirical")
-   #notonlyHZ = (not inchionlyHZ(inchi)) or (basis=="semiempirical")
-   hasHZ = inchihasHZ(inchi2) and (basis!="semiempirical") and (theory!='pspw') and (theory!='pspw4') and (theory!='paw')
-   notonlyHZ = (not inchionlyHZ(inchi2)) or (basis=="semiempirical") or (theory=='pspw') or (theory=='pspw4') or (theory=='paw')
-
-   print("delete_esmiles inchi =",inchi)
-   print("delete_esmiles inchi2=",inchi2)
-   print("delete_esmiles inchi =",inchikey)
-   print("delete_esmiles inchi2=",inchikey2)
-   print("delete_esmiles theory=",theory)
-   print("delete_esmiles xc    =",xc)
-   if (notonlyHZ):  print("delete_esmiles basis =",basis)
-   if (hasHZ):      print("delete_esmiles basisHZ =",basisHZ)
-   if (hasHZ):      print("delete_esmiles basisHZ1 =",basisHZ1)
-   if (hasHZ):      print("delete_esmiles basisHZ2 =",basisHZ2)
-   if (hasHZ):      print("delete_esmiles basisHZ2 =",basisHZ2)
-   if (hasHZ):      print("delete_esmiles basisHZ3 =",basisHZ3)
-   if (theory_base!=''): print("delete_esmiles theory_base=",theory_base)
-   if (xc_base!=''):     print("delete_esmiles xc_base=",xc_base)
-   if (notonlyHZ) and (basis_base!=''): print("delete_esmiles basis_base=",basis_base)
-   if (hasHZ) and (basisHZ_base!=''):   print("delete_esmiles basisHZ_base=",basisHZ_base)
-   print("delete_esmiles theory_property=",theory_property)
-   print("delete_esmiles xc_property    =",xc_property)
-   if (notonlyHZ): print("delete_esmiles basis_property =",basis_property)
-   if (hasHZ):     print("delete_esmiles basisHZ_property =",basisHZ_property)
-   print("delete_esmiles charge=",charge)
-   print("delete_esmiles mult  =",mult)
-   print("delete_esmiles solvation_type=",solvation_type)
-   if (reaction_hash!=''):   print("delete_esmiles reaction_hash =" + reaction_hash)
-   if (reaction_gamma!=''):  print("delete_esmiles reaction_gamma =",reaction_gamma)
-   if (reaction_kappa!=''):  print("delete_esmiles reaction_kappa =",reaction_kappa)
-
-   eps = 1.0e-6
-   checklist = []
-   checklist.append(inchi)
-   checklist.append(inchi2)
-   checklist.append(inchikey)
-   checklist.append(inchikey2)
-   checklist.append(theory)
-   checklist.append(xc)
-   if (notonlyHZ): checklist.append(basis)
-   if (hasHZ): 
-      checklist.append(basisHZ)
-      checklist.append(basisHZ1)
-      checklist.append(basisHZ2)
-      checklist.append(basisHZ3)
-   if (theory_base!=''): checklist.append(theory_base)
-   if (xc_base!=''):     checklist.append(xc_base)
-   if (notonlyHZ) and (basis_base!=''): checklist.append(basis_base)
-   if (hasHZ) and (basisHZ_base!=''):   checklist.append(basisHZ_base)
-   checklist.append(theory_property)
-   checklist.append(xc_property)
-   if (notonlyHZ): checklist.append(basis_property)
-   if (hasHZ):     checklist.append(basisHZ_property)
-   if (reaction_hash!=''):  checklist.append(reaction_hash)
-   if (reaction_gamma!=''):
-      checklist.append(reaction_gamma-eps)
-      checklist.append(reaction_gamma+eps)
-   if (reaction_kappa!=''):
-      checklist.append(reaction_kappa-eps)
-      checklist.append(reaction_kappa+eps)
-   checklist.append(charge)
-   checklist.append(mult)
-   checklist.append(solvation_type)
-
-   wherestr =  " where (InChI=? or InChI=? or InChIKey=? or InChIKey=?)"
-   wherestr += " and theory=?"
-   wherestr += " and xc=?"
-   if (notonlyHZ): wherestr += " and basis=?"
-   #if (hasHZ):     wherestr += " and basisHZ=?"
-   if (hasHZ):     wherestr += " and (basisHZ=? or basisHZ=? or basisHZ=? or basisHZ=?)"
-
-   if (theory_base!=''): wherestr += " and theory_base=?"
-   if (xc_base!=''):     wherestr += " and xc_base=?"
-   if (notonlyHZ) and (basis_base!=''): wherestr += " and basis_base=?"
-   if (hasHZ) and (basisHZ_base!=''):   wherestr += " and basisHZ_base=?"
-
-   wherestr += " and theory_property=?"
-   wherestr += " and xc_property=?"
-   if (notonlyHZ): wherestr += " and basis_property=?"
-   if (hasHZ):     wherestr += " and basisHZ_property=?"
-   if (reaction_hash!=''):  wherestr += " and constraint_string=?"
-   if (reaction_gamma!=''): wherestr += " and constraint_value>=? and constraint_value<=?"
-   if (reaction_kappa!=''): wherestr += " and constraint_spring>=? and constraint_spring<=?"
-   wherestr += " and charge=?"
-   wherestr += " and mult=?"
-   wherestr += " and solvation_type=?"
-
-   if (issqlite3):
-      sqlcheck  = "select * from " + table + wherestr
-      sqldelete = "delete from " + table + wherestr
-   else:
-      sqlcheck = "select * from " + table + wherestr.replace('?','%s')
-      sqldelete = "delete from " + table + wherestr.replace('?','%s')
-
-   if (issqlite3):
-      dbcon = sqlite3.connect(dbfile)
-   else:
-      host = hup.split()[0]
-      user = hup.split()[1]
-      pss = hup.split()[2]
-      #dbcon = MySQLdb.connect(host,user,pss,dbfile)
-      dbcon = MySQLdb.connect(host=host,user=user,password=pss,database=dbfile,autocommit=True,charset='utf8mb4')
-
-   with dbcon:
-      cur = dbcon.cursor()
-      cur.execute(sqlcheck,checklist)
-      rows = cur.fetchall()
-      if (len(rows)>0):
-         cur.execute(sqldelete,checklist)
 
 
 
@@ -5537,34 +4814,42 @@ def parse_calculation(nwinput_str):
 
     return f"calculation_type{{{'-'.join(calculations)}}}" if calculations else "calculation_type{}"
 
-def parse_theory(nwinput_str):
+def parse_theory(file_path):
     """Determines the theory used (pspw or band). Default to pspw for NWPW calculations."""
-    if "nwpw" in nwinput_str.lower():
-        return "theory{pspw}"
-    return "theory{band}"
+    theory = '????'
+    with open(file_path,'r') as ff:
+       nwinput_str = ff.read()
+       if "BAND Calculation" in nwinput_str.lower():
+          theory = "theory{band}"
+       else:
+          theory = "theory{pspw}"
 
-def parse_nw_file_to_esmiles(nwinput_str):
-    """Reads and parses an NWChem input string to eSMILES."""
-    nwinput_str = clean_input(nwinput_str)
-    mygeom = parse_geometry(nwinput_str)
-    nwpw_settings = parse_nwpw_block(nwinput_str)
-    calculations = parse_calculation(nwinput_str)
-    theory = parse_theory(nwinput_str)
+    return theory
 
-    esmiles = f"{mygeom} {nwpw_settings} {theory} {calculations}"
-    return esmiles
 
-def parse_nwinput_to_esmiles(nwoutput):
-    # Example Run
-    nwinput_str = ""
-    with open(nwoutput, "r") as f:
-        nwinput_str = f.read()
 
-    nwinput_str = nwinput_str.split("============================== echo of input deck ==============================")[1]
-    nwinput_str = nwinput_str.split("================================================================================")[0]
+def extract_calculation_genome(file_path):
+    """
+    Extracts the calculation genome from a structured comment block in a file.
 
-    esmiles_output = parse_nw_file_to_esmiles(nwinput_str)
-    return esmiles_output
+    Parameters:
+        file_path (str): Path to the input file.
+
+    Returns:
+        str: The extracted calculation genome, or 'Unknown' if not found.
+    """
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                match = re.search(r"#\s*genome\s*[-:]\s*(\S+)", line, re.IGNORECASE)
+                if match:
+                    return match.group(1).strip()
+    except Exception as e:
+        print(f"Error reading file: {e}")
+
+    return "Unknown"
+
+
 
 
 
@@ -5596,13 +4881,13 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
   myjob = {}
   myjob['xyz'] = " "
   myjob['cif'] = " "
-  myjob['iupac'] = " "
   myjob['theory'] = " "
   myjob['datetime'] = " "
   myjob['k_point_grid'] = " "
   myjob['smearing_type'] = " "
   myjob['smearing_width'] = " "
   myjob['calculation_type'] = " "
+  myjob['genome'] = " "
   myjob['machine'] = " "
   myjob['ncpu'] = " "
   myjob['wall_time'] = " "
@@ -5642,6 +4927,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
 
       ### add yaml file ###
       myjob['theory'] = parse_theory(outfile)
+      myjob['genome'] = extract_calculation_genome(outfile)
 
       myjob['datetime'] = parse_job_info_datetime(outfile_without_hash)
 
@@ -5658,11 +4944,11 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       myjob['mult']   = parse_mult(outfile_without_hash)
 
       myjob['spin_penalty'] = parse_spin_penalty(outfile_without_hash)
+      print("Spin penalty parsed:", myjob['spin_penalty'])
       myjob['initial_magnetic_moments'] = apply_spin_penalty(compute_magnetic_moments_nwout(outfile_without_hash), myjob['spin_penalty'])
 
 
 
-      #theory = parse_theory(outfile)
       myjob['xc']     = parse_xc(outfile)
       myjob['basis']  = parse_basis(False,outfile)
 
@@ -5693,34 +4979,9 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       myjob['mformula'] = xyz_molecular_formula(myjob['xyzblob'])
       #(bonding_string, covalent_string) = xyz_bonding_strings(xyzfile)
 
-      myjob['esmiles'] = parse_nwinput_to_esmiles(outfile_without_hash)
    
-      myjob['client']    = parse_client(outfile_without_hash)
 
-      #myjob['iupac']  = pubchem_smiles2iupac(myjob['smiles'])
-      #if (myjob['iupac']==''): myjob['iupac'] = myjob['smiles']
 
-      #myjob['smiles2'] = cannonicalsmiles(myjob['smiles'])
-      #myjob['chemical_structure_asciiart'] = smiles2ascii(myjob['smiles'])
-
-      if (myjob['mult']==2): myjob['iupac'] += " doublet radical"
-      if (myjob['mult']==3): myjob['iupac'] += " triplet radical"
-      if (myjob['mult']==4): myjob['iupac'] += " quqrtet radical"
-      if (myjob['mult']==5): myjob['iupac'] += " quintet radical"
-      if (myjob['mult']==6): myjob['iupac'] += " sextet radical"
-      if (myjob['mult']==7): myjob['iupac'] += " septet radical"
-      if (myjob['mult']==8): myjob['iupac'] += " octet radical"
-      if (myjob['mult']==9): myjob['iupac'] += " nonet radical"
-      if (myjob['mult']==10): myjob['iupac'] += " decet radical"
-      if (myjob['mult']>10):  myjob['iupac'] += " large radical"
-      if (myjob['charge']==-4): myjob['iupac'] += " tetraanion"
-      if (myjob['charge']==-3): myjob['iupac'] += " trianion"
-      if (myjob['charge']==-2): myjob['iupac'] += " dianion"
-      if (myjob['charge']==-1): myjob['iupac'] += " anion"
-      if (myjob['charge']==+1): myjob['iupac'] += " cation"
-      if (myjob['charge']==+2): myjob['iupac'] += " dication"
-      if (myjob['charge']==+3): myjob['iupac'] += " trication"
-      if (myjob['charge']==+4): myjob['iupac'] += " tetracation"
 
       #inserting = (energy<=9.0e9) and (smiles!='')
       #sitkoff  = ecd
@@ -5818,18 +5079,16 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       print(" cif                 =",myjob['cif']);
       print(" unitcell            =",myjob['unitcell']);
       print(" mformula            =",myjob['mformula'])
-      print(" iupac                  =",myjob['iupac'])
       print(" theory                 =",myjob['theory'])
+      print(" genome                 =",myjob['genome'])
       print(" datetime               =",myjob['datetime'])
       print(" k_point_grid           =",myjob['k_point_grid'])
       print(" smear_type             =",myjob['smearing_type'])
       print(" smearing_width         =",myjob['smearing_width'])
-      print(" calculation_type       =",myjob['calculation_type'])
       print(" machine                =",myjob['machine'])
       print(" ncpu                   =",myjob['ncpu'])
       print(" wall_time              =",myjob['wall_time'])
       print(" pseudopotentials       =",myjob['pseudopotentials'])
-      print(" esmiles                =",myjob['esmiles']);
       print(" material_name          =",myjob['material_name'])
       print(" lattice_parameters     =",myjob['lattice_parameters'])
       print(" lattice_type           =",myjob['lattice_type'])
@@ -5852,7 +5111,6 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          print(" bader_total            =",myjob['bader_total'])
          print(" bader_magnetization    =",myjob['bader_magnetization'])
       print(" jobok                  =",myjob['jobok'])
-      print(" client                 =",myjob['client'])
       print(" spin penalty           =",myjob['spin_penalty'])
 
 

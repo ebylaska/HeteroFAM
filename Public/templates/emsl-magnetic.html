@@ -1687,7 +1687,7 @@ ul, li {
           * @param {object} editor - An instance of the Ace Editor
           *
           */
-         async function fetchAndInsertCIF(codId, editor) {
+         async function fetchAndInsertCIF(codId, cifcell, editor) {
            if (codId === -1) {
               const userInput = window.prompt("Enter COD ID to fetch CIF:", "1000027");
               if (userInput === null || userInput.trim() === "" || isNaN(userInput)) {
@@ -1697,7 +1697,14 @@ ul, li {
               codId = userInput.trim();
            }
 
-           const url = `https://heterofam.pnnl.gov/api/generate_crystal_cif/${codId}`;
+           console.log("fetchAndInsertCIF cifcell=",cifcell);
+           let url    = `https://heterofam.pnnl.gov/api/generate_crystal_cif/${codId}`;
+           const url1 = `https://heterofam.pnnl.gov/api/generate_crystal_cif_conventional/${codId}`;
+           const url2 = `https://heterofam.pnnl.gov/api/generate_crystal_cif_primitive/${codId}`;
+           if (!cifcell) cifcell = "none";
+           if (cifcell=="conventional") url=url1;
+           if (cifcell=="primitive")    url=url2;
+           console.log("fetchAndInsertCIF url=",url);
 
            try {
              const response = await fetch(url);
@@ -14195,14 +14202,20 @@ ul, li {
                       <td>
                          <table>
                             <tr>
-                               <td> <input type="button" class="button3" value="Add Hematite" onClick="fetchAndInsertCIF(9000139,editor)"</td>
-                               <td> <input type="button" class="button3" value="Add Goethite" onClick="fetchAndInsertCIF(9002158,editor)"</td>
-                               <td> <input type="button" class="button3" value="Add CIF" onClick="fetchAndInsertCIF(-1,editor)"</td>
+                               <td> <input type="button" class="button3" value="Add Hematite" onClick="fetchAndInsertCIF(9000139, document.getElementById('cif-cell').value, editor)"</td>
+                               <td> <input type="button" class="button3" value="Add Goethite" onClick="fetchAndInsertCIF(9002158, document.getElementById('cif-cell').value, editor)"</td>
+                               <td> <input type="button" class="button3" value="Add CIF" onClick="fetchAndInsertCIF(-1, document.getElementById('cif-cell').value, editor)"</td>
                             </tr>
                             <tr>
-                               <td> <input type="button" class="button3" name="smilesX1" id="smilesX1" value="Magnetite" onClick="fetchAndInsertCIF(9006920,editor)"</td>
-                               <td> <input type="button" class="button3" name="smilesX2" id="smilesX2" value="Maghemite" onClick="fetchAndInsertCIF(9006316,editor)"</td>
-                               <td> <input type="button" class="button3" name="smilesX3" id="smilesX3" value="Pyrite" onClick="fetchAndInsertCIF(1544891,editor)"</td>
+                               <td> <input type="button" class="button3" name="smilesX1" id="smilesX1" value="Magnetite" onClick="fetchAndInsertCIF(9006920, document.getElementById('cif-cell').value, editor)"</td>
+                               <td> <input type="button" class="button3" name="smilesX2" id="smilesX2" value="Maghemite" onClick="fetchAndInsertCIF(9006316, document.getElementById('cif-cell').value, editor)"</td>
+			       <td> <select id="cif-cell">
+                                       <option value="none">default</option>
+                                       <option value="conventional">conventional</option>
+                                       <option value="primitive">primitive</option>
+                                    </select>
+                               </td>
+
                             </tr>
                             <tr> <td> </td> </tr>
                             <tr>

@@ -186,8 +186,8 @@ def geturlresult(url):
 
 
 def extract_charge_and_multiplicity(lines):
-    charge = None
-    mult = None
+    charge = 0
+    mult = 1
     for line in lines:
         line = line.strip().lower()
         if line.startswith("charge"):
@@ -240,7 +240,7 @@ def extract_xc_functional(lines):
         match = xc_pattern.search(line)
         if match:
             return match.group(1).lower()
-    return "Unknown"
+    return "LDA"
 
 def canonicalize_nwchem_input(lines):
     canonical_lines = []
@@ -924,6 +924,11 @@ if (listqueues):
       echeck['queue_number'] = 1
       echeck['fetched'] = 1
       echeck['mformula'] = 1
+      #echeck['xc'] = 1
+      #echeck['charge'] = 1
+      #echeck['mult'] = 1
+      #echeck['lattice'] = 1
+      #echeck['genome'] = 1
       echeck['hash'] = 1
       echeck['client'] = 1
    queue = solid_queue_collection.find(check,echeck)
@@ -1011,7 +1016,6 @@ if (addqueue):
       entry['cutoff']   = cutoff
       entry['genome']   = genome
       entry['xc']       = xc
-      entry['cutoff']   = cutoff
       entry['lattice']  = lattice
       entry['hash']     = hash_value
 
@@ -1112,6 +1116,15 @@ if (runqueue):
    data1 += "# NWChemJobId: %s" % entry['_id']
    data1 += "\n"
    data1 += "#\n"
+   data1 += "# mformula - %s\n" % entry['mformula']
+   data1 += "# charge   - %d\n" % entry['charge']
+   data1 += "# mult     - %d\n" % entry['mult']
+   if (entry['cutoff']):
+      data1 += "# cufoff   - %f\n" % entry['cutoff']
+   data1 += "# xc       - %s\n" % entry['xc']
+   data1 += "# lattice  - %s\n" % entry['lattice']
+   data1 += "# genome   - %s\n" % entry['genome']
+   data1 += "#\n"
    data1 +=  entry['nwchem_input_deck'] + "\n"
    data1 += "#########################  END   NWCHEM INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
    print(data1)
@@ -1150,6 +1163,13 @@ if (nwoutfile!=''):
       #   with open(dfile,'r') as ff: 
       #      data = ff.read()
       #   datafiles.append((dfile,data))
+      mformula = "UNKNOWN"
+      xc       = "UNKNOWN"
+      lattice  = "UNKNOWN"
+      charge   = 0
+      mult     = 1
+      cutoff   = 50.0
+      genome   = "UNKNOWN"
 
       if "# NWChemJobId:" in nwchemoutput:
          if ismongo:
@@ -1157,28 +1177,23 @@ if (nwoutfile!=''):
          else:
             id = nwchemoutput.split('NWChemJobId:')[1].split('\n')[0].strip()
          print("ID=",id)
+         entry = solid_queue_collection.find_one({'_id': id})
+         print("Entry to delete:", entry)
+
+         ### set some properties
+         mformula = entry['mformula']
+         xc       = entry['xc']
+         lattice  = entry['lattice']
+         charge   = entry['charge']
+         mult     = entry['mult']
+         cutoff   = entry['cutoff']
+         genome   = entry['genome']
+
          delentry = {}
          delentry['_id']  = id
          print("deleting entry=",delentry)
          queue = solid_queue_collection.remove(delentry)
 
-      ### set some properties
-      try:
-         mformula = nwchemoutput.split('- mformula         =')[1].split('\n')[0].strip()
-         charge   = evalnum(nwchemoutput.split('- charge           =')[1].split('\n')[0].strip())
-         mult     = evalnum(nwchemoutput.split('- mult             =')[1].split('\n')[0].strip())
-         cutoff   = evalnum(nwchemoutput.split('-cutoff            =')[1].split('\n')[0].strip())
-         lattice  = nwchemoutput.split('- lattice          =')[1].split('\n')[0].strip()
-         xc       = nwchemoutput.split('- xc               =')[1].split('\n')[0].strip()
-         genome   = nwchemoutput.split('- genome           =')[1].split('\n')[0].strip()
-      except:
-         mformula = "UNKNOWN"
-         xc       = "UNKNOWN"
-         lattice  = "UNKNOWN"
-         charge   = 0
-         cutoff   = 50.0
-         mult     = 1
-         genome   = "UNKNOWN"
 
       ### set queue number  ##
       #queue_number00  = qnumber_collection.find_one({'queue':'solid_queue'})['count']
