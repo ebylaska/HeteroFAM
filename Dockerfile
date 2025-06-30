@@ -35,14 +35,24 @@ COPY .nwchemrc /root/.nwchemrc
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
+
 # Install Open Babel
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openbabel gnuplot \
     && apt-get install -y  --no-install-recommends openjdk-17-jdk vim nwchem \
     && rm -rf /var/lib/apt/lists/*
 
-
 COPY . .
+
+# Install dependencies and build Eric from local tarball
+RUN apt-get update && apt-get install -y build-essential gfortran && \
+    cd third_party && base64 -d ../Public/static/nwchem/henry.file > henry.tgz && \
+    tar -xvzf henry.tgz && \
+    cd henry && make
+
+
+# Add Bader to PATH
+ENV PATH="/HeteroFAM/third_party/bader:${PATH}"
 
 #CMD [ "python3", "Public/app9.py"]
 CMD [ "python3", "-u", "Public/app9.py"]
