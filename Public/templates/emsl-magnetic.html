@@ -67,10 +67,6 @@
 <!-- ************************************** -->
 <script type="text/javascript" language="javascript" src="{{ url_for('static', filename='jsmol/JSmol.min.js')}}"></script>
 
-<!-- ************************************** -->
-<!-- Location of scripts for JSME           -->
-<!-- ************************************** -->
-<script type="text/javascript" language="javascript" src="{{ url_for('static', filename='jsme/jsme.nocache.js')}}"></script>
 
 <!-- ************************************** -->
 <!-- Location of scripts for ACE            -->
@@ -235,7 +231,18 @@
   //background-image: linear-gradient(blue,lightgreen,blue);
   //background-image: linear-gradient(#4286f4,orange,#4286f4);
   //background-image: linear-gradient(#38761D,orange,#38761D);
-  background-image: linear-gradient(#92D0DF,#EEC689,#92D0DF);
+  //background-image: linear-gradient(#92D0DF,#EEC689,#92D0DF);
+
+  //background-image: linear-gradient(#3a4e5c, #92D0DF, #3a4e5c);
+
+
+  //background-image: linear-gradient(#304FFE, #FF6F00,black);
+  background-image: linear-gradient(black, #FF6F00, #304FFE);
+  //background-image: linear-gradient(black, #304FFE, black);
+
+  //background-image: linear-gradient(#2E7D32, #FFEB3B, #2E7D32);
+  //color: black;
+
   //background-image: linear-gradient(#4286f4,#599a3e,#4286f4);
   //background-image: linear-gradient(#2f61ce,lightgreen,#2f61ce);
   //background-image: linear-gradient(#2f61ce,gold,#2f61ce);
@@ -745,11 +752,7 @@ ul, li {
          finish_Thomas_command("Thomas ball and stick");
       }
       else if (txt.includes("stick")) {  jms("select *; wireframe 0.03; spacefill 1%;"); Text2Speech0("atoms are stick"); finish_Thomas_command("Thomas stick");}
-      else if (txt.includes("2d") && (txt.includes("add")||txt.includes("append"))) {  
-         Text2Speech0("Added molecule into JSME");
-         appendMolecule();
-         finish_Thomas_command("Thomas 2d add || append");
-      }
+
       else if (txt.includes("3d") && (txt.includes("add")||txt.includes("append"))) {  
          jmasmiles();
          Text2Speech0("Added molecule into JSMol");
@@ -915,11 +918,6 @@ ul, li {
          Text2Speech0("Running 2D molecule");
          Confirm0(document.form2,document.form2.smi.value);
          finish_Thomas_command("Thomas run 2d molecule");
-      }
-      else if (txt.includes("2d")) {  
-         Text2Speech0("Loaded molecule into JSME");
-         readMolecule();
-         finish_Thomas_command("Thomas 2d");
       }
       else if (txt.includes("3d")) {  
          Text2Speech0("Loaded molecule into JSMol");
@@ -1340,55 +1338,6 @@ ul, li {
 
 
 
-	//this function will be called after the JavaScriptApplet code has been loaded.
-	function jsmeOnLoad() {
-
-		//Instantiate a new JSME: 380px  340px
-		//arguments: HTML id, width, height (must be string not number!)
-		//jsmeApplet = new JSApplet.JSME("appletContainer", "700px", "467px", {
-                //var startingStructure = "13 14 C 15.94 -11.45 C 15.94 -10.05 C 14.72 -9.35 C 13.51 -10.05 C 13.51 -11.45 C 14.72 -12.15 C 17.34 -11.45 C 17.34 -10.05 O 18.33 -9.06 C 18.33 -12.44 C 17.96 -13.79 C 19.68 -12.07 N 21.03 -11.71 1 2 1 2 3 -1 3 4 1 4 5 1 5 6 1 1 6 -1 7 8 1 2 8 1 1 7 1 8 9 2 7 10 -1 10 11 2 10 12 1 12 13 3";
-    	
-
-		jsmeApplet = new JSApplet.JSME("appletContainer", "1000px", "667px", {
-			//optional parameters
-			"options" : "query,hydrogens,canonize,removehs,atommovebutton,fullScreenIcon",
-		        //"jme" : startingStructure
-		});
-
-		//Alternative method: the size is not specified: the applet will use 100% of the space of its parent container "appletContainer".
-		//Be sure that the parent container size > 0, otherwise the applet will not be visible
-
-		/*    	jsmeApplet = new JSApplet.JSME("appletContainer",  {
-		 //optional parameters
-		 "options" : "query,hydrogens",
-		 "jme" : startingStructure
-		 });
-		 */
-
-		//Opera patch: if some applet elements are not displayed, force repaint
-		//jsmeApplet.deferredRepaint(); //the applet will be repainted after the browser event loop returns
-		//it is recommended to use it if the JSME is created outside this jsmeOnLoad() function
-
-		//jsmeApplet has the same API as the original Java applet
-		//One can mimic the JME Java applet access to simplify the adaptation of HTML and JavaScript code:
-		document.JME = jsmeApplet;
-
-		//suggestion 
-		//all buttons that access the jsme variable were disabled in the html
-		//Now enable all buttons that can access the jsme variable since the applet is ready
-		//example:
-		//document.getElementById("button").disabled=false;
-                jsmeApplet.setMenuScale(1.4);
-
-	}
-        function jsmereaction() {
-           jsmeApplet.options("query,hydrogens,canonize,removehs,reaction");
-           //jsmeApplet.reset();
-        }
-        function jsmenoreaction() {
-           jsmeApplet.options("query,hydrogens,canonize,removehs,noreaction");
-           //jsmeApplet.reset();
-        }
 
      delete Jmol._tracker;
      function jmolOnLoad() {
@@ -1410,7 +1359,9 @@ ul, li {
             //color: "0x4286f4",
             //color: "0x00FF00",
             //color: "0x38761D",
-              color: "0x92D0DF",
+            //  color: "0x92D0DF",
+              //color: "0x304FFE",
+              color: "black",
             //color: "0x2f61ce",
             disableJ2SLoadMonitor: true,
             disableInitialConsole: true,
@@ -3388,16 +3339,6 @@ ul, li {
         }
 
 
-        function jmsmiles() { 
-            jms("load smiles \"" + document.JME.smiles().replace('>>','.') + "\""); 
-            var hasreaction = document.getElementById("jmolreactionplane").value == "Reaction off";
-            if (hasreaction) {
-               scpt  = "draw reactionarrow diameter 0.2  color red arrow {-2,0,0}, {2,0,0}; ";
-               scpt += "draw reactionplane \"reaction plane\" 1500 color translucent red plane {0,0,0} {0,1,0} {0,0,1};"
-               jms0(scpt);
-            }
-            Text2Speech0("Copying JSME to JSMol");
-        }
         function jmasmiles() { jms("set appendNew false;load append smiles \"" + document.JME.smiles().replace('>>','.') + "\"; select all; select within(molecule,(*)[0]); minimize select selected;"); 
            Text2Speech0("Appending JMSE to JSMol");
         }
@@ -6779,7 +6720,14 @@ ul, li {
            //var mult  = (eval(jmvar("{*}.elemno.sum")) + charge) % 2 + 1;
            var mult  = (eval(jmvar("{thisModel}.elemno.sum")) + charge) % 2 + 1;
            var odd0  = ((mult%2)==1);
-           var mult0 = document.getElementById("nwchemmult").value;
+	   var elem = document.getElementById("nwchemmult1");
+	   if (elem && elem.value !== "") {
+              var mult0 = elem.value;
+              console.log("Multiplet value:", mult0);
+           } else {
+              console.warn("Element 'nwchemmult1' not found.");
+           }
+           //var mult0 = document.getElementById("nwchemmult1").value;
            if (nwchemopt) mult=mult0;
            if (arrows_input.includes("mult{")) {
               mult = eval(arrows_input.split("mult{")[1].split("}")[0].trim());
@@ -6928,46 +6876,21 @@ ul, li {
            return solvation_type;
         }
         function calculation_type_arrowsdata() {
-           var arrows_input = document.form.smi.value;
            var calculation_type = "e";
-           if (arrows_input.includes("theory{pspw")) {
-              calculation_type = "e";
-           }
-           if (arrows_input.includes("calculation_type{")) {
-              calculation_type = arrows_input.split("calculation_type{")[1].split("}")[0].trim();
-           }
+           var calculation_type = "epovwyb";
+
            return calculation_type;
         }
 
 
 
-	function readMolecule() {
-		var mol = exMod();
-                jsmeApplet.reset();
-                jsmeApplet.readMolFile(mol);
-                Text2Speech0("Copying JSMol to JSME");
-	}
-
-
-        function loadreaction2dWindow(myid) { 
-           var mol = document.form2.smi.value;
-           if (!mol.contains(" --> ")) {
-    	      mol =  jsmeApplet.smiles();
-              var re = /\./g;
-              mol = mol.replace(re, " + ");
-              mol = mol.replace(">>"," --> ");
-           }
-           document.getElementById(myid).value = mol;
-
-           //appendreactants2jsmol(mol);
-        } 
 
         function hcleanappendreactants2jsmol(xx,yy) {
            console.log("HELLLO: ", xx,yy);
            if (yy.contains("Step 100") ||  yy.contains("CONVERGED")) {
               document.getElementById('apirunning').value = document.getElementById('apirunning').value.replace("+ running appendreactants2jsmol\n","");
               document.getElementById('nwchemcharge').value = charge_arrowsdata();
-              document.getElementById('nwchemmult').value   = mult_arrowsdata();
+              document.getElementById('nwchemmult1').value   = mult_arrowsdata();
               jms0('set echoCallback ""');
            }
         }
@@ -6977,7 +6900,7 @@ ul, li {
            if (yy.contains("Step 100") ||  yy.contains("CONVERGED")) {
               document.getElementById('apirunning').value = document.getElementById('apirunning').value.replace("+ running appendreactants2jsmol\n","");
               document.getElementById('nwchemcharge').value = charge_arrowsdata();
-              document.getElementById('nwchemmult').value   = mult_arrowsdata();
+              document.getElementById('nwchemmult1').value   = mult_arrowsdata();
               jms0('set echoCallback ""');
               finish_Thomas_command("Thomas appendreactants2jsmol");
            }
@@ -6988,7 +6911,7 @@ ul, li {
            if (yy.contains("Step 100") ||  yy.contains("CONVERGED")) {
               document.getElementById('apirunning').value = document.getElementById('apirunning').value.replace("+ running appendreactants2jsmol\n","");
               document.getElementById('nwchemcharge').value = charge_arrowsdata();
-              document.getElementById('nwchemmult').value   = mult_arrowsdata();
+              document.getElementById('nwchemmult1').value   = mult_arrowsdata();
               jms0('set echoCallback ""');
               loadframe2jsmol(false,true,0);
            }
@@ -7154,38 +7077,7 @@ ul, li {
         }
 
 
-	function appendMolecule() {
-		var mol = exMod();
-                jsmeApplet.readMolFile(mol);
-                Text2Speech0("Appending JSMol to JSME");
-	}
 
-	function readMultipart() {
-		var jme = "9 9 C 6.68 -7.15 C 5.47 -6.45 C 4.26 -7.15 C 4.26 -8.55 C 5.47 -9.25 C 6.68 -8.55 C 5.47 -5.05 O- 6.68 -4.35 O 4.26 -4.35 1 2 1 2 3 2 3 4 1 4 5 2 5 6 1 6 1 2 2 7 1 7 8 1 7 9 2|1 0 Na+ 12.21 -6.61";
-		jsmeApplet.readMolecule(jme) // or document.JME.readMolecule(jme
-	}
-
-	function readReaction() {
-		var jme = "3 2 C:1 1.41 -7.12 O:2 1.41 -5.72 Cl 2.63 -7.82 1 2 2 1 3 1|3 2 N:3 5.72 -6.78 C:4 7.12 -6.78 H:5 5.02 -7.99 1 2 1 1 3 1 >> 5 4 C:1 13.51 -6.40 O:2 13.51 -5.00 N:3 14.72 -7.10 C:4 15.94 -6.40 H:5 14.71 -8.50 1 2 2 1 3 1 3 4 1 3 5 1";
-		jsmeApplet.readMolecule(jme);
-	}
-
-	function getMolfile() {
-		var data = document.JME.molFile();
-		document.getElementById("jme_output").value = data;
-
-	}
-	function getSmiles() {
-                var drawing = document.JME.smiles();
-                document.form.smi.value = drawing;
-	}
-	function appendSmiles() {
-                var drawing = document.JME.smiles();
-                var re = /\./g;
-                drawing = drawing.replace(re, " + ");
-                drawing = drawing.replace(">>"," --> ");
-                document.form2.smi.value += drawing;
-	}
 
 	function appendSmiles2() {
                 //jms("xxsmiles = {1.1}.find(\"SMILES\");");
@@ -7549,6 +7441,9 @@ ul, li {
            var qtime   = document.getElementById("queue_time").value;
            var ncpus   = document.getElementById("queue_ncpus").value;
            var account = document.getElementById("queue_account").value.replace("None","");
+	   var dftmapping = document.getElementById("dftmapping").value
+
+           console.log("Im HERE?", dftmapping);
             
 
            var today = new Date();
@@ -7760,6 +7655,7 @@ ul, li {
            var solvation_type   = solvation_type_arrowsdata();
            var jobname = theory + "-" + xc + "-" + mformula;
            var mformula0 = mformula;
+           console.log("calculation_type?", calculation_type);
 
            if (calculation_type.includes("a")) {
                data = "";
@@ -7819,7 +7715,7 @@ ul, li {
               document.getElementById("queue_nwchem_curdir").value = curdir;
            }
            document.getElementById("nwchemcharge").value = charge;
-           document.getElementById("nwchemmult").value   = mult;
+           document.getElementById("nwchemmult1").value   = mult;
 
            x += "#curdir " + curdir +"\n";
            x += "#\n";
@@ -7909,6 +7805,7 @@ ul, li {
                  x += "  cutoff " + basis + "\n";
               }
               x += "  mult " + mult.toString() + "\n";
+	      if (dftmapping=="unrestricted") { x += "  odft\n"; }
               if (xc=="lda")    {x += "  xc vosko";}
               if (xc=="pbe")    {x += "  xc pbe96";}
               if (xc=="blyp")   {x += "  xc blyp";}
@@ -8048,202 +7945,9 @@ ul, li {
 
               data += x;
       
-           } else if (theory=="dft") {
+           } 
 
-              x = makegaussianbasis(basis,basisHZ,katom);
 
-              x += "dft\n";
-              x += "  direct\n";
-              x += "  noio\n"; 
-              x += "  grid nodisk\n";
-              x += "  mult " + mult.toString() + "\n";
-              if (xc.includes("pbe0")) { 
-                 x += "  xc pbe0";
-              } else if (xc.includes("pbe")) {
-                 x += "  xc xpbe96 cpbe96";
-              }
-              if (xc.includes("blyp"))   {x += "  xc becke88 lyp";}
-              if (xc.includes("b3lyp"))  {x += "  xc b3lyp";}
-              if (xc.includes("m06-2x")) {x += "  xc m06-2x";}
-              x += "\n";
-              if (xc.includes("coarse")) {x += "  grid coarse";}
-              if (xc.includes("fine"))   {x += "  grid fine";}
-              if (xc.includes("xfine"))  {x += "  grid xfine";}
-              x += "\n";
-              x += "  iterations 5001\n";
-              x += "end\n";
-
-              data += x;
-
-           } else if ((theory=="hf") || (theory=="uhf")) {
-              x  = makegaussianbasis(basis,basisHZ,katom);
-              if (mult==1) { 
-                 x += "scf\n";
-                 if (theory=='uhf') {x += "   uhf\n";}
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==2) { 
-                 x += "scf\n";
-                 if (theory=='uhf') {x += "   uhf\n";}
-                 x += "   doublet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==3) { 
-                 x += "scf\n";
-                 if (theory=='uhf') {x += "   uhf\n";}
-                 x += "   triplet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==4) { 
-                 x += "scf\n";
-                 if (theory=='uhf') {x += "   uhf\n";}
-                 x += "   quartet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==5) { 
-                 x += "scf\n";
-                 if (theory=='uhf') {x += "   uhf\n";}
-                 x += "   quintet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-
-              data += x;
-
-           } else if (theory=="mp2") {
-              x  = makegaussianbasis(basis,basisHZ,katom);
-              if (mult==1) { 
-                 x += "scf\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==2) { 
-                 x += "scf\n";
-                 x += "   uhf\n";
-                 x += "   doublet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==3) { 
-                 x += "scf\n";
-                 x += "   uhf\n";
-                 x += "   triplet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==4) { 
-                 x += "scf\n";
-                 x += "   uhf\n";
-                 x += "   quartet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==5) { 
-                 x += "scf\n";
-                 x += "   uhf\n";
-                 x += "   quintet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              x += "mp2\n"; 
-              x += "   freeze atomic\n"; 
-              x += "end\n";
-              x += "set cphf:maxiter 1500\n";
-
-              data += x;
-
-           } else if (theory=="ccsd(t)") {
-              x  = makegaussianbasis(basis,basisHZ,katom);
-              if (mult==1) {
-                 x += "scf\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==2) {
-                 x += "scf\n";
-                 x += "   rohf\n";
-                 x += "   doublet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==3) {
-                 x += "scf\n";
-                 x += "   rohf\n";
-                 x += "   triplet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==4) {
-                 x += "scf\n";
-                 x += "   rohf\n";
-                 x += "   quartet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult==5) {
-                 x += "scf\n";
-                 x += "   rohf\n";
-                 x += "   quintet\n";
-                 x += "   maxiter 501\n";
-                 x += "end\n";
-              }
-              if (mult>1) { 
-                 x += "tce\n";
-                 x += "   freeze atomic\n"; 
-                 x += "   ccsd(t)\n"; 
-                 x += "   io ga\n"; 
-                 x += "   2eorb\n"; 
-                 x += "   2emet 13\n"; 
-                 x += "   tilesize 20\n"; 
-                 x += "end\n";
-              } else {
-                 x += "ccsd\n"; 
-                 x += "   freeze atomic\n";
-                 x += "   maxiter 51\n";
-                 x += "end\n";
-              } 
-
-              data += x;
-           }
-
-           // define cosmo radii
-           var radii=[];
-           var j,xx,yy,zz,r,dsigma;
-           for (i=0; i<symbols.length; i++) {radii.push(0.0); }
-           for (i=0; i<symbols.length; i++) {
-              if (symbols[i]=='H') {radii[i] = 1.172; } 
-              else if (symbols[i]=='N') {radii[i] = 2.126;}
-              else if (symbols[i]=='O') {radii[i] = 1.576;}
-              else if (symbols[i]=='F') {radii[i] = 1.28;}
-              else if (symbols[i]=='P') {radii[i] = 2.279;}
-              else if (symbols[i]=='S') {radii[i] = 2.023;}
-              else if (symbols[i]=='Cl'){radii[i] = 1.75;}
-              else if (symbols[i]=='Al'){radii[i] = 1.404;}
-              else if (symbols[i]=='Si'){radii[i] = 2.457;}
-              else if (symbols[i]=='Br'){radii[i] = 2.16;}
-              else if (symbols[i]=='I') {radii[i] = 2.32;}
-              else if (symbols[i]=='C') { 
-                dsigma = true;
-                for (j=0; j<symbols.length; j++) {
-                   if ((symbols[j]=='C') && (j!=i)) {
-                     xx=xyz[3*i]-xyz[3*j]; yy=xyz[3*i+1]-xyz[3*j+1]; zz=xyz[3*i+2]-xyz[3*j+2];
-                     r = Math.sqrt(xx*xx + yy*yy + zz*zz);
-                     if (r<=1.46) {dsigma = false;}
-                   }
-                }
-                if (dsigma) {
-                   radii[i] = 2.096;
-                } else {
-                   radii[i] = 1.635;
-                }
-              } else {
-                radii[i] = 2.223;
-              }
-           }
 
 
            // Add tasks
@@ -8254,210 +7958,42 @@ ul, li {
            if (theory=="pspw-band") {theory="band";}
            x = "";
            for (i=0; i<tasks.length; i++) {
-              if (tasks[i]=="e") {x += "task "+ theory + " energy ignore\n";}
+              if (tasks[i]=="e") {
+			     x += "task "+ theory + " energy ignore\n\n";
+	      }
+              if (tasks[i]=="p") {
+			     x += "nwpw\n    pspspin off\nend\n\n";
+			     x += "task "+ theory + " energy ignore\n\n";
+	      }
               if (tasks[i]=="g") {x += "task "+ theory + " gradient\n";}
               if (tasks[i]=="o") {
                  x += "\ndriver; default; maxiter 50; clear; end\n";
-                 x += "task "+ theory + " optimize ignore\n";
+                 x += "task "+ theory + " optimize ignore\n\n";
               }
-              if (tasks[i]=="v") {x += "task "+ theory + " freq numerical\n";}
-              if (tasks[i]=="w") {x += "task "+ theory + " freq\n";}
-              if (tasks[i]=="a") {
-                 x += makegeom_neb((theory=="pspw") || (theory=="paw") || (theory=="band"));
-                 x += "neb\n";
-                 x += "   impose\n";
-                 x += "   algorithm 0\n";
-                 x += "   maxiter 10\n";
-                 x += "   nbeads 10\n";
-                 x += "   stepsize 1.0\n";
-                 x += "   kbeads 0.001\n";
-                 x += "end\n";
-                 x += "task " + theory + " neb ignore\n";
-              }
-
-              if (tasks[i]=="c") { 
-                 if (solvation_type.includes("COSMO-SMD")) { 
-                    if (solvation_type.includes(":")) { 
-                       svnt = solvation_type.split(":")[1];
-                    } else {
-                       svnt = "h2o";
-                    }
-                    x += "cosmo\n"
-                    x += "   do_cosmo_smd .true.\n";
-                    x += "   solvent " + svnt + "\n";
-                    x += "\nend\n"
-                    x += "task " + theory + " energy ignore\n";
-                 } else if (solvation_type=='COSMO') { 
-                    x += "unset dft:converged\n";
-                    x += "unset scf:converged\n";
-                    x += "cosmo\n";
-                    x += "   do_gasphase .true.\n";
-                    x += "   rsolv  0.0\n";
-                    x += "   ifscrn 2\n";
-                    x += "   minbem 3\n";
-                    x += "   maxbem 3\n";
-                    x += "   radius ";
-                    for (j=0; j<radii.length; j++) {
-                      x +=  radii[j].toString() + " ";
-                    }
-                    x += "\nend\n";
-                    x += "task " + theory + " energy ignore\n";
-                 }
-              }
+              if (tasks[i]=="v") {x += "task "+ theory + " freq numerical\n\n";}
+              if (tasks[i]=="w") {
+		  x += "task "+ theory + " wannier\n";
+		  x += "task "+ theory + " wannier\n\n";
+    	      }
+              if (tasks[i]=="y") {
+		  x += "nwpw\n  wannier\n     algorithm Damle-Lin-Ying\n  end\nend\n"
+		  x += "task "+ theory + " wannier\n\n";
+	      }
+             
               if (tasks[i]=="b") { 
-                 if ((theory=="pspw") && (mult==1)) {
-                    x += "\n\n### Generating HOMO and LUMO Gaussian cube files ###\n";
+                 if ((theory=="pspw")) {
+                    x += "\n\n### Generating Gaussian cube files ###\n";
                     x += "nwpw\n";
-                    x += "   virtual 8\n";
                     x += "   dplot\n";
-                    x += "      orbital 1 homo-restricted.cube\n";
                     x += "      density total density.cube\n";
-                    x += "   end\n";
-                    x += "end\n";
-                    x += "task pspw energy ignore\n";
-                    x += "task pspw pspw_dplot\n\n";
-                    x +=  "nwpw\n";
-                    x += "   dplot\n";
-                    x += "      vectors " + jobname + ".emovecs\n";
-                    x += "      orbital 1 lumo-restricted.cube\n";
+                    x += "      density diff  diff.cube\n";
+                    x += "      density alpha alpha.cube\n";
+                    x += "      density beta  beta.cube\n";
                     x += "   end\n";
                     x += "end\n";
                     x += "task pspw pspw_dplot\n\n";
-                 }
-                 if ((theory=="pspw") && (mult>1)) {
-                    ndn = (ncharge-mult+1)/2;
-                    nup = ndn + mult - 1;
-                    x += "\n\n### Generating HOMO and LUMO Gaussian cube files ###\n";
-                    x +=  "nwpw\n";
-                    x += "   virtual 8\n";
-                    x += "   dplot\n";
-                    x += "      orbital 1         homo-alpha.cube\n";
-                    if (ndn>0) {
-                       x += "      orbital 123456789 homo-beta.cube\n";
-                    } else {
-                       x += "      orbital 1 homo-beta.cube\n";
-                    }
-                    x += "      density total density.cube\n";
-                    x += "   end\n";
-                    x += "end\n";
-                    x += "task pspw energy ignore\n";
-                    x += "task pspw pspw_dplot\n\n";
-                    x +=  "nwpw\n";
-                    x += "   dplot\n";
-                    x += "      vectors " + jobname + ".emovecs\n";
-                    x += "      orbital 1 lumo-alpha.cube\n";
-                    x += "      orbital 123456789 lumo-beta.cube\n";
-                    x += "   end\n";
-                    x += "end\n";
-                    x += "task pspw pspw_dplot\n\n";
-                 }
-                 if (((theory=="dft")||(theory=="hf")) && (mult==1)) {
-                    nup = ncharge/2;
-                    ndn = nup+1;
-                    x += "\n\n### Generating HOMO and LUMO Gaussian cube files ###\n";
-                    x += "dplot\n";
-                    x += "   TITLE HOMO_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n" 
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin total\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    x += "  " +  nup.toString() + "\n";
-                    x += "   gaussian\n";
-                    x += "   output homo-restricted.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                    x += "dplot\n";
-                    x += "   TITLE LUMO_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n" 
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin total\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    x += "   " + ndn.toString() + "\n";
-                    x += "   gaussian\n";
-                    x += "   output lumo-restricted.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                 }
-                 if (((theory=="dft")||(theory=="hf")) && (mult>1)) {
-                    ndn = (ncharge-mult+1)/2;
-                    nup = ndn + mult - 1;
-                    var nup1 = nup + 1;
-                    var ndn1 = ndn + 1;
-                    x += "\n\n### Generating HOMO and LUMO Gaussian cube files ###\n";
-                    x += "dplot\n";
-                    x += "   TITLE HOMO_Alpha_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n" ;
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin alpha\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    x += "   " + nup.toString() + "\n";
-                    x += "   gaussian\n";
-                    x += "   output homo-alpha.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                    x += "dplot\n";
-                    x += "   TITLE LUMO_Alpha_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n" ;
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin alpha\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    x += "   " + nup1.toString() + "\n";
-                    x += "   gaussian\n";
-                    x += "   output lumo-alpha.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                    x += "dplot\n";
-                    x += "   TITLE HOMO_Beta_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n";
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin beta\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    if (ndn>0) {
-                       x += "   " + ndn.toString() + "\n";
-                    } else {
-                       x += "   " + ndn1.toString() + "\n";
-                    }
-                    x += "   gaussian\n";
-                    x += "   output homo-beta.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                    x += "dplot\n";
-                    x += "   TITLE LUMO_Beta_Orbital\n";
-                    x += "   vectors " + jobname + ".movecs\n";
-                    x += "   LimitXYZ\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   -15.0 15.0 96\n";
-                    x += "   spin beta\n";
-                    x += "   orbitals view\n";
-                    x += "   1\n";
-                    x += "   " + ndn1.toString() + "\n";
-                    x += "   gaussian\n";
-                    x += "   output lumo-beta.cube\n";
-                    x += "end\n";
-                    x += "task dplot\n";
-                 }
 
+                 }
               }
            }
            data += x;
@@ -8691,10 +8227,6 @@ ul, li {
            }
            if (button0=="pspw")    { theorystr = "pspw"; }
            if (button0=="pspw4")   { theorystr = "pspw4"; }
-           if (button0=="dft")     { theorystr = "dft"; }
-           if (button0=="mp2")     { theorystr = "mp2"; }
-           if (button0=="ccsd(t)") { theorystr = "ccsd(t)"; }
-           if (button0=="pm3")     { theorystr = "pm3"; }
 
            if (button0=="6-31G*")          { basisstr = "6-31G*"; }
            if (button0=="6-311++G(2d,2p)") { basisstr = "6-311++G(2d,2p)"; }
@@ -8727,7 +8259,6 @@ ul, li {
            if (button0=="None")      { solvstr = "None"; }
 
            // remove conflicting options
-           if ((theorystr=="mp2") || (theorystr=="ccsd(t)"))  { xcstr = ""; }
            if (((theorystr=="band")||(theorystr=="pspw") || (theorystr=="pspw4")) && (xcstr=="m06-2x")) { xcstr = ""; }
            if (((theorystr=="band")||(theorystr=="pspw")                        ) && (solvstr=="COSMO")) { solvstr = ""; }
            if (((theorystr=="band")||(theorystr=="pspw")                                              ) && (solvstr.includes("COSMO-SMD"))) { solvstr = ""; }
@@ -8781,50 +8312,6 @@ ul, li {
                   document.getElementById("None").style      = color1;
                   document.getElementById("6-31G*").style          = color2;
                   document.getElementById("6-311++G(2d,2p)").style = color2;
-              } else if ((theorystr=="mp2")||(theorystr=="ccsd(t)")) {
-                  document.getElementById("lda").style     = color2;
-                  document.getElementById("pbe").style     = color2;
-                  document.getElementById("pbe0").style    = color2;
-                  document.getElementById("blyp").style   = color2;
-                  document.getElementById("b3lyp").style   = color2;
-                  document.getElementById("tpss03").style   = color2;
-                  document.getElementById("scan").style   = color2;
-                  document.getElementById("vs98").style   = color2;
-                  document.getElementById("m06-2x").style  = color2;
-                  document.getElementById("revpbe").style     = color2;
-                  document.getElementById("pbesol").style     = color2;
-                  document.getElementById("pbe-grimme2").style     = color2;
-                  document.getElementById("pbe-grimme3").style     = color2;
-                  document.getElementById("beef").style     = color2;
-                  document.getElementById("xbeef-cpbe").style     = color2;
-                  document.getElementById("beef-vdw2").style     = color2;
-                  document.getElementById("COSMO").style     = color1;
-                  document.getElementById("COSMO-SMD").style = color1;
-                  document.getElementById("None").style      = color1;
-                  document.getElementById("6-31G*").style          = color1;
-                  document.getElementById("6-311++G(2d,2p)").style = color1;
-              } else if (theorystr=="pm3") {
-                  document.getElementById("lda").style     = color2;
-                  document.getElementById("pbe").style     = color2;
-                  document.getElementById("pbe0").style    = color2;
-                  document.getElementById("blyp").style   = color2;
-                  document.getElementById("b3lyp").style   = color2;
-                  document.getElementById("tpss03").style   = color2;
-                  document.getElementById("scan").style   = color2;
-                  document.getElementById("vs98").style   = color2;
-                  document.getElementById("m06-2x").style  = color2;
-                  document.getElementById("revpbe").style     = color2;
-                  document.getElementById("pbesol").style     = color2;
-                  document.getElementById("pbe-grimme2").style     = color2;
-                  document.getElementById("pbe-grimme3").style     = color2;
-                  document.getElementById("beef").style     = color2;
-                  document.getElementById("xbeef-cpbe").style     = color2;
-                  document.getElementById("beef-vdw2").style     = color2;
-                  document.getElementById("COSMO").style     = color1;
-                  document.getElementById("COSMO-SMD").style = color2;
-                  //document.getElementById("None").style      = color2;
-                  document.getElementById("6-31G*").style          = color2;
-                  document.getElementById("6-311++G(2d,2p)").style = color2;
               }
            } else {
               // set the button colors
@@ -8849,28 +8336,6 @@ ul, li {
                   document.getElementById("b3lyp_2").style   = color1;
                   document.getElementById("tpss03_2").style   = color1;
                   document.getElementById("scan_2").style   = color1;
-                  document.getElementById("m06-2x_2").style  = color2;
-                  document.getElementById("6-31G*_2").style          = color2;
-                  document.getElementById("6-311++G(2d,2p)_2").style = color2;
-              } else if ((theorystr=="mp2")||(theorystr=="ccsd(t)")) {
-                  document.getElementById("lda_2").style     = color2;
-                  document.getElementById("pbe_2").style     = color2;
-                  document.getElementById("pbe0_2").style    = color2;
-                  document.getElementById("blyp_2").style   = color2;
-                  document.getElementById("b3lyp_2").style   = color2;
-                  document.getElementById("tpss03_2").style   = color2;
-                  document.getElementById("scan_2").style   = color2;
-                  document.getElementById("m06-2x_2").style  = color2;
-                  document.getElementById("6-31G*_2").style          = color1;
-                  document.getElementById("6-311++G(2d,2p)_2").style = color1;
-              } else if (theorystr=="pm3") {
-                  document.getElementById("lda_2").style     = color2;
-                  document.getElementById("pbe_2").style     = color2;
-                  document.getElementById("pbe0_2").style    = color2;
-                  document.getElementById("blyp_2").style   = color2;
-                  document.getElementById("b3lyp_2").style   = color2;
-                  document.getElementById("tpss03_2").style   = color2;
-                  document.getElementById("scan_2").style   = color2;
                   document.getElementById("m06-2x_2").style  = color2;
                   document.getElementById("6-31G*_2").style          = color2;
                   document.getElementById("6-311++G(2d,2p)_2").style = color2;
@@ -8922,7 +8387,6 @@ ul, li {
            for (const bb of ["queue_nwchem_permdir","queue_nwchem_curdir"]) {
               let oldbb = document.getElementById(bb).value;
               if (oldbb.includes("hf"))             { document.getElementById(bb).value = oldbb.replace("hf",newtheory); }
-              else if (oldbb.includes("mp2"))       { document.getElementById(bb).value = oldbb.replace("mp2",newtheory); }
               else if (oldbb.includes("dft"))       { document.getElementById(bb).value = oldbb.replace("dft",newtheory); }
               else if (oldbb.includes("pspw-band")) { document.getElementById(bb).value = oldbb.replace("pspw-band",newtheory); }
               else if (oldbb.includes("band"))      { document.getElementById(bb).value = oldbb.replace("band",newtheory); }
@@ -12707,27 +12171,6 @@ ul, li {
         }
 
 
-        function bondings_metadynamics() {
-           var bondings = document.getElementById('reaction_bondings').value;
-           if (bondings.includes("gamma")) {
-              var coefatom = bondings.split("gamma")[1].split("\n")[0].trim();
-
-              document.getElementById("coordinate_type").value = "bondings";
-              changecollectivecoords();
-              document.getElementById('collective_bondings_coefindexes').value = coefatom; 
-              var ggmin =  parseFloat(document.getElementById('min_reaction_gamma').value);
-              var ggmax =  parseFloat(document.getElementById('max_reaction_gamma').value);
-              var dlta = 2.5;
-              ggmin -= dlta;
-              ggmax += dlta;
-      
-              document.getElementById('meta_range').value = ggmin.toFixed(4) + " " + ggmax.toFixed(4);
-              document.getElementById('meta_nrange').value = 501;
-              document.getElementById("meta_boundary_w").value = 0.1;
-              document.getElementById("meta_boundary_sigma").value = 0.1;
-           }
-        }
-
       
 
         function set_color_alist(color,alist) {
@@ -12923,35 +12366,7 @@ ul, li {
            }
         }
 
-        function changefreeenergy() {
-           var ftype = document.getElementById("free_energy_type").value;
-           if (ftype=="Metadynamics") {
-              document.getElementById("metainput").style.display = "block";
-              document.getElementById("tamdinput").style.display = "none";
-              document.getElementById("pmfinput").style.display = "none";
-           } else if (ftype=="TAMD") {
-              document.getElementById("metainput").style.display = "none";
-              document.getElementById("tamdinput").style.display = "block";
-              document.getElementById("pmfinput").style.display = "none";
-           } else {
-              document.getElementById("metainput").style.display = "none";
-              document.getElementById("tamdinput").style.display = "none";
-              document.getElementById("pmfinput").style.display = "block";
-           }
-        }
 
-        function changecollectivecoords() {
-           var ctype = "collective_" + document.getElementById("coordinate_type").value;
-           var alldivs = document.getElementsByClassName("collective_div");
-       
-           for (var i=0; i<alldivs.length; ++i) {
-              if (alldivs[i].id==ctype) {
-                 alldivs[i].style.display = "block";
-              } else {
-                 alldivs[i].style.display = "none";
-              }
-           }
-        }
 
         function set_Sprik() {
            var checked = document.getElementById("collective_coord_number_sprik").checked;
@@ -13079,18 +12494,21 @@ ul, li {
 </head>
 
 
-<body onload="jmolOnLoad();cacheLoadAll();changefreeenergy();changecollectivecoords();jmolsetLoadStruct();">
+<body onload="jmolOnLoad();cacheLoadAll();jmolsetLoadStruct();">
 
 <!--div class="linkbanner">
    <a href="https://arrows.emsl.pnnl.gov/api"><img src="https://dl.dropboxusercontent.com/s/s5fof263qwxzcaq/EMSLArrows2019.png" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a> 
 <a href="https://arrows.emsl.pnnl.gov/api/periodic">Expert Periodic and Molecular Editor</a> &nbsp; 
    <a href="https://arrows.emsl.pnnl.gov/api/3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="https://arrows.emsl.pnnl.gov/api/expert">2D and 3D Combo Editor</a> &nbsp;   <a href="https://arrows.emsl.pnnl.gov/api/qsharp_chem">Microsoft Quantum Editor</a> &nbsp;  <a href="https://arrows.emsl.pnnl.gov/api/aerosol">EMSL Aerosol Workshop Editor</a> &nbsp; <a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">Manual</a>
+   :w
+
+   <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/mag3.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="100" align="middle"></a>
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/mag3.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="100" align="middle"></a>
+   <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/omegashell2.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="100" align="middle"></a>
 <a href="{{ heterofam_api }}periodic">Expert Periodic and Molecular Editor</a> &nbsp;
-   <a href="{{ heterofam_api }}moire">Moire Editor</a>  &nbsp; <a href="{{ heterofam_api }}magnetic">Magnetic Editor</a> &nbsp;   <a href="{{ heterofam_api }}aerosol">AI Editor</a> &nbsp;  <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
+   <a href="{{ heterofam_api }}moire">Moire Editor</a>  &nbsp; <a href="{{ heterofam_api }}magnetic">Magnetic Editor</a> &nbsp; <a href="{{ heterofam_api }}arrows">Arrows</a> &nbsp;   <a href="{{ heterofam_api }}aerosol">AI Editor</a> &nbsp;  <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
 </div>
 
 
@@ -13747,6 +13165,14 @@ ul, li {
                                     size="3" min="0" max="100" step="1" value="0" 
                                     onChange="changenwchemvirt()" 
                                     oninput="cacheInput(this)"> 
+               dft type:     <select id="dftmapping" 
+                                     title=": set text dftmapping :"
+                                     oninput="cacheInput(this)">
+                                    <option value="default">default</option>
+                                    <option value="restricted">restricted</option>
+                                    <option value="unrestricted" selected>unrestricted</option>
+                                    <option value="non-collinear">non-collinear</option>
+                             </select>
                Ewald rcut:   <input type="number" 
                                     name="nwchemewald_rcut" 
                                     id="nwchemewald_rcut" 
@@ -15045,7 +14471,7 @@ function solveSpinStates(JijMatrix, magneticAtomInfo, multiplicity = null, tempe
                   <br><br>
 
                   <button id="generateMagneticSpin"  onClick="generateJijMatrix();">Generate Magnetic Spin Data</button>
-                      <label for="mult">multiplicity:</label> <input type="number" name="nwchemmult" id="nwchemmult2" title=": set number nwchemmult2  :" size="3" min="1" max="100" step="1" value="1" onChange="changenwchemmult(this)" oninput="cacheInput(this)">
+                      <label for="mult">multiplicity:</label> <input type="number" name="nwchemmult9" id="nwchemmult2" title=": set number nwchemmult2  :" size="3" min="1" max="100" step="1" value="1" onChange="changenwchemmult(this)" oninput="cacheInput(this)">
                       <label for="temperature">Initial Temperature:</label> <input type="number" id="temperature" value="100" step="1" min="1" style="width: 80px;">
                       <label for="coolingRate">Cooling Rate:</label> <input type="number" id="coolingRate" value="0.98" step="0.01" min="0.80" max="1.0" style="width: 80px;">
                       <label for="maxIterations">Max Iterations:</label> <input type="number" id="maxIterations" value="1000" step="1" min="1" style="width: 80px;">
@@ -16842,9 +16268,6 @@ number table rows: <input type="number" id="nrowsTable" size="9" min="1" max="10
      <option value="theory{dft}">     dft     </option>
      <option value="theory{pspw}">    pspw    </option>
      <option value="theory{pspw4}">   pspw4   </option>
-     <option value="theory{mp2}">     mp2     </option>
-     <option value="theory{ccsd(t)}"> ccsd(t) </option>
-     <option value="theory{pm3}">     pm3     </option>
      <option value="theory{band}">    band    </option>
    </select>
 <select id="xc_s2" onChange="add_string_id('columnTheories',document.getElementById('xc_s2').value)">
@@ -17512,7 +16935,6 @@ function queue_openwindow(url,name) {
 
    <font color="443322" size="2"><p><a href="https://ace.c9.io">ACE: High Performance Code Editor for the Web</a></p></font>
     <font color="443322" size="2"><p><a href="https://wiki.jmol.org/index.php/JSmol">JSmol: an open-source HTML5 viewer for chemical structures in 3D</a></p></font>
-    <font color="443322" size="2"><p> JSME Editor Citation: <a href="https://jcheminf.springeropen.com/articles/10.1186/1758-2946-5-24"> B. Bienfait and P. Ertl, JSME: a free molecule editor in JavaScript, J. Cheminformatics 5:24 (2013)</a> </p></font>
     <font color="443322" size="2"><p><a href="https://bossanova.uk/jspreadsheet/v4/">Jspreadsheet v4: The javascript spreadsheet</a></p></font>
 
     <table> <tr>
@@ -17723,7 +17145,7 @@ arrows calculation queue url: <input type="url" id="arrows_calculation_url" SIZE
 </div>
 <br><br><br>
 <hr>
-               
+
 
 </body>
 </html>

@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory, Response, session
 from flask import abort
 from werkzeug.utils import secure_filename
-import os,subprocess,urllib,time,random,requests,zipfile,re,math,yaml
+import os,subprocess,urllib,time,uuid,random,requests,zipfile,re,math,yaml,csv,datetime
 import paramiko,secrets
 import logging
 
@@ -29,13 +29,18 @@ print("HeteroFAM_HOME=",HeteroFAM_HOME)
 HeteroFAM_API_HOME = 'https://heterofam.pnnl.gov/api/'
 ###################### HeteroFAM Locations #######################
 
-UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'uploads')
+UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'uploads') 
+if not UPLOAD_FOLDER.endswith(os.sep):
+   UPLOAD_FOLDER += os.sep
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 #UPLOAD_FOLDER = '/tmp/'
 #UPLOAD_FOLDER = HeteroFAM_HOME + '/Public/uploads/'
 
 ERIC_UPLOAD_FOLDER = os.path.join(HeteroFAM_HOME, 'Public', 'eric_data')
 os.makedirs(ERIC_UPLOAD_FOLDER, exist_ok=True)
+
+# In-memory store; you can persist to DB or file if needed
+file_metadata = {}
 
 ALLOWED_EXTENSIONS = {
     'cube', 'out', 'nwout', 'nwo', 'nw', 'eap', 'xyz', 'emotion', 'ion_motion',
@@ -52,7 +57,7 @@ tar                     = "/bin/tar -czf "
 chemdb_fetch_reactions  = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " -e "
 chemdb_fetch_reactions0 = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " "
 chemdb_queue            = HeteroFAM_HOME + "/bin/chemdb_queue --heterofam_api=" + HeteroFAM_API_HOME + " "
-solid_queue             = HeteroFAM_HOME + "/bin/solid_queue --heterofam_api=" + HeteroFAM_API_HOME + " "
+eric_solid_queue        = HeteroFAM_HOME + "/bin/solid_queue --heterofam_api=" + HeteroFAM_API_HOME + " "
 chemdb_balance_reaction = HeteroFAM_HOME + "/bin/chemdb_balance_reaction9f --heterofam_api=" + HeteroFAM_API_HOME + " "
 tnt_submit              = HeteroFAM_HOME + "/bin/tnt_submit5 --heterofam_api=" + HeteroFAM_API_HOME + " -f "
 
@@ -91,7 +96,7 @@ HeteroFAMHeader = '''
    <center> <font color="74A52B" size="+2"><p><b>Results from an HeteroFAM Request</b></p></font></center>
    <center> <p>Making molecular modeling accessible by combining NWChem, databases, web APIs (<a href="%s">%s</a>), and email (arrows@emsl.pnnl.gov)</p> </center>
    <center> %s </center>
-''' % (HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME,headerfigure[3])
+''' % (HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME+"arrows",HeteroFAM_API_HOME+"arrows",headerfigure[3])
 
 HeteroFAMHeader2 = '''
    <center> <font color="darkgreen" size="+2"><p><b> EMSL HeteroFAM Microsoft Quantum Development Kit Queue</b></p></font></center>
@@ -101,6 +106,15 @@ HeteroFAMHeader2 = '''
 ''' % (headerfigure[1]+headerfigure[0])
 
 
+
+def parse_ttl(ttl_str):
+    units = {'s':1, 'm':60, 'h':3600, 'd':86400}
+    try:
+        num = int(ttl_str[:-1])
+        unit = ttl_str[-1].lower()
+        return num * units.get(unit, 0)
+    except:
+        return 0
 
 
 
@@ -544,7 +558,7 @@ def ssh_tunnel2(username, password, target_machine_ip, local_port, remote_port, 
 #             xyz2cif                     #
 #                                         #
 ###########################################
-def xyz2cif(xyzdat,cell):
+def xyz2cif(xyzdat,cell,scrystal=False):
    try:
       a1 = cell.split("a1=<")[1].split(">")[0].strip().split()
       a2 = cell.split("a2=<")[1].split(">")[0].strip().split()
@@ -634,6 +648,14 @@ _atom_site_fract_z''' % (a,b,c,alpha,beta,gamma)
       x = eval(ss[1])
       y = eval(ss[2])
       z = eval(ss[3])
+      if (scrystal):
+         f1 = x
+         f2 = y
+         f3 = z
+         x = f1*a1[0] + f2*a1[1] + f3*a1[2]
+         y = f1*a2[0] + f2*a2[1] + f3*a2[2]
+         z = f1*a3[0] + f2*a3[1] + f3*a3[2]
+      
       f1 = x*b1[0] + y*b1[1] + z*b1[2]
       f2 = x*b2[0] + y*b2[1] + z*b2[2]
       f3 = x*b3[0] + y*b3[1] + z*b3[2]
@@ -659,7 +681,12 @@ def nwinput2jsmol(backgroundcolor,nwinput):
       return msg4
 
    ### fetch xyzdat ###
+   scrystal = False;
    xxx = nwinput.split("geometry")[-1].split("end")[0].strip()
+   if "system crystal" in nwinput:
+      xxx = nwinput.split("geometry")[-1].split("end")[1].split("end")[0].strip()
+      scrystal = True
+
    yyy = xxx.split("\n")
    zzz = '\n'.join(yyy[1:])
    nion   = len(zzz.split("\n"))
@@ -699,7 +726,7 @@ def nwinput2jsmol(backgroundcolor,nwinput):
       while (len(xyzlist)>=(nion+2)):
          xyzdat0 = "\n".join(xyzlist[:nion+2])
          xyzlist = xyzlist[nion+2:]
-         cifdat += xyz2cif(xyzdat0,cell)
+         cifdat += xyz2cif(xyzdat0,cell,scrystal)
       #cifdat = xyz2cif(xyzdat,cell)
       with open(staticdir + xyzfilename,'w') as ff:
          ff.write(cifdat)
@@ -2156,15 +2183,20 @@ def list_queue_nwchem3():
 
 ############################ solid_queue ###############################
 @app.route('/api/solid_queue/', methods=['GET'])
-def solid_queue():
+def get_solid_queue():
    global namecount
    name = "tmp/solid%d.html" % namecount
    namecount += 1
+   print("namecount=",namecount)
+   print("name=",name)
    try:
+      print("HERA")
       increment_apivisited()
-      cmd8 = solid_queue + '-l'
+      print("HERb")
+      cmd8 = eric_solid_queue + '-l'
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
+      print("HERcb, calcs=",calcs)
    except:
       calcs = "heteroFAM solid queue not found\n"
 
@@ -2189,7 +2221,7 @@ def list_solid_html():
    namecount += 1
    try:
       increment_apivisited()
-      cmd8 = solid_queue + '-l'
+      cmd8 = eric_solid_queue + '-l'
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2206,7 +2238,7 @@ def list_solid_html():
          html += ln + "\n"
       elif ss[0].isdigit():
          restln = ln.split(ss[0])[1]
-         link   = HeteroFAM_API_HOME + "queue_view/"+ss[0]
+         link   = HeteroFAM_API_HOME + "solid_queue_fetch/"+ss[0]
          hlink  = "<a href=\"" + link + "\">%s</a>" % ss[0]
          nspace = 11-len(ss[0])
          html += " " * nspace
@@ -2228,7 +2260,7 @@ def submit_solid_prequeue():
    namecount += 1
    try:
       increment_apivisited()
-      cmd8 = solid_queue + '-c'
+      cmd8 = eric_solid_queue + '-c'
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2260,9 +2292,9 @@ def add_solid_reset(esmiles):
       esmiles = esmiles.replace("\'",'')
       esmiles = esmiles.replace("%2F",'/')
       if ("M" in esmiles):
-         cmd8 = solid_queue + '-m ' + '\"' +  esmiles + '\"'
+         cmd8 = eric_solid_queue + '-m ' + '\"' +  esmiles + '\"'
       else:
-         cmd8 = solid_queue + '-r ' + '\"' +  esmiles + '\"'
+         cmd8 = eric_solid_queue + '-r ' + '\"' +  esmiles + '\"'
       #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2293,7 +2325,7 @@ def add_solid_delete(esmiles):
       esmiles = esmiles.replace("\"",'')
       esmiles = esmiles.replace("\'",'')
       esmiles = esmiles.replace("%2F",'/')
-      cmd8 = solid_queue + '-d ' + '\"' +  esmiles + '\"'
+      cmd8 = eric_solid_queue + '-d ' + '\"' +  esmiles + '\"'
       #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2325,7 +2357,7 @@ def add_solid_queue(esmiles):
       esmiles = esmiles.replace("\"",'')
       esmiles = esmiles.replace("\'",'')
       esmiles = esmiles.replace("%2F",'/')
-      cmd8 = solid_queue + '-a ' + '\"' +  esmiles + '\"'
+      cmd8 = eric_solid_queue + '-a ' + '\"' +  esmiles + '\"'
       #result = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       result = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2353,7 +2385,7 @@ def fetch_solid_queue(jobid):
    namecount += 1
    try:
       increment_apivisited()
-      cmd8 = solid_queue + '-f ' + jobid
+      cmd8 = eric_solid_queue + '-f ' + jobid
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2381,7 +2413,7 @@ def view_solid_queue(jobid):
    namecount += 1
    try:
       increment_apivisited()
-      cmd8 = solid_queue + '-q ' + jobid
+      cmd8 = eric_solid_queue + '-q ' + jobid
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2516,7 +2548,7 @@ def submit_solid_queue():
    namecount += 1
    try:
       increment_apivisited()
-      cmd8 = solid_queue + '-s'
+      cmd8 = eric_solid_queue + '-s'
       #calcs = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
       calcs = subprocess.check_output(cmd8,shell=True).decode("utf-8")
    except:
@@ -2900,6 +2932,73 @@ def submit_output_deck(datafiles):
 
    return msg
       
+
+
+@app.route('/api/submit_solid_output/<datafiles9>', methods=['GET'])
+def submit_solid_output_deck(datafiles9):
+   #
+   print("submit_SOLID_OUTPUT, datafiles=",datafiles9)
+   increment_apivisited()
+   datafiles = datafiles9.replace("\"",'')
+   datafiles = datafiles.replace("\'",'')
+   print("DATAFILES=",datafiles)
+
+   #tt1 = time.localtime()
+   #dd1 = "-%d-%d-%d-%d-%d-%d" % (tt1[0],tt1[1],tt1[2],tt1[3],tt1[4],tt1[5])
+   ddrand = random.randint(0,999999)
+   dd1 = "-%d" % (ddrand)
+
+   # copy data to chemdbdir and find nwoutfile and datafiles ####
+   nwoutfile = ''
+   nwoutfile0 = ''
+   string_of_datafiles = ''
+   string_of_datafiles0 = ''
+   for filename in datafiles.split():
+      print("FILENAME=",filename)
+      nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
+      nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]+dd1
+      nwfilename1 = nwfilename1.replace(",","-")
+      print("nwfilename=",nwfilename)
+      print("nwfilename1=",nwfilename1)
+      if os.path.exists(nwfilename):
+         ### copy data to chemdbdir ###
+         with open(nwfilename, 'r') as ff: tdata = ff.read()
+         with open(nwfilename1,'w') as ff: ff.write(tdata)
+
+         ### look for nwout file  or datafile ###
+         if ('.out' in filename) or ('.nwo' in filename):
+            nwoutfile  = nwfilename1
+            nwoutfile0 = filename
+         else:
+            string_of_datafiles  += nwfilename1 + " "
+            string_of_datafiles0 += filename  + " "
+   string_of_datafiles  = string_of_datafiles.strip()
+   string_of_datafiles0 = string_of_datafiles0.strip()
+
+   print("string_of_datafiles=",string_of_datafiles)
+   #### call eric_solid_queue ###
+   if nwoutfile != '':
+      msg = "Submited " + nwoutfile0
+      cmd1 = eric_solid_queue + "-w " +  nwoutfile
+      if string_of_datafiles!='':
+         cmd1 +=  " -z \""+string_of_datafiles+"\""
+         msg  += " with the following extra datafiles=" + string_of_datafiles0
+
+      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+      print("RESULT=",result)
+
+   else:
+      msg = "Nothing was submited2"
+
+   #### clean the upload directory ####
+   clean_upload_directory()
+
+   return msg
+
+
+
+
+
 
 
 
@@ -3373,12 +3472,23 @@ def queue_nwchem_add_reset(esmiles):
 
 @app.route('/api/download_datafile/<datafile>', methods=['GET'])
 def download_datafiler0(datafile):
+   chemdb_hold = os.path.join(HeteroFAM_HOME, 'Public', 'chemdb_hold')
+   print("datafile=",datafile)
+   print("Absolute path =", os.path.abspath(chemdb_hold))
+
    increment_apivisited()
    datafile = datafile.replace("\"",'')
    datafile = datafile.replace("\'",'')
    filename = datafile
    ddfile = filename[filename.rfind('/')+1:]
-   return send_from_directory(directory='chemdb_hold', filename=ddfile,as_attachment=True)
+   print("ddfile=",ddfile)
+
+   full_path = os.path.join(chemdb_hold, ddfile)
+   if not os.path.isfile(full_path):
+      print("File not found:", full_path)
+      abort(404)
+   return send_from_directory(directory=chemdb_hold, path=ddfile, as_attachment=True)
+
 
 
 #@app.route('/api/submit_output_nwchem/<datafiles>', methods=['GET'])
@@ -3635,6 +3745,10 @@ def arrows_draw_post():
        return get_listallesmiles(nrows)
     elif ("list all reactions"  in text.lower()) or ("listallreactions"  in text.lower()):
        return get_listallreactions()
+
+    elif ("solid_queue" in text.lower()):
+       return list_solid_html()
+
     elif ("queue_nwchem3" in text.lower()):
        return list_queue_nwchem3()
     elif ("queue_nwchem" in text.lower()):
@@ -3644,6 +3758,7 @@ def arrows_draw_post():
           return list_queue_nwchem_check(nqnames[0])
        else:
           return list_queue_nwchem_html()
+
     elif ("queue" in text.lower()):
        return list_queue_html()
     elif ("download fetch_nwchem_input" in text.lower()):
@@ -3660,8 +3775,6 @@ def arrows_draw_post():
        ddfile = filename[filename.rfind('/')+1:]
        return send_from_directory(directory='chemdb_hold', filename=ddfile,as_attachment=True)
 
-    elif ("solid_queue" in text.lower()):
-       return solid_queue_html()
 
     elif ("==>" in text):
        reaction = text
@@ -3680,15 +3793,15 @@ def arrows_draw_post():
 
 
 
-@app.route('/api/rxn')
+@app.route('/api/arrows')
 def arrows_reaction_draw_form():
    increment_apivisited()
    calcs = arrowsjobsrun()
    molcalcs = calculationscount()
    avisits = apivisited()
-   return render_template("JSME-arrows-rxn.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+   return render_template("JSME-arrows.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
-@app.route('/api/rxn', methods=['POST'])
+@app.route('/api/arrows', methods=['POST'])
 def arrows_reaction_draw_post():
 
     text = request.form['smi']
@@ -3749,6 +3862,10 @@ def arrows_reaction_draw_post():
        else:
           nrows = ''
        return get_listallesmiles(nrows)
+
+    elif (("solid" in text.lower()) and ("queue" in text.lower())):
+       return list_solid_html()
+
     elif ("queue_nwchem3" in text.lower()):
        return list_queue_nwchem3()
     elif ("queue_nwchem" in text.lower()):
@@ -3760,6 +3877,8 @@ def arrows_reaction_draw_post():
           return list_queue_nwchem_html()
     elif ("queue" in text.lower()):
        return list_queue_html()
+       #return list_solid_html()
+
     elif ("download fetch_nwchem_input" in text.lower()):
        return send_from_directory(directory='programs', filename='fetch_nwchem_input.py',as_attachment=True)
     elif ("download upload_nwchem_outfiles" in text.lower()):
@@ -3786,8 +3905,9 @@ def arrows_reaction_draw_post():
        esmiles = text
        return get_molecule(esmiles)
 
-    processed_text = "EMSL HeteroFAM did not understand \"" + text + "\"."
+    processed_text = "Arrows HeteroFAM did not understand \"" + text + "\"."
     return processed_text
+
 
 
 @app.route('/api/3dbuilder')
@@ -4779,35 +4899,136 @@ def ssh_tunnel_route():
 
 
 
+
+
 @app.route('/api/eric_upload', methods=['POST'])
-def eric_upload():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in request'}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    save_path = os.path.join(ERIC_UPLOAD_FOLDER, file.filename)
-    file.save(save_path)
-    return jsonify({'message': f'File {file.filename} uploaded successfully'}), 200
+def upload_file():
+    files = request.files.getlist('file')
+    origin = request.form.get('origin', 'unknown')
+    tag = request.form.get('tag')  # optional label for grouping
+    path = request.form.get('path')  # original machine:/filepath
+    ttl = request.form.get('ttl')  # e.g., "10m" or "1h"
+    result = []
+
+    for file in files:
+        uid = str(uuid.uuid4())
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(ERIC_UPLOAD_FOLDER, uid + "_" + filename)
+        file.save(filepath)
+
+        expires = time.time() + parse_ttl(ttl) if ttl else None
+        file_metadata[uid] = {
+            'filename': filename,
+            'origin': origin,
+            'path': path,
+            'tag': tag,
+            'expires': expires,
+            'stored_at': filepath,
+        }
+
+        result.append({
+            'uuid': uid,
+            'download_url': f"/api/eric_download/{uid}"
+        })
+
+    return jsonify(result)
 
 
-@app.route('/api/eric_download/<filename>', methods=['GET'])
-def eric_download(filename):
-    file_path = os.path.join(ERIC_UPLOAD_FOLDER, filename)
-    if not os.path.exists(file_path):
-        return abort(404, description="File not found")
+@app.route('/api/eric_download/<uuid>', methods=['GET'])
+def download_file(uuid):
+    meta = file_metadata.get(uuid)
+    if not meta:
+        return jsonify({'error': 'UUID not found'}), 404
 
-    def generate_and_delete():
-        with open(file_path, 'rb') as f:
-            data = f.read()
-        os.remove(file_path)
-        yield data
-
-    return Response(
-        generate_and_delete(),
-        mimetype='application/octet-stream',
-        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    return send_from_directory(
+        ERIC_UPLOAD_FOLDER,
+        uuid + "_" + meta['filename'],
+        as_attachment=True
     )
+
+@app.route('/api/eric_list_uploads', methods=['GET'])
+def list_uploads():
+    now = time.time()
+    active = []
+    for uid, meta in file_metadata.items():
+        if meta['expires'] and meta['expires'] < now:
+            continue  # Skip expired
+        active.append({**{'uuid': uid}, **meta})
+    return jsonify(active)
+
+
+@app.route('/api/eric_delete/<uuid>', methods=['DELETE'])
+def delete_upload(uuid):
+    meta = file_metadata.get(uuid)
+    if not meta:
+        return jsonify({'error': 'UUID not found'}), 404
+
+    try:
+        os.remove(meta['stored_at'])
+        del file_metadata[uuid]
+        return jsonify({'status': 'deleted', 'uuid': uuid})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/eric_cleanup_expired', methods=['POST'])
+def cleanup_expired():
+    now = time.time()
+    removed = []
+
+    for uid in list(file_metadata.keys()):
+        meta = file_metadata[uid]
+        if meta.get('expires') and meta['expires'] < now:
+            try:
+                os.remove(meta['stored_at'])
+            except FileNotFoundError:
+                pass  # File might already be gone
+            removed.append(uid)
+            del file_metadata[uid]
+
+    return jsonify({'removed': removed, 'status': 'cleanup complete'})
+
+
+
+@app.route('/api/cpu_log_json/<window>')
+def cpu_log_json(window):
+    now = datetime.datetime.now()
+    if window == "1h":
+        cutoff = now - datetime.timedelta(hours=1)
+    elif window == "24h":
+        cutoff = now - datetime.timedelta(days=1)
+    elif window == "7d":
+        cutoff = now - datetime.timedelta(days=7)
+    else:
+        cutoff = now - datetime.timedelta(days=30)
+
+    LOG_PATH = HeteroFAM_HOME+"/Public/HeteroFAM/Public/Logs/arrows_cpu_log.csv"
+    #LOG_PATH = os.path.join(os.path.dirname(__file__), 'Logs', 'arrows_cpu_log.csv')
+    data = []
+    with open(LOG_PATH, 'r') as f:
+        for row in csv.reader(f):
+            try:
+                timestamp = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
+                if timestamp >= cutoff:
+                    data.append({
+                        'timestamp': row[0],
+                        'cpu': float(row[1]),
+                        'count': int(row[2])
+                    })
+            except:
+                continue
+
+    return jsonify(data)
+
+
+@app.route('/api/cpu_plot')
+def cpu_plot():
+    LOG_PATH = HeteroFAM_HOME+"/Public/templates/cpu_plot.html"
+    #LOG_PATH = os.path.join(os.path.dirname(__file__), 'templates', 'cpu_plot.html')
+    with open(LOG_PATH,"r") as f:
+        return f.read()
+
+
 
 
 
@@ -4816,4 +5037,4 @@ if __name__ == '__main__':
     #app.run(debug=True,threaded=True)
     #app.run(host='0.0.0.0', threaded=True)
     #app.run(debug=True,host='0.0.0.0',port=5000,threaded=True)
-    app.run(host='0.0.0.0',port=8080,threaded=True)
+    app.run(debug=True,host='0.0.0.0',port=8080,threaded=True)

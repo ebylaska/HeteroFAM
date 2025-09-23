@@ -1003,8 +1003,10 @@ if (submitqueue2):
 if (addqueue):
    entry = {}
 
-   if ("/" not in nwinputfile): nwinputfile = curdir +"/" + nwinputfile
+   print("nwinputfile=",nwinputfile)
+   if ("/" not in nwinputfile): nwinputfile = curdir +"/Public/uploads/" + nwinputfile
    nwfileexist = os.path.exists(nwinputfile)
+   print("nwinputfile2=",nwinputfile, " curdir=",curdir)
    print("Nwfileexist=",nwfileexist);
    if (nwfileexist):
 
@@ -1061,15 +1063,15 @@ if (addqueue):
       entry['stopped']  = 'no'
       entry['start_time']  = time.time()
 
-   #centry = checkentry(entry)
-   #duplicatecount = solid_queue_collection.find_count(centry)
-   duplicatecount = 0
-   print("duplicatecount=", duplicatecount)
-   if (duplicatecount==0): 
-      qq = solid_queue_collection.insert(entry)
-      print("Added " + mformula + " to solid_queue. queue_entry=",entry['queue_number'])
-   else:
-      print("Did not add " + mformula + " to solid_queue, because it already exists.")
+      #centry = checkentry(entry)
+      #duplicatecount = solid_queue_collection.find_count(centry)
+      duplicatecount = 0
+      print("duplicatecount=", duplicatecount)
+      if (duplicatecount==0): 
+         qq = solid_queue_collection.insert(entry)
+         print("Added " + mformula + " to solid_queue. queue_entry=",entry['queue_number'])
+      else:
+         print("Did not add " + mformula + " to solid_queue, because it already exists.")
 
 
 
@@ -1123,6 +1125,7 @@ if (runqueue):
       data1 += "# cufoff   - %f\n" % entry['cutoff']
    data1 += "# xc       - %s\n" % entry['xc']
    data1 += "# lattice  - %s\n" % entry['lattice']
+   data1 += "# hash     - %s\n" % entry['hash']
    data1 += "# genome   - %s\n" % entry['genome']
    data1 += "#\n"
    data1 +=  entry['nwchem_input_deck'] + "\n"
@@ -1169,6 +1172,7 @@ if (nwoutfile!=''):
       charge   = 0
       mult     = 1
       cutoff   = 50.0
+      hash     = "UNKNOWN"
       genome   = "UNKNOWN"
 
       if "# NWChemJobId:" in nwchemoutput:
@@ -1187,6 +1191,7 @@ if (nwoutfile!=''):
          charge   = entry['charge']
          mult     = entry['mult']
          cutoff   = entry['cutoff']
+         hash     = entry['hash']
          genome   = entry['genome']
 
          delentry = {}
@@ -1219,6 +1224,7 @@ if (nwoutfile!=''):
       newentry['cutoff']   = cutoff
       newentry['charge']   = charge
       newentry['mult']     = mult
+      newentry['hash']     = hash
       newentry['genome']   = genome
  
       qq = solid_finished_queue_collection.insert(newentry)

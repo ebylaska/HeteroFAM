@@ -432,9 +432,9 @@
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ arrows_api }}"><img src="{{url_for('static', filename='heteroatom-static/HeteroFAM.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
+   <a href="{{ arrows_api }}"><img src="{{url_for('static', filename='arrows-static/TinyArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
 <a href="{{ arrows_api }}periodic">Expert Periodic and Molecular Editor </a> &nbsp;
-   <a href="{{ arrows_api }}3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}expert">Molecular Combo Editor</a> &nbsp;   <a href="{{ arrows_api }}qsharp_chem">Microsoft Quantum Editor</a> &nbsp;  <a href="{{ arrows_api }}aerosol">EMSL Aerosol Workshop Editor</a> &nbsp;  <a href="{{ arrows_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; <a href="https://ebylaska.github.io/TinyArrows/">Manual</a> &nbsp;  <a href="{{ arrows_api }}eric_view2/list=">Projects</a> 
+   <a href="{{ arrows_api }}3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}expert">Molecular Combo Editor</a> &nbsp;   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;  <a href="{{ arrows_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; <a href="https://ebylaska.github.io/TinyArrows/">Manual</a> &nbsp;  <a href="{{ arrows_api }}eric_view2/list=">Projects</a> 
 
 </div>
 
@@ -453,7 +453,7 @@
          <font color="298DB4"><p> {{ calculations }}</b> Arrows calculations carried out to date <br>
                                     {{ moleculecalculations }} Molecular calculations in database to date </p></font>
     <h2>Enter an <a href="https://nwchemgit.github.io/EMSL_Arrows#introduction-to-esmiles-how-to-change-calculation-theories">esmiles</a>, <a href="https://nwchemgit.github.io/EMSL_Arrows.html#esmiles-reactions-how-to-calculate-reaction-energies"> esmiles reaction</a>, or other Arrows input, then push the "Run Arrows" button.</h2>
-    <form action="." name="form"  method="POST">
+    <form action="/api/arrows" name="form"  method="POST">
        <table>
           <tr>
              <td> <input type="text" name="smi" SIZE=100 
@@ -899,6 +899,12 @@
        <INPUT TYPE="button" VALUE="queue" 
               onClick="document.form.smi.value='queue'" 
               style="background-color:#f8f8ff; color:#298DB4;"> 
+       <INPUT TYPE="button" VALUE="queue_nwchem" 
+              onClick="document.form.smi.value='queue_nwchem'" 
+              style="background-color:#f8f8ff; color:#298DB4;"> 
+       <INPUT TYPE="button" VALUE="solid_queue" 
+              onClick="document.form.smi.value='solid_queue'" 
+              style="background-color:#f8f8ff; color:#298DB4;"> 
        <INPUT TYPE="button" VALUE="download fetch_nwchem_input" 
               onClick="document.form.smi.value='download fetch_nwchem_input'" 
               style="background-color:#f8f8ff; color:#298DB4;"> 
@@ -920,6 +926,28 @@
     <!--td> <a href="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/ArrowsBeaker2.gif"><img src="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/ArrowsBeaker2.gif" alt="Arrows Movie"> </a> </td-->
     </tr></table>
      Keywords: quantum chemistry calculations - quantum chemistry computations - quantum chemistry - molecular modeling calculations - molecular modeling computations - molecular modeling - chemical modeling - chemical reactions calculations - chemical reactions computations - chemical reactions - NWChem calculations - computational chemistry - NWChem 
+
+
+<hr>
+<p style="text-align: center;">
+  <strong>Building toward the future in chemical and materials simulation</strong><br>
+  <a href="/static/papers/bylaska_EMSL_Arrows.pdf" target="_blank">
+    Accepted Manuscript PDF (Local copy)
+  </a> |
+  <a href="https://drive.google.com/file/d/1-f3Rtev2ocMdFd7ljrKpd5J5svGzn3_t/view" target="_blank">
+    Google Drive copy
+  </a><br>
+  <small>
+    Eric J. Bylaska, Duo Song, Eugene S. Ilton, Shaun O’Leary, Tifany L. Torralba-Sánchez, and Paul G. Tratnyek,
+    <em>Annual Reports in Computational Chemistry</em>, Vol. 17 (2021).<br>
+    Final published version:
+    <a href="https://doi.org/10.1016/bs.arcc.2021.09.003" target="_blank">
+      https://doi.org/10.1016/bs.arcc.2021.09.003
+    </a>
+  </small>
+</p>
+
+
 
 <br><br>
 <div align="right"><font color="298DB4"> Tiny Arrows API visited {{ visits }} times </font></div>

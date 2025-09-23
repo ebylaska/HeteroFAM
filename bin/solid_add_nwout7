@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import sys,os,time,pickle,math,urllib,pexpect,getopt,subprocess,random,operator,re,yaml,sqlite3,tempfile
+import sys,os,time,pickle,math,urllib,pexpect,getopt,subprocess,random,operator,re,yaml,sqlite3,tempfile,json,hashlib
 import pymysql as MySQLdb
 import numpy as np
 from datetime import datetime
-
+from collections import Counter
 
 import shutil
 import uuid
@@ -27,17 +27,18 @@ MY_ENV                = os.environ.copy()
 MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 
 #babel       = "/usr/bin/env babel"
-bader = ARROWS_HOME + "/bader/bader/bader "
 obabel      = "/usr/bin/env obabel "
 myxyz2smiles = ARROWS_HOME + "/bin/myxyz2smiles "
 esmiles2xyz  = ARROWS_HOME + "/bin/esmiles2xyz "
 tnt_submit   = ARROWS_HOME + "/bin/tnt_submit5 "
-bader        = ARROWS_HOME + "/bader/bader/bader "
+bader        = ARROWS_HOME + "/third_party/bader/bader "
 soliddb_queue = ARROWS_HOME + "/bin/solid_queue "
 chemdb_say   = ARROWS_HOME + "/bin/chemdb_say "
 wrkdir       = ARROWS_HOME + "/Work"
+chemdb_queue_nwchem        = ARROWS_HOME + "/bin/chemdb_queue_nwchem "
 calculationscountfilename  = ARROWS_HOME + "/Public/counters/calculationscount"
 soliddbfile     = ARROWS_HOME + "/bin/.soliddb-en"
+chemdbfile      = ARROWS_HOME + "/bin/.soliddb-en"
 ddrand = random.randint(0,999999)
 tmpsmi1 = "tmpsmi1-%d.smi" % ddrand
 tmpsmi2 = "tmpsmi2-%d.smi" % ddrand
@@ -4346,14 +4347,10 @@ def insert_abbreviation(hup,dbfile,abrev_table,abbreviation,
    checklist2.append(covalent_string)
    checklist2.append(xyz_blob)
 
-   if (issqlite3):
-      dbcon = sqlite3.connect(dbfile)
-   else:
-      host = hup.split()[0]
-      user = hup.split()[1]
-      pss = hup.split()[2]
-      #dbcon = MySQLdb.connect(host,user,pss,dbfile)
-      dbcon = MySQLdb.connect(host=host,user=user,password=pss,database=dbfile,autocommit=True,charset='utf8mb4')
+   user = hup.split()[1]
+   pss = hup.split()[2]
+   
+   dbcon = MySQLdb.connect(host=host,user=user,password=pss,database=dbfile,autocommit=True,charset='utf8mb4')
    
    with dbcon:
       cur = dbcon.cursor()
@@ -4851,6 +4848,164 @@ def extract_calculation_genome(file_path):
 
 
 
+def parse_number_atoms(file_path):
+    """
+    Parses the number of atoms from an NWChem input or output file.
+
+    Parameters:
+        file_path (str): Path to the input file.
+
+    Returns:
+        int: Number of atoms detected, or 0 if not found.
+    """
+    num_atoms = 0
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+
+            # Search for XYZ block first
+            for i, line in enumerate(lines):
+                if 'XYZ file generated' in line or line.strip().isdigit():
+                    try:
+                        num_atoms = int(lines[i].strip())
+                        return num_atoms
+                    except ValueError:
+                        continue
+
+            # Search for start of geometry block
+            in_geometry_block = False
+            for line in lines:
+                if 'geometry' in line.lower() or 'start geometry' in line.lower():
+                    in_geometry_block = True
+                    continue
+                if in_geometry_block:
+                    if 'end' in line.lower() or line.strip() == '':
+                        break
+                    tokens = line.split()
+                    if len(tokens) >= 4:
+                        num_atoms += 1
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+    return num_atoms
+
+
+def parse_description(file_path):
+    """
+    Extracts a short description of the calculation from a comment or title line.
+
+    Parameters:
+        file_path (str): Path to the input or output file.
+
+    Returns:
+        str: A short description string.
+    """
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Look for a description in a comment block (Arrows-style)
+                if re.match(r"#\s*description\s*[:\-]\s*(.*)", line, re.IGNORECASE):
+                    return re.sub(r"#\s*description\s*[:\-]\s*", "", line, flags=re.IGNORECASE).strip()
+                # Try to catch early TITLE lines
+                elif 'title' in line.lower() or 'calculation of' in line.lower():
+                    return line.strip()
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+    
+    return "Parsed calculation"
+
+
+def parse_material_name(file_path):
+    """
+    Extracts a material name from:
+    1. Inline comment like '# material: Fe4O6'
+    2. Atomic composition from XYZ-like block (fallback)
+    3. Filename fallback (final fallback)
+
+    Returns a clean formula like 'Fe4O6' or 'C2H5NO3'.
+    """
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+            # 1. Check for explicit material comment
+            for line in lines:
+                match = re.search(r"#\s*material\s*[:\-]\s*(\S+)", line, re.IGNORECASE)
+                if match:
+                    return match.group(1).strip()
+
+            # 2. Parse from XYZ block
+            atom_counts = Counter()
+            for line in lines:
+                parts = line.strip().split()
+                if len(parts) >= 4:
+                    symbol = parts[0]
+                    if re.fullmatch(r"[A-Z][a-z]?", symbol):
+                        atom_counts[symbol] += 1
+
+            if atom_counts:
+                # Optional: Use Hill notation
+                def hill_sort_key(el):
+                    if el == "C": return (0, el)
+                    if el == "H": return (1, el)
+                    return (2, el)
+
+                sorted_atoms = sorted(atom_counts.items(), key=lambda x: hill_sort_key(x[0]))
+                return ''.join(f"{el}{n if n > 1 else ''}" for el, n in sorted_atoms)
+
+    except Exception as e:
+        print(f"[parse_material_name] Error reading {file_path}: {e}")
+
+    # 3. Fallback: filename prefix without path or extension
+    fallback = os.path.basename(file_path)
+    return os.path.splitext(fallback)[0].replace('.', '_')
+
+
+
+
+def parse_name(mformula,file_path):
+    base = os.path.basename(file_path)
+    name = base.replace(".out", "").replace(".nwout", "").replace(".gz", "")
+
+    formula = mformula
+    volume = None
+    lattice = {}
+
+    # Use current timestamp and hash it
+    now = datetime.now().isoformat()
+    date_hash = hashlib.sha1(now.encode()).hexdigest()[:6]  # Short hash
+
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+
+            # Try to find lattice parameters and volume
+            for key in ['a', 'b', 'c', 'alpha', 'beta', 'gamma']:
+                match = re.search(rf"\bcell_{key}\s*=\s*([\d.]+)", content, re.IGNORECASE)
+                if match:
+                    lattice[key] = float(match.group(1))
+
+            vm = re.search(r"volume\s*=\s*([\d.]+)", content, re.IGNORECASE)
+            if vm:
+                volume = float(vm.group(1))
+
+    except Exception as e:
+        print(f"Error parsing name from {file_path}: {e}")
+
+    elements_part = formula if formula else "UnknownComp"
+    lattice_part = f"a{lattice.get('a', '?'):.1f}" if 'a' in lattice else ""
+    volume_part = f"V{volume:.1f}" if volume else ""
+
+    name_parts = [elements_part]
+    if lattice_part:
+        name_parts.append(lattice_part)
+    if volume_part:
+        name_parts.append(volume_part)
+    name_parts.append(name)
+    name_parts.append(f"d{date_hash}")
+
+    return "_".join(name_parts)
+
+
 
 
 
@@ -4863,7 +5018,7 @@ def extract_calculation_genome(file_path):
 #                                             #
 ###############################################
 
-def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpassword,nwmachine,extra_datafiles,noresubmit):
+def insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra_datafiles,noresubmit):
 
   if (hup=='sqlite3'):
       issqlite3 = True
@@ -4878,34 +5033,59 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
   xyzfile   = wrkdir + "/"+tmpxyz2
   outfile_without_hash  = wrkdir + "/"+outfile99
 
-  myjob = {}
-  myjob['xyz'] = " "
-  myjob['cif'] = " "
-  myjob['theory'] = " "
-  myjob['datetime'] = " "
-  myjob['k_point_grid'] = " "
-  myjob['smearing_type'] = " "
-  myjob['smearing_width'] = " "
-  myjob['calculation_type'] = " "
-  myjob['genome'] = " "
-  myjob['machine'] = " "
-  myjob['ncpu'] = " "
-  myjob['wall_time'] = " "
-  myjob['pseudopotentials'] = " "
-  myjob['material_name'] = " "
-  myjob['lattice_parameters'] = " "
-  myjob['lattice_type'] = " "
-  myjob['space_group'] = " "
-  myjob['basis'] = " "
-  myjob['energy'] = " "
-  myjob['enthalpy'] = " "
-  myjob['entropy'] = " "
-  myjob['hubbaard_U'] = " "
-  myjob['initial_magnetic_moment'] = " "
-  myjob['wannier_charges'] = False
-  myjob['bader_charges'] = False
- 
-  
+  myjob = { 'xyz': b' ',  # should be bytes
+            'cif': '',
+            'unitcell': '',
+            'mformula': '',
+            'charge': 0,
+            'multiplicity': 1,
+            'number_atoms': 0,
+            'xc': '',
+            'theory': '',
+            'k_point_grid': {},
+            'smearing_type': '',
+            'smearing_width': 0.0,  # smearing_temperature
+            'kerker_energy': 0.0,
+            'fractional_occupations': {},
+            'initial_spin_penalties': {},
+            'wannier': {},
+            'wannier_magnetization': {},
+            'wannier_charges': False,
+            'dly': {},
+            'dly_magnetization': {},
+            'bader_alpha': {},
+            'bader_beta': {},
+            'bader_total': {},
+            'bader_magnetization': {},
+            'bader_charges': False,
+            'atomic_symbols': [],
+            'atomic_charges': [],
+            'Hubbard_U': 0.0,
+            'Hubbard_J': 0.0,
+            'genome': '',
+            'machine': '',
+            'ncpu': 0,
+            'wall_time': '',
+            'pseudopotentials': {},
+            'material_name': '',
+            'lattice_parameters': {
+                'a': 0.0, 'b': 0.0, 'c': 0.0,
+                'alpha': 90.0, 'beta': 90.0, 'gamma': 90.0
+            },
+            'lattice_type': '',
+            'space_group': {'space_group_name': ''},
+            'basis': '',
+            'energy': 0.0,
+            'enthalpy': 0.0,
+            'entropy': 0.0,
+            'filename': '',
+            'data_filenames': b'',
+            'calculation_exaf': b'',
+            'datetime': datetime.now(),
+            'jobok': True,
+            'spin_penalty': {}
+          }
+
   print("extra_datafiles=", extra_datafiles)
 
 
@@ -4924,30 +5104,45 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
 
       ### remove "," from filename since archive cannot handle this ###
       nwfilename = nwfilename.replace(",","-")  
+      
+      nwdatacopy1 = []
+      nwdatafiles = ''
+      for bb in extra_datafiles.strip().split():
+         bbb = nwmachine + "/" + bb[bb.rfind('/')+1:] + dd1 + " "
+         nwdatafiles += bbb
+         nwdatacopy1.append((bb.strip(),bbb.strip()))
+      nwdatafiles = nwdatafiles.strip()
+
+
+      myjob['filename']       = nwfilename 
+      myjob['data_filenames'] = nwdatafiles
+
 
       ### add yaml file ###
       myjob['theory'] = parse_theory(outfile)
       myjob['genome'] = extract_calculation_genome(outfile)
 
-      myjob['datetime'] = parse_job_info_datetime(outfile_without_hash)
+      job_datetime = parse_job_info_datetime(outfile_without_hash)
+      myjob['datetime'] = job_datetime if job_datetime else datetime.now()
+
 
       myjob['jobok']    = parse_calculation_ok(outfile_without_hash)
       myjob['program']  = parse_program(outfile_without_hash)
       myjob['machine']  = parse_machine(outfile_without_hash)
       myjob['ncpu']     = parse_ncpu(outfile_without_hash)
       myjob['wall_time']= parse_wall_time(outfile_without_hash)
-      #myjob['energy']   = parse_energy(outfile_without_hash)
       myjob['enthalpy'] = parse_enthalpy(outfile_without_hash)
       myjob['entropy']  = parse_entropy(outfile_without_hash)
 
       myjob['charge'] = parse_charge(outfile_without_hash)
       myjob['mult']   = parse_mult(outfile_without_hash)
+      myjob['number_atoms'] = parse_number_atoms(outfile_without_hash)
+      myjob['description'] = parse_description(outfile_without_hash)
+      myjob['material_name'] = parse_material_name(outfile_without_hash)
 
       myjob['spin_penalty'] = parse_spin_penalty(outfile_without_hash)
       print("Spin penalty parsed:", myjob['spin_penalty'])
       myjob['initial_magnetic_moments'] = apply_spin_penalty(compute_magnetic_moments_nwout(outfile_without_hash), myjob['spin_penalty'])
-
-
 
       myjob['xc']     = parse_xc(outfile)
       myjob['basis']  = parse_basis(False,outfile)
@@ -4960,34 +5155,20 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       print("unitcell=",myjob['unitcell']);
       myjob['lattice_parameters']  = parse_lattice_parameters(myjob['unitcell'])
       myjob['lattice_type']  = parse_lattice_type(myjob['unitcell'])
+      unitcell = myjob['unitcell']
    
 
-      myjob['xyzblob']  = parse_output_to_xyz(outfile_without_hash)
-      #myjob['xyzblob'] =  parse_xyzblob(outfile_without_hash,"hello.xyz")
-      myjob['cif']      = nwchem_output_to_cif_string(myjob['unitcell'],myjob['xyzblob'])
-      #myjob['smiles']   = xyz2smiles(myjob['xyzblob'])
-      #myjob['InChI']    = smiles2InChI(myjob['smiles'])
-      myjob['InChIKey'] = xyz2InChIKey(myjob['xyzblob'])
+      myjob['xyz']  = parse_output_to_xyz(outfile_without_hash)
+
+      myjob['cif']      = nwchem_output_to_cif_string(myjob['unitcell'],myjob['xyz'])
+      myjob['InChIKey'] = xyz2InChIKey(myjob['xyz'])
       myjob['space_group']  = parse_space_group(outfile_without_hash)
       myjob['energy'] = parse_total_pspw_energy(outfile_without_hash)
 
-      #myjob['cid']      = pubchem_smiles2cid(myjob['smiles'])
-      #myjob['cas']      = pubchem_smiles2cas(myjob['smiles'])
-      #myjob['kegg']     = pubchem_smiles2kegg(myjob['smiles'])
-      #synonyms = pubchem_smiles2synonyms(myjob['smiles'])
-      #InChI2 = xyz2InChI(xyzfile)
-      myjob['mformula'] = xyz_molecular_formula(myjob['xyzblob'])
-      #(bonding_string, covalent_string) = xyz_bonding_strings(xyzfile)
-
-   
+      myjob['mformula'] = xyz_molecular_formula(myjob['xyz'])
+      myjob['name'] = parse_name(myjob['mformula'], outfile_without_hash)
 
 
-
-      #inserting = (energy<=9.0e9) and (smiles!='')
-      #sitkoff  = ecd
-      #honig    = ehd
-      #ASA      = sum(msurface[0])
-      #SAV      = sum(msurface[1])
       wannier_data = parse_wannier_centers(outfile_without_hash)
       print("wannier_data=",wannier_data)  
       if (wannier_data!=None):
@@ -4997,10 +5178,6 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          print_wannier_table(wannier_data, wannier_magnetization)
          myjob['wannier_charges'] = True
 
-      #print("DEBUG: Parsed Wannier Data =", wannier_data)  # Debugging
-      #print("DEBUG: Parsed Wannier wannier magnetization =", wannier_magnetization)  # Debugging
-
-
       dly_data = parse_dly_wannier_centers(outfile_without_hash)
       print("dly_data=",dly_data)
       if ((dly_data!=None) and (len(dly_data)>0)):
@@ -5009,8 +5186,6 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          myjob['dly_magnetization'] = dly_magnetization
          print_dly_table(dly_data, dly_magnetization)
       
-
-
       if (len(extra_datafiles)>0):
        if  (are_all_cube_files_present(outfile_without_hash, extra_datafiles)):
          myjob['cube_files']   = parse_cube_files(outfile_without_hash)
@@ -5022,11 +5197,6 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          diffcube =  get_full_cube_filenames(parse_cube_files(outfile_without_hash),extra_datafiles)['difference']
          atom_names = extract_atom_names_from_cube(alphacube)
          
-         #print("alphacube=",alphacube)
-         #print("betacube=",betacube)
-         #print("totalcube=",totalcube)
-         #print("diffcube=",diffcube)
-
          cmd = bader + alphacube
          alpha_result = subprocess.check_output(cmd,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
          alpha_acf = ''
@@ -5048,16 +5218,12 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          bader_alpha = extract_bader_charges(alpha_acf)
          bader_beta  = extract_bader_charges(beta_acf)
          bader_total = extract_bader_charges(total_acf)
-         #print("Alpha Bader Charges:", bader_alpha)
-         #print("Beta Bader Charges:", bader_beta)
-         #print("Total Bader Charges:", bader_total)
          bader_magnetization = compute_bader_magnetization(bader_alpha, bader_beta,atom_names)
          myjob['bader_alpha'] = bader_alpha
          myjob['bader_beta']  = bader_beta
          myjob['bader_total'] = bader_total
          myjob['bader_magnetization'] = bader_magnetization
          myjob['bader_charges'] = True
-         #print("bader magnetization:", bader_magnetization)
 
          print_bader_analysis(bader_alpha, bader_beta, bader_total, bader_magnetization)
          print_both_magnetization(wannier_data, wannier_magnetization, bader_magnetization)
@@ -5072,13 +5238,17 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
 
       #print("wannier=", myjob['wannier'])
 
+      #set the mytable
       print("myjob=",myjob)
-
       print()
-      print(" xyzblob             =",myjob['xyzblob']);
-      print(" cif                 =",myjob['cif']);
-      print(" unitcell            =",myjob['unitcell']);
+      print(" name                =",myjob['name'])
+      print(" xyz                 =",myjob['xyz'])
+      print(" cif                 =",myjob['cif'])
+      print(" unitcell            =",myjob['unitcell'])
       print(" mformula            =",myjob['mformula'])
+      print(" number_atoms        =",myjob['number_atoms'])
+      print(" description         =",myjob['description'])
+      print(" material_name       =",myjob['material_name'])
       print(" theory                 =",myjob['theory'])
       print(" genome                 =",myjob['genome'])
       print(" datetime               =",myjob['datetime'])
@@ -5097,7 +5267,7 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
       print(" energy                 =",myjob['energy'])
       print(" enthalpy               =",myjob['enthalpy'])
       print(" entropy                =",myjob['entropy'])
-      print(" hubbard_U              =",myjob['hubbaard_U'])
+      print(" Hubbard_U              =",myjob['Hubbard_U'])
       print(" initial_magnetic_moments=",myjob['initial_magnetic_moments'])
       if (myjob['wannier_charges']):
          print(" wannier                =",myjob['wannier'])
@@ -5112,13 +5282,144 @@ def insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpa
          print(" bader_magnetization    =",myjob['bader_magnetization'])
       print(" jobok                  =",myjob['jobok'])
       print(" spin penalty           =",myjob['spin_penalty'])
+      print(" filename               =",myjob['filename'])
+      print(" data_filenames         =",myjob['data_filenames'])
 
 
+      sqlinsert = f"""
+      INSERT INTO {table} (
+          name, description, xyz, unitcell, mformula, charge, multiplicity, number_atoms,
+          xc, theory, k_points, smearing_type, smearing_temperature, kerker_energy,
+          fractional_occupations, initial_spin_penalties, wannier, wannier_magnetization,
+          dly, dly_magnetization, bader_alpha, bader_beta, bader_total, bader_magnetization,
+          atomic_symbols, atomic_charges, Hubbard_U, Hubbard_J, genome, machine, ncpu,
+          wall_time, pseudopotentials, material_name,
+          lattice_parameter_a, lattice_parameter_b, lattice_parameter_c,
+          lattice_parameter_alpha, lattice_parameter_beta, lattice_parameter_gamma,
+          lattice_type, space_group, basis, cif,
+          energy, enthalpy, entropy, filename, data_filenames, calculation_exaf,
+          datetime, created_at, updated_at
+      ) VALUES (
+          %s, %s, %s, %s, %s, %s, %s, %s,
+          %s, %s, %s, %s, %s, %s,
+          %s, %s, %s, %s,
+          %s, %s, %s, %s, %s, %s,
+          %s, %s, %s, %s, %s, %s, %s,
+          %s, %s, %s,
+          %s, %s, %s,
+          %s, %s, %s,
+          %s, %s, %s, %s,
+          %s, %s, %s, %s, %s, %s,
+          %s, %s, %s
+      )
+      """
 
-       
+      myjob['xyz'] = myjob['xyz'].encode('utf-8')
+
+      insertlist = [ myjob.get('name', ''),                          # name
+                     myjob.get('description', ''),                   # description
+                     myjob.get('xyz', b''),                          # xyz (blob)
+                     json.dumps(myjob.get('unitcell', '')),          # unitcell
+                     myjob.get('mformula', ''),                      # mformula
+                     myjob.get('charge', 0),                         # charge
+                     myjob.get('multiplicity', 1),                   # multiplicity
+                     myjob.get('number_atoms', 0),                   # number_atoms
+                     myjob.get('xc', ''),                            # xc
+                     myjob.get('theory', ''),                        # theory
+                     json.dumps(myjob.get('k_point_grid', '')),      # k_points
+                     myjob.get('smearing_type', ''),                 # smearing_type
+                     myjob.get('smearing_width', 0.0),               # smearing_temperature
+                     myjob.get('kerker_energy', 0.0),                # kerker_energy
+                     json.dumps(myjob.get('fractional_occupations', '')),      # fractional_occupations
+                     json.dumps(myjob.get('initial_spin_penalties', '')),      # initial_spin_penalties
+                     json.dumps(myjob.get('wannier', '')),                     # wannier
+                     json.dumps(myjob.get('wannier_magnetization', '')),      # wannier_magnetization
+                     json.dumps(myjob.get('dly', '')),                         # dly
+                     json.dumps(myjob.get('dly_magnetization', '')),          # dly_magnetization
+                     json.dumps(myjob.get('bader_alpha', '')),                # bader_alpha
+                     json.dumps(myjob.get('bader_beta', '')),                 # bader_beta
+                     json.dumps(myjob.get('bader_total', '')),                # bader_total
+                     json.dumps(myjob.get('bader_magnetization', '')),        # bader_magnetization
+                     json.dumps(myjob.get('atomic_symbols', '')),             # atomic_symbols
+                     json.dumps(myjob.get('atomic_charges', '')),             # atomic_charges
+                     myjob.get('Hubbard_U', 0.0),                             # Hubbard_U
+                     myjob.get('Hubbard_J', 0.0),                             # Hubbard_J
+                     myjob.get('genome', ''),                                 # genome
+                     myjob.get('machine', ''),                                # machine
+                     myjob.get('ncpu', 0),                                    # ncpu
+                     myjob.get('wall_time', ''),                              # wall_time
+                     json.dumps(myjob.get('pseudopotentials', {})),
+                     myjob.get('material_name', ''),                          # material_name
+                     myjob['lattice_parameters']['a'],                   # a
+                     myjob['lattice_parameters']['b'],                   # b
+                     myjob['lattice_parameters']['c'],                   # c
+                     myjob['lattice_parameters']['alpha'],              # alpha
+                     myjob['lattice_parameters']['beta'],               # beta
+                     myjob['lattice_parameters']['gamma'],              # gamma
+                     myjob.get('lattice_type', ''),                           # lattice_type
+                     myjob.get('space_group', {})['space_group_name'],
+                     myjob.get('basis', ''),                                  # basis
+                     myjob.get('cif', ''),                                    # cif
+                     myjob.get('energy', 0.0),                                # energy
+                     myjob.get('enthalpy', 0.0),                              # enthalpy
+                     myjob.get('entropy', 0.0),                               # entropy
+                     myjob.get('filename', ''),                               # filename
+                     myjob.get('data_filenames', b''),                        # data_filenames (blob)
+                     myjob.get('calculation_exaf', b''),                      # calculation_exaf (blob)
+                     myjob.get('datetime', datetime.now()),                   # datetime
+                     datetime.now(),                                          # created_at
+                     datetime.now(),                                          # updated_at
+                   ]
+
+      host = hup.split()[0]
+      user = hup.split()[1]
+      pss = hup.split()[2]
+
+      print("SQL insert preview:", sqlinsert)
+      print("Insert payload preview:", insertlist)
+      commit_success = False
+
+      try:
+         dbcon = MySQLdb.connect(host=host, user=user, passwd=pss, db=dbfile)
+         with dbcon:
+            cur = dbcon.cursor()
+            cur.execute(sqlinsert, insertlist)
+            print("Insert successful.")
+            print("Connected to DB:", dbfile)
+            cur = dbcon.cursor()
+            cur.execute("SELECT DATABASE();")
+            print("Insert target DB:", cur.fetchone()[0])
+            print("Insert statement:", insertlist)
+            print("Payload length:", len(insertlist))
+            dbcon.commit()
+            commit_success = True
+
+      except Exception as e:
+         print("Insert failed:", e)
 
 
+      print("commit_success=",commit_success)
+      if (commit_success):
+         text2speech("Hi. I just added " + myjob['mformula'] + " molecule to the " + table + " table in the " + dbfile  + " database.")
+         print("Inserting ",myjob['mformula']," ",myjob['machine'],myjob['genome'],myjob['theory'],myjob['xc'],myjob['basis'],myjob['charge'],myjob['mult'])
+         print(" filename               =",myjob['filename'])
+         print(" data_filenames         =",myjob['data_filenames'])
 
+         #cmd0 = "scp " + outfile  + " " + myjob['filename']
+         #print("cmd00=",cmd0)
+         #pexpect_command(cmd0,nwpassword)
+         cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -b curdir='+myjob['filename'] + ' -a ' + outfile
+         print("cmd00=",cmd0)
+         pexpect_command(cmd0,"nopassword")
+
+         for ff in nwdatacopy1:
+            if (os.path.isfile(ff[0])):
+               #cmd0 = "scp " + ff[0]  + " " + ff[1]
+               cmd0 = chemdb_queue_nwchem + '-m archive -n omelas -b curdir=' + ff[1] + ' -a ' +  ff[0]
+               print('cmd0=',cmd0)
+               pexpect_command(cmd0,"nopassword")
+      else:
+         text2speech("Hi. The " + myjob['mformula'] + " molecule was not added to the " + table + " table in the " + dbfile  + " database. It was not added.")
 
 
 
@@ -5138,10 +5439,6 @@ Remote solid_add_nwout mysql  program
   -h hup_string="machine user password" or enter sqlite3 for sqlite3 db
   -d database = "name of database"
   -t table = "name of table"
-  -q requests_table = "name of requests_table"
-  -b bad_table = "name of bad_table"
-  -n nmr_table = "name of nmr_table"
-  -c bad_nmr_table = "name of bad_nmr_table"
   -m nwmachine = "machine:directory"
   -p nwpassrd = password for nwmachine
   -x prints this message
@@ -5153,26 +5450,14 @@ Remote solid_add_nwout mysql  program
 #Database defaults
 hup    = hup0
 dbfile = dbfile0
-table  = "calculations"
-requests_table  = "requests"
-bad_table       = "bad_calculations"
-nmr_table       = "nmr_calculations"
-bad_nmr_table   = "bad_nmr_calculations"
-abrev_table     = "abbreviations"
-aimd_table      = "aimd_calculations"
-solute_table    = "solute_structures"
+table  = "materials"
 extra_datafiles = ''
 noresubmit = False
 
 nwmachine  = archivemachine + "/%d/%d" % (random.randint(0,99),random.randint(0,99))
 nwpassword = archivepassword
-
-a = random.randint(0,9)
-b = random.randint(0,9)
-c = random.randint(0,9)
-d = random.randint(0,9)
-e = random.randint(0,9)
-nwmachine_aimd = archivemachine+"/aimd_simulations/%d/%d/%d/%d/%d/" % (a,b,c,d,e)
+print("NWMACHINE=",nwmachine)
+print("NWPASSWD=",nwpassword)
 
 
 
@@ -5197,14 +5482,6 @@ for o, a in opts:
      dbfile = a
   if '-t' in o:
      table = a
-  if '-q' in o:
-     requests_table = a
-  if '-b' in o:
-     bad_table = a
-  if '-n' in o:
-     nmr_table = a
-  if '-c' in o:
-     bad_nmr_table = a
   if '-m' in o:
      nwmachine = a
   if '-p' in o:
@@ -5226,10 +5503,12 @@ for i in range(len(args)):
 
 print("nwofile=",nwofiles)
 print("extradatafiles=",extra_datafiles)
+print("hup=",hup)
 
 
 for outfile in nwofiles:
-   insert_solid_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpassword,nwmachine,extra_datafiles,noresubmit)
+   print("outfile=",outfile)
+   insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra_datafiles,noresubmit)
 
    #nmr_blob = parse_nmrblob(outfile)
    #if (nmr_blob!=''):

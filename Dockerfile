@@ -39,10 +39,15 @@ RUN pip3 install -r requirements.txt
 # Install Open Babel
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openbabel gnuplot \
-    && apt-get install -y  --no-install-recommends openjdk-17-jdk vim nwchem \
+    default-jdk vim nwchem \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
+#COPY . .
+# Minimal copy needed for henry build
+COPY third_party /HeteroFAM/third_party
+COPY Public/static/nwchem/henry.file /HeteroFAM/Public/static/nwchem/henry.file
+
 
 # Install dependencies and build Eric from local tarball
 RUN apt-get update && apt-get install -y build-essential gfortran && \
@@ -53,6 +58,16 @@ RUN apt-get update && apt-get install -y build-essential gfortran && \
 
 # Add Bader to PATH
 ENV PATH="/HeteroFAM/third_party/bader:${PATH}"
+
+# Add user and group matching host UID and GID
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} hetero && \
+    useradd -m -u ${UID} -g ${GID} hetero
+
+# Switch to this user
+USER hetero
+
 
 #CMD [ "python3", "Public/app9.py"]
 CMD [ "python3", "-u", "Public/app9.py"]

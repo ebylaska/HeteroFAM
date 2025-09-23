@@ -103,9 +103,9 @@ MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 ARROWS_API_HOME = 'http://localhost:8080/api/'
 #ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
 
-print("ARROWS_HOME=", ARROWS_HOME)
-print("MY_ENV=", MY_ENV)
-print("ARROWS_API_HOME=", ARROWS_API_HOME)
+#print("ARROWS_HOME=", ARROWS_HOME)
+#print("MY_ENV=", MY_ENV)
+#print("ARROWS_API_HOME=", ARROWS_API_HOME)
 
 
 ####################### mongoDB #############################

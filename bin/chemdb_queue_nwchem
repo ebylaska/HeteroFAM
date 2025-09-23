@@ -223,6 +223,9 @@ chemdb_queue_nwchem program
   -s submit finished nwchem entries to chemdb_add_nwout
   -a nwinput_file
   -b label
+  -m machine
+  -n name of queue
+  -p password
   -d delete queue_entry
   -x force delete queue_entry
   -y force fetch nwchem input deck
@@ -237,6 +240,7 @@ chemdb_queue_nwchem program
 tt      = time.localtime()
 
 submitqueue2 = False
+print_header = True
 listqueues = True
 listqueues2= False
 addqueue   = False
@@ -254,7 +258,10 @@ nwoutfile      = ''
 label           = ''
 vtag            = ''
 queue_name = ''
-opts, args = getopt.getopt(sys.argv[1:], "a:b:d:x:y:e:f:q:g:w:z:r:lskh",['help','arrows_api=','heterofam_api='])
+machine = ''
+nqueue = ''
+apassword = ''
+opts, args = getopt.getopt(sys.argv[1:], "a:b:d:x:y:e:f:m:n:p:q:g:w:z:r:lskh",['help','arrows_api=','heterofam_api='])
 for o, a in opts:
   if o=='-l':
      listqueues = True
@@ -265,8 +272,15 @@ for o, a in opts:
      nwinputfile = a
      listqueues = False
      addqueue   = True
+     print_header =  ('.nw' in nwinputfile) or ('.inp' in nwinputfile) 
   if o=='-b':
      label = a
+  if o=='-m':
+     machine = a
+  if o=='-n':
+     nqueue = a
+  if o=='-p':
+     apassword = a
   if o=='-r':
      try:
         reset_queue_number = eval(a)
@@ -409,7 +423,9 @@ if (addqueue):
       if ("python" in nwchem_input.lower()): nwchem_input = "Don't be a Jerk!"
 
       ### look for password ###
-      if ("ARROWS_PASSWORD:" in nwchem_input) and (":ARROWS_PASSWORD" in nwchem_input) and (".nw" in nwinputfile):
+      if (apassword!=''):
+         arrows_password = apassword
+      elif ("ARROWS_PASSWORD:" in nwchem_input) and (":ARROWS_PASSWORD" in nwchem_input) and (".nw" in nwinputfile):
          arrows_password = nwchem_input.split('ARROWS_PASSWORD:')[1].split(':ARROWS_PASSWORD')[0].strip()
       elif ("EAP_PASSWORD:" in nwchem_input) and (":EAP_PASSWORD" in nwchem_input) and (".eap" in nwinputfile):
          arrows_password = nwchem_input.split('EAP_PASSWORD:')[1].split(':EAP_PASSWORD')[0].strip()
@@ -450,6 +466,8 @@ if (addqueue):
          machine_type = "feff9"
       elif (".inp" in nwinputfile):
          machine_type = "feff9"
+      elif (machine != ''):
+         machine_type = machine
       else:
          machine_type = "unknown"
 
@@ -461,6 +479,8 @@ if (addqueue):
          queue_name = nwchem_input.split('queue_name:')[1].split(':queue_name')[0].strip()
       elif (".inp" in nwinputfile):
          queue_name = "exafs"
+      elif (nqueue != ''):
+         queue_name = nqueue
       else:
          queue_name = "regular"
 
@@ -487,6 +507,7 @@ if (addqueue):
       entry['arrows_password'] = arrows_password
       entry['label']  = label
       entry['nwchem_input_deck'] = nwchem_input
+      entry['print_header'] = print_header 
       entry['restart_input_deck']  = "no"
       entry['restart_count'] = 0
       entry['machine_type'] = machine_type
@@ -585,18 +606,25 @@ if (runqueue):
             ctag = "*"
             cname = "FEFF9"
 
-         data1 =  ctag + "########################  START "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
-         data1 += ctag + "\n"
-         data1 += ctag + " queue_nwchem_JobId: %s" % entry['_id']
-         data1 += "\n"
-         data1 += ctag + " queue_nwchem_restart_count: %d" % entry['restart_count']
-         data1 += "\n"
-         data1 += ctag + "\n"
+         data1= ''
+         if (entry['print_header']):
+            data1 =  ctag + "########################  START "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
+            data1 += ctag + "\n"
+            data1 += ctag + " queue_nwchem_JobId: %s" % entry['_id']
+            data1 += "\n"
+            data1 += ctag + " queue_nwchem_restart_count: %d" % entry['restart_count']
+            data1 += "\n"
+            data1 += ctag + "\n"
+
          if entry['restart_input_deck']=='no':
-            data1 +=  entry['nwchem_input_deck'] + "\n"
+            #data1 +=  entry['nwchem_input_deck'] + "\n"
+            data1 +=  entry['nwchem_input_deck'].strip().rstrip()
          else:
-            data1 +=  entry['restart_input_deck'] + "\n"
-         data1 += ctag + "########################  END   "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
+            #data1 +=  entry['restart_input_deck'] + "\n"
+            data1 +=  entry['restart_input_deck'].strip().rstrip() 
+
+         if (entry['print_header']):
+            data1 += ctag + "########################  END   "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
          print(data1)
       else:
          print()
