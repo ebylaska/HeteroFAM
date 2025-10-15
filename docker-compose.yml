@@ -14,9 +14,9 @@ services:
       - ../MyHeteroFAM/archive:/HeteroFAM/archive
       - ../MyHeteroFAM/Work:/HeteroFAM/Work
       - ../MyHeteroFAM/Projects:/HeteroFAM/Projects
-      - /home/bylaska/Public/HeteroFAM/Public/uploads:/HeteroFAM/Public/uploads
-      - /home/bylaska/Public/HeteroFAM/Public/chemdb_hold:/HeteroFAM/Public/chemdb_hold
-      - /home/bylaska/Public/HeteroFAM/Public/eric_data:/HeteroFAM/Public/eric_data
+      - /data0/Public/HeteroFAM/Public/uploads:/HeteroFAM/Public/uploads
+      - /data0/Public/HeteroFAM/Public/chemdb_hold:/HeteroFAM/Public/chemdb_hold
+      - /data0/Public/HeteroFAM/Public/eric_data:/HeteroFAM/Public/eric_data
       - .:/HeteroFAM
       - .nwchemrc:/home/hetero/.nwchemrc
     working_dir: /HeteroFAM

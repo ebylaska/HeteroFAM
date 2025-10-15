@@ -5408,14 +5408,14 @@ def insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra
          #cmd0 = "scp " + outfile  + " " + myjob['filename']
          #print("cmd00=",cmd0)
          #pexpect_command(cmd0,nwpassword)
-         cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -b curdir='+myjob['filename'] + ' -a ' + outfile
+         cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir='+myjob['filename'] + ' -a ' + outfile
          print("cmd00=",cmd0)
          pexpect_command(cmd0,"nopassword")
 
          for ff in nwdatacopy1:
             if (os.path.isfile(ff[0])):
                #cmd0 = "scp " + ff[0]  + " " + ff[1]
-               cmd0 = chemdb_queue_nwchem + '-m archive -n omelas -b curdir=' + ff[1] + ' -a ' +  ff[0]
+               cmd0 = chemdb_queue_nwchem + '-m archive -n omelas -p 05291999 -b curdir=' + ff[1] + ' -a ' +  ff[0]
                print('cmd0=',cmd0)
                pexpect_command(cmd0,"nopassword")
       else:
@@ -5505,14 +5505,41 @@ print("nwofile=",nwofiles)
 print("extradatafiles=",extra_datafiles)
 print("hup=",hup)
 
+wrkdir0 = os.path.join(wrkdir, "%d-%d" % (random.randint(0, 99), random.randint(0, 99)))
+os.mkdir(wrkdir0)
 
-for outfile in nwofiles:
-   print("outfile=",outfile)
-   insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra_datafiles,noresubmit)
+# Copy NWChem files
+nwfiles = []
+for nwfile in nwofiles:
+    dest = os.path.join(wrkdir0, os.path.basename(nwfile))
+    shutil.copy(nwfile, dest)
+    nwfiles.append(dest)
 
-   #nmr_blob = parse_nmrblob(outfile)
-   #if (nmr_blob!=''):
-   #   insert_nmr_calculation(outfile,hup,dbfile,nmr_table,bad_nmr_table,nwpassword,nwmachine)
+# Copy extra files
+for extrafile in extra_datafiles.strip().split():
+    dest = os.path.join(wrkdir0, os.path.basename(extrafile))
+    shutil.copy(extrafile, dest)
+
+
+# Process output files
+old_cwd = os.getcwd()
+try:
+   os.chdir(wrkdir0)
+   for outfile in nwfiles:
+      print("outfile=",outfile)
+      #insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra_datafiles,noresubmit)
+      insert_solid_calculation(outfile,hup,dbfile,table,nwpassword,nwmachine,extra_datafiles,noresubmit)
+finally: 
+   # cd  wrkdir then Clean up directory (remove everything inside + the folder itself)
+   os.chdir(old_cwd)
+   shutil.rmtree(wrkdir0,ignore_errors=True)
+
+   # Delete parsed files
+   #for f in nwofiles + extra_datafiles.strip().split():
+   #   try:
+   #      os.unlink(f)
+   #   except FileNotFoundError:
+   #      pass
 
 
 ### delete temporary wrkdir files ###

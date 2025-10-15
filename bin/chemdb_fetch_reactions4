@@ -55,7 +55,7 @@ with open(arrowslogosvg,'r') as f: alogosvg += f.read()
 alogosvg += '''
 
 <br>
-<a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">More information about EMSL Arrows</a>
+<a href="https://ebylaska.github.io/TinyArrows/">More information about Tiny Arrows</a>
 <br>
 <a href="https://dl.dropboxusercontent.com/u/11053366/ArrowsManual/ArrowsManual.htm">Link to Arrows manual</a>
 <br>
@@ -129,7 +129,7 @@ KEYWORDs -
 
 alogo = '''
 <br>
-<a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">More information about EMSL Arrows</a>
+<a href="https://ebylaska.github.io/TinyArrows/">More information about Tiny Arrows</a>
 <br>
 <a href="https://dl.dropboxusercontent.com/u/11053366/ArrowsManual/ArrowsManual.htm">Link to Arrows manual</a>
 <br>

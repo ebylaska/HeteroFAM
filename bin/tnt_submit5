@@ -1553,7 +1553,7 @@ def makegeom_neb(xyzfilename,xyzfilename2):
 def makegaussianbasis(mformula,basis,basisHZ):
    foundHZ = False
    str = "basis \"ao basis\" cartesian print\n"
-   for aa in re.findall('[^\d ]+', mformula):
+   for aa in re.findall(r'[^\d ]+', mformula):
       if (periodic_table_charge[aa]<21):
          if (basis=='default'):
             str += " " + aa + " library \"6-311++G(2d,2p)\"" + "\n"
@@ -1580,7 +1580,7 @@ def makegaussianbasis(mformula,basis,basisHZ):
    str += "end\n"
    if foundHZ: 
       str += "ecp\n"
-      for aa in re.findall('[^\d ]+', mformula):
+      for aa in re.findall(r'[^\d ]+', mformula):
          if (periodic_table_charge[aa]>=37):
             if (basisHZ=='default'):
                if (periodic_table_charge[aa]<87):

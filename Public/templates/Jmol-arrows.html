@@ -12,7 +12,7 @@
 <link rel="icon" type="image/png" sizes="96x96" href="https://dl.dropboxusercontent.com/s/k0kyp30ale2pkod/favicon-96x96.png">
 <link rel="icon" type="image/png" sizes="16x16" href="https://dl.dropboxusercontent.com/s/0l0w2wk9wfxt4el/favicon-16x16.png">
 
-<title>Tiny Arrows</title>
+<title>Open Arrows</title>
 
 <!-- Alternative location for ace editor -->
 <!-- script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.1/ace.js" type="text/javascript" charset="utf-8"></script> -->
@@ -397,9 +397,9 @@
                 x = 1;
               }
               if (url.indexOf("http") == -1) {
-                 url2 = "{{ arrows_api }}esmiles2xyz/\"" + url + "\"" ;
+                 url2 = "{{ heterofam_api }}esmiles2xyz/\"" + url + "\"" ;
                  //url  = "https://arrows.emsl.pnnl.gov/api/xyz/\"" + url + "\"" ;
-                 url  = "{{ arrows_api }}mol/\"" + url + "\"" ;
+                 url  = "{{ heterofam_api }}mol/\"" + url + "\"" ;
               }
               console.log(url);
               if (url.trim().length>9) {
@@ -585,7 +585,7 @@
            var smiles = prompt("Please enter smiles:", "CCO");
            if (smiles.includes("http")) {
               alert("Running OSRA for " + smiles);
-              var url = "{{ arrows_api }}osra/'" + smiles + "'";
+              var url = "{{ heterofam_api }}osra/'" + smiles + "'";
               var ajax = new XMLHttpRequest();
               ajax.onload = functionName;
               ajax.onerror = errorFunctionName;
@@ -1941,9 +1941,13 @@
 <body onload="jmolOnLoad()">
 
 <div class="linkbanner">
-   <a href="{{ arrows_api }}"><img src="{{url_for('static', filename='arrows-static/TinyArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
-<a href="{{ arrows_api }}periodic">Expert Periodic and Molecular Editor</a> &nbsp;
-   <a href="{{ arrows_api }}3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}expert">Molecular Combo Editor</a> &nbsp; <a href="{{ arrows_api }}qsharp_chem">Microsoft Quantum Editor</a> &nbsp;  <a href="{{ arrows_api }}aerosol">EMSL Aerosol Workshop Editor</a> &nbsp;  <a href="{{ arrows_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
+   <a href="{{ heterofam_api }}arrows"><img src="{{url_for('static', filename='arrows-static/OpenArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
+   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;
+   <a href="{{ heterofam_api }}arrows/periodic">Periodic and Molecular Editor</a> &nbsp;
+   <a href="{{ heterofam_api }}arrows/3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; 
+   <a href="{{ heterofam_api }}arrows/expert">Molecular Combo Editor</a> &nbsp;  
+   <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; 
+   <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
 </div>
 
 
@@ -1954,7 +1958,7 @@
     application to display correctly.</div>
     </noscript>
 
-        <center><font color="74A52B" size="+2"> <p><b>TinyArrows 3D Molecular And Reaction Editor</b></p></font></center>
+        <center><font color="74A52B" size="+2"> <p><b>OpenArrows 3D Molecular And Reaction Editor</b></p></font></center>
         <center><font color="E8613B" size="+1"><p align="center">EMSL Arrows is a revolutionary approach to materals and chemical simualations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font></center>
         <font color="298DB4"><p> {{ calculations }} Arrows calculations carried out to date<br>
                                     {{ moleculecalculations }} Molecular calculations in database to date </p></font>

@@ -11,8 +11,8 @@ ARROWS_HOME           = __file__.split("HeteroFAM")[0] + "HeteroFAM"
 MY_ENV                = os.environ.copy()
 MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 
-ARROWS_API_HOME = 'http://localhost:8080/api/'
-#ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
+#ARROWS_API_HOME = 'http://localhost:8080/api/'
+ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
 
 #babel              = "/usr/bin/babel"
 obabel             = "/usr/bin/env obabel "
@@ -3065,7 +3065,7 @@ def xyztoadjmat(xyzfilename):
 def f_reaction(mformulas,rps,coeffs):
    ss = []
    for a in mformulas:
-      ss += re.findall ('[^\d ]+', a)
+      ss += re.findall (r'[^\d ]+', a)
    symbols = list(set(ss))
 
    f = {}
@@ -3075,8 +3075,8 @@ def f_reaction(mformulas,rps,coeffs):
          mformula = mformulas[i]
          x        = coeffs[i]
          z        = rps[i]
-         ss1 = re.findall ('[^\d ]+', mformula)
-         ss2 = re.findall ('[\d]+', mformula)
+         ss1 = re.findall (r'[^\d ]+', mformula)
+         ss2 = re.findall (r'[\d]+', mformula)
          for j in range(len(ss1)):
             if ss1[j]==s:
                f[s] += eval(ss2[j])*x*z
@@ -3109,8 +3109,8 @@ def df_reaction(mformulas,rps,coeffs):
    for i in range(len(mformulas)):
       mformula = mformulas[i]
       z = rps[i]
-      ss1 = re.findall ('[^\d ]+', mformula)
-      ss2 = re.findall ('[\d]+', mformula)
+      ss1 = re.findall (r'[^\d ]+', mformula)
+      ss2 = re.findall (r'[\d]+', mformula)
       df0 = 0
       for j in range(len(ss1)):
          df0 += 2*eval(ss2[j])*f[ss1[j]]*z

@@ -23,6 +23,7 @@ tnt_submit   = ARROWS_HOME + "/bin/tnt_submit5 "
 chemdb_queue = ARROWS_HOME + "/bin/chemdb_queue "
 chemdb_say   = ARROWS_HOME + "/bin/chemdb_say "
 wrkdir       = ARROWS_HOME + "/Work"
+chemdb_queue_nwchem        = ARROWS_HOME + "/bin/chemdb_queue_nwchem "
 calculationscountfilename  = ARROWS_HOME + "/Public/counters/calculationscount"
 chemdbfile     = ARROWS_HOME + "/bin/.chemdb-en"
 ddrand = random.randint(0,999999)
@@ -1534,7 +1535,7 @@ periodic_table_charge = {
 
 def mformula_foundHZ(mformula):
    foundHZ = False
-   for aa in re.findall('[^\d ]+', mformula):
+   for aa in re.findall(r'[^\d ]+', mformula):
      if (periodic_table_charge[aa]>=21):
         foundHZ = True
 
@@ -1942,8 +1943,8 @@ def xyz_molecular_formula(xyzfilename):
 def inchionlyHZ(inchi):
    try:
       onlyHZ = True
-      for a in re.findall('[A-Z][^A-Z]*', inchi.split("/")[1]):
-         aa = re.sub("[^a-zA-Z]","", a)
+      for a in re.findall(r'[A-Z][^A-Z]*', inchi.split("/")[1]):
+         aa = re.sub(r'[^a-zA-Z]','', a)
          if (periodic_table_charge[aa]<21): onlyHZ = False
    except:
       onlyHZ = False
@@ -1954,8 +1955,8 @@ def inchihasHZ(inchi):
    try:
       hasHZ = False
       #for aa in re.findall('[^\d^. ]+',inchi.split("/")[1]):
-      for a in re.findall('[A-Z][^A-Z]*', inchi.split("/")[1]):
-         aa = re.sub("[^a-zA-Z]","", a)
+      for a in re.findall(r'[A-Z][^A-Z]*', inchi.split("/")[1]):
+         aa = re.sub(r'[^a-zA-Z]','', a)
          if (periodic_table_charge[aa]>=21): hasHZ = True
    except:
       hasHZ = False
@@ -5162,26 +5163,28 @@ def insert_calculation(outfile,hup,dbfile,table,bad_table,abrev_table,nwpassword
           print("Inserting ",iupac," ",mformula," ",smiles," ",csmiles," ",esmiles," ",program,calculation_type,theory,xc,basis,charge,mult,energy,enthalpy,entropy,cosmo,ecd,ehd,ASA,SAV)
 
          
-          cmd0 = "scp " + outfile  + " " + nwfilename
-          if ((":/" not in nwfilename) and (":/" not in outfile)): 
-             cmd0 = cmd0.replace("scp","cp")
-             ppth = os.path.dirname(nwfilename)
-             if (not os.path.isdir(ppth)):
-                cmd9 = "mkdir -p " +  ppth
-                pexpect_command(cmd9,nwpassword)
+          #cmd0 = "scp " + outfile  + " " + nwfilename
+          #if ((":/" not in nwfilename) and (":/" not in outfile)): 
+          #   cmd0 = cmd0.replace("scp","cp")
+          #   ppth = os.path.dirname(nwfilename)
+          #   if (not os.path.isdir(ppth)):
+          #      cmd9 = "mkdir -p " +  ppth
+          #      pexpect_command(cmd9,nwpassword)
+          cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir=' + nwfilename + ' -a ' + outfile
           print(cmd0)
-          pexpect_command(cmd0,nwpassword)
+          pexpect_command(cmd0,"nopassword")
 
           for bbb in nwdatacopy:
-             cmd0 = "scp " + bbb[0]  + " " + bbb[1]
-             if ((":/" not in bbb[1]) and (":/" not in bbb[0])): 
-                cmd0 = cmd0.replace("scp","cp")
-                ppth = os.path.dirname(bbb[1])
-                if (not os.path.isdir(ppth)):
-                   cmd9 = "mkdir -p " + ppth
-                   pexpect_command(cmd9,nwpassword)
+             #cmd0 = "scp " + bbb[0]  + " " + bbb[1]
+             #if ((":/" not in bbb[1]) and (":/" not in bbb[0])): 
+             #   cmd0 = cmd0.replace("scp","cp")
+             #   ppth = os.path.dirname(bbb[1])
+             #   if (not os.path.isdir(ppth)):
+             #      cmd9 = "mkdir -p " + ppth
+             #      pexpect_command(cmd9,nwpassword)
+             cmd0 = chemdb_queue_nwchem + '-m archive -n omelas -p 05291999 -b curdir=' + bbb[1] + ' -a ' +  bbb[0]
              print(cmd0)
-             pexpect_command(cmd0,nwpassword)
+             pexpect_command(cmd0,"nopassword")
 
           delete_esmiles(hup,dbfile,requests_table,esmiles)
           if (osmiles != "nosmiles"):
@@ -6054,15 +6057,16 @@ def insert_aimd_calculation(outfile,hup,dbfile,table,solute_table,nwpassword,nwm
 
             for ff in dfilenames:
                if (os.path.isfile(ff[0])):
-                  cmd0 = "scp " + ff[0]  + " " + ff[1]
-                  if ((":/" not in ff[0]) and (":/" not in ff[1])): 
-                     cmd0 = cmd0.replace("scp","cp")
-                     ppth = os.path.dirname(ff[1])
-                     if (not os.path.isdir(ppth)):
-                        cmd9 = "mkdir -p " + ppth
-                        pexpect_command(cmd9,nwpassword)
+                  #cmd0 = "scp " + ff[0]  + " " + ff[1]
+                  #if ((":/" not in ff[0]) and (":/" not in ff[1])): 
+                  #   cmd0 = cmd0.replace("scp","cp")
+                  #   ppth = os.path.dirname(ff[1])
+                  #   if (not os.path.isdir(ppth)):
+                  #      cmd9 = "mkdir -p " + ppth
+                  #      pexpect_command(cmd9,nwpassword)
+                  cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir=' + ff[1] + ' -a ' + ff[0]
                   print(cmd0)
-                  pexpect_command(cmd0,nwpassword)
+                  pexpect_command(cmd0,"nopassword")
 
          else:
             text2speech("Hi. The " + mformula + " molecule already exists in the " + table + " table in the " + dbfile  + " database. It was not added.")
@@ -6389,15 +6393,16 @@ def insert_nmr_calculation(outfile,hup,dbfile,table,bad_table,nwpassword,nwmachi
           text2speech("Hi. I just added " + mformula + " to the " + mytable + " table in the " + dbfile  + " database.")
 
           print("Inserting ",iupac," ",mformula," ",smiles," ",csmiles," ",esmiles," ",program,calculation_type,theory,xc,basis,theory_property,xc_property,basis_property,charge,mult,energy,cosmo,ecd,ehd,ASA,SAV)
-          cmd0 = "scp " + outfile  + " " + nwfilename
-          if ((":/" not in nwfilename) and (":/" not in outfile)): 
-             cmd0 = cmd0.replace("scp","cp")
-             ppth = os.path.dirname(nwfilename)
-             if (not os.path.isdir(ppth)):
-                cmd9 = "mkdir -p " +  ppth
-                pexpect_command(cmd9,nwpassword)
+          #cmd0 = "scp " + outfile  + " " + nwfilename
+          #if ((":/" not in nwfilename) and (":/" not in outfile)): 
+          #   cmd0 = cmd0.replace("scp","cp")
+          #   ppth = os.path.dirname(nwfilename)
+          #   if (not os.path.isdir(ppth)):
+          #      cmd9 = "mkdir -p " +  ppth
+          #      pexpect_command(cmd9,nwpassword)
+          cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir=' + nwfilename + ' -a ' + outfile
           print(cmd0)
-          pexpect_command(cmd0,nwpassword)
+          pexpect_command(cmd0,"nopassword")
           delete_esmiles(hup,dbfile,requests_table,esmiles)
       else:
           text2speech("Hi. I just did not insert " + mformula + " to the " + mytable + " table in the " + dbfile  + " database, because it was a duplicate")
@@ -6525,15 +6530,16 @@ def insert_homolumo(outfile,hup,dbfile,table,bad_table,abrev_table,nwpassword,nw
 
          if (changed):
             for bbb in nwdatacopy:
-               cmd0 = "scp " + bbb[0]  + " " + bbb[1]
-               if ((":/" not in bbb[0]) and (":/" not in bbb[1])): 
-                  cmd0 = cmd0.replace("scp","cp")
-                  ppth = os.path.dirname(bbb[1])
-                  if (not os.path.isdir(ppth)):
-                     cmd9 = "mkdir -p " + ppth
-                     pexpect_command(cmd9,nwpassword)
+               #cmd0 = "scp " + bbb[0]  + " " + bbb[1]
+               #if ((":/" not in bbb[0]) and (":/" not in bbb[1])): 
+               #   cmd0 = cmd0.replace("scp","cp")
+               #   ppth = os.path.dirname(bbb[1])
+               #   if (not os.path.isdir(ppth)):
+               #      cmd9 = "mkdir -p " + ppth
+               #      pexpect_command(cmd9,nwpassword)
+               cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir=' + bbb[1] + ' -a ' + bbb[0]
                print(cmd0)
-               pexpect_command(cmd0,nwpassword)
+               pexpect_command(cmd0,"nopassword")
             data_filenames = data_filenames.strip()
             updatelist = []
             updatelist.append(data_filenames)
@@ -6653,15 +6659,16 @@ def insert_hrotor(outfile,hup,dbfile,table,bad_table,abrev_table,nwpassword,nwma
 
          if (not alreadyhasrotor) or hrotorreplacejob:
             for bbb in nwdatacopy:
-               cmd0 = "scp " + bbb[0]  + " " + bbb[1]
-               if ((":/" not in bbb[0]) and (":/" not in bbb[1])): 
-                  cmd0 = cmd0.replace("scp","cp")
-                  ppth = os.path.dirname(bbb[1])
-                  if (not os.path.isdir(ppth)):
-                     cmd9 = "mkdir -p " + ppth
-                     pexpect_command(cmd9,nwpassword)
+               #cmd0 = "scp " + bbb[0]  + " " + bbb[1]
+               #if ((":/" not in bbb[0]) and (":/" not in bbb[1])): 
+               #   cmd0 = cmd0.replace("scp","cp")
+               #   ppth = os.path.dirname(bbb[1])
+               #   if (not os.path.isdir(ppth)):
+               #      cmd9 = "mkdir -p " + ppth
+               #      pexpect_command(cmd9,nwpassword)
+               cmd0 = chemdb_queue_nwchem +'-m archive -n omelas -p 05291999 -b curdir=' + bbb[1] + ' -a ' + bbb[0]
                print(cmd0)
-               pexpect_command(cmd0,nwpassword)
+               pexpect_command(cmd0,"nopassword")
 
             if alreadyhasrotor and hrotorreplacejob:
                hrotors_blob = replace_hrotor_blob(hrotors_blob,hrotor_blob)

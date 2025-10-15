@@ -24,23 +24,56 @@
 
 .linkbanner {
   position: relative;
-  //display: inline-block;
+  /*/display: inline-block;*/
+  display: flex;
+   align-items: center;       /* aligns all items at the bottom */
+  justify-content: flex-start;
   padding: 1px;
-  // background-color: lightblue;
+  /* background-color: lightblue;
   //background-image: linear-gradient(blue,#FEFEFE,blue);
   //background-image: linear-gradient(blue,orange,blue);
   //background-image: linear-gradient(#4286f4,orange,#4286f4);
-  //background-image: linear-gradient(#38761D,orange,#38761D);
-  background-image: linear-gradient(#92D0DF,#EEC689,#92D0DF);
-  //background-image: linear-gradient(#4286f4,#599a3e,#4286f4);
+  //background-image: linear-gradient(#38761D,orange,#38761D); */
+background-image: linear-gradient(#92D0DF,#EEC689,#92D0DF);
+  /*//background-image: linear-gradient(#4286f4,#599a3e,#4286f4);
   //background-image: linear-gradient(#2f61ce,lightorange,#2f61ce);
   //background-image: linear-gradient(#2f61ce,gold,#2f61ce);
-  //background-image: linear-gradient(#4286f4,gold,#4286f4);
+  //background-image: linear-gradient(#4286f4,gold,#4286f4); */
   font-size: 18px;
   font-weight: bold;
-  font-family: arial;
+  font-family: Arial, sans-serif;
   color: #1C6291;
 }
+
+ .section {
+  /*flex-direction: column;*/
+  text-align: center;
+  }
+
+ .section img {
+  height: 100px;   /* make all icons the same height */
+  object-fit: contain;
+  }
+
+  .label {
+  margin-top: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1C6291;
+  text-align: center;
+  }
+
+ .linkbanner h3 {
+  margin: 0 0 10px 0;           /* space between label and icons */
+  font-size: 18px;
+  font-weight: bold;
+  color: #1C6291;
+  }
+
+ .separator {
+  border-left: 3px solid black;
+  align-self: stretch;          /* make separator span full banner height */
+  }
 
  .linkbanner a {
             color: #1C6291;
@@ -476,10 +509,37 @@
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/HeteroFAM.png')}}" alt="Copyright HeteroFAM Logo" width="120" height="120" align="middle"></a>
-<a href="{{ heterofam_api }}periodic">Expert Periodic and Molecular Editor </a> &nbsp;    <a href="{{ heterofam_api }}moire"> Moire Editor</a> &nbsp;   <a href="{{ heterofam_api }}magnetic"> Magnetic Editor</a> &nbsp; <a href="{{ heterofam_api }}arrows">Arrows</a> &nbsp;   <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; <a href="https://ebylaska.github.io/TinyArrows/">Manual</a> &nbsp;  <a href="{{ heterofam_api }}eric_view2/list=">Projects</a> 
+   <div>
+      <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/HeteroFAM.png')}}" alt="Copyright HeteroFAM Logo" width="120" height="120" align="middle"></a> &nbsp;&nbsp;&nbsp;
+   </div>
+
+    <!-- separator line -->
+    <div class="separator"></div>
+
+    &nbsp;&nbsp;&nbsp;
+   <div class="section">
+   <a href="{{ heterofam_api }}periodic"><img src="{{url_for('static', filename='heteroatom-static/editor3.png')}}" alt="Copyright HeteroFAM Logo" width="150" height="100" align="middle"></a> &nbsp;&nbsp;&nbsp;
+   <a href="{{ heterofam_api }}moire"><img src="{{url_for('static', filename='heteroatom-static/Moire1.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="100" align="middle"></a> &nbsp;&nbsp;&nbsp;
+   <a href="{{ heterofam_api }}magnetic"><img src="{{url_for('static', filename='heteroatom-static/omegashell6.png')}}" alt="Copyright HeteroFAM Logo" width="105" height="100" align="middle"></a> &nbsp;&nbsp;&nbsp;
+   <a href="{{ heterofam_api }}arrows"><img src="{{url_for('static', filename='arrows-static/OpenArrows2019.png')}}" alt="Copyright HeteroFAM Logo" width="180" height="100" align="middle"></a> &nbsp;&nbsp;
+     <div class="label">Web Applications</div>
+   </div>
+
+    <!-- separator line -->
+    <div class="separator"></div>
+
+   <div class="section">
+      <a href=https://github.com/ebylaska/PWDFT><img src="{{url_for('static', filename='heteroatom-static/pwdft.png')}}" alt="Copyright PWDFT Logo" width="160" height="160" align="middle"></a> 
+      <a href=https://github.com/nwchemgit/nwchem><img src="{{url_for('static', filename='heteroatom-static/nwchem.png')}}" alt="Copyright NWChem Logo" width="90" height="90" align="middle"></a> 
+      <a href=https://github.com/npbauman/QFlow-COVOs><img src="{{url_for('static', filename='heteroatom-static/QFlow-COVOs.png')}}" alt="Copyright QFlow-COVOsHeteroFAM Logo" width="100" height="100" align="middle"></a> &nbsp;
+      <a href=https://github.com/ExaChem><img src="{{url_for('static', filename='heteroatom-static/exachem.png')}}" alt="Copyright ExaChem Logo" width="100" height="100" align="middle"></a> 
+
+     <div class="label">Software</div>
+   </div>
 
 </div>
+
+
 
 
 	<!-- RECOMMENDED if your web app will not function without JavaScript enabled -->

@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory, Response, session
 from flask import abort
 from werkzeug.utils import secure_filename
-import os,subprocess,urllib,time,uuid,random,requests,zipfile,re,math,yaml,csv,datetime
+import os,subprocess,urllib,time,uuid,random,requests,zipfile,re,math,yaml,csv,datetime,fcntl
 import paramiko,secrets
 import logging
 
@@ -87,16 +87,20 @@ esmiles2xyzblocked = 0
 
 #headerfigure = ['<a href="https://dl.dropboxusercontent.com/s/1fdkluujb97tr0b/banner2.gif"><img src="https://dl.dropboxusercontent.com/s/1fdkluujb97tr0b/banner2.gif" alt="HeteroFAM Banner Movie"> </a>', '<a href="https://dl.dropboxusercontent.com/s/en5l9l7l31ggz6e/EMSL_banner.jpg"><img src="https://dl.dropboxusercontent.com/s/en5l9l7l31ggz6e/EMSL_banner.jpg" alt="EMSL Computing Banner" height="162" width="450" border=0 /></a>', '<a href="https://dl.dropboxusercontent.com/s/rcoee0m9urc4e3o/Surface-uprot.gif"><img src="https://dl.dropboxusercontent.com/s/rcoee0m9urc4e3o/Surface-uprot.gif" alt="HeteroFAM Movie" width="200" height="200"> </a>', '<a href="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/HeteroFAMBeaker2.gif"><img src="https://dl.dropboxusercontent.com/s/chxhlvamd8ro356/HeteroFAMBeaker2.gif" alt="HeteroFAM Movie"> </a>']
 
-headerfigure = [ '<a href="{{url_for(\'static\', filename=\'arrows-static/banner2.gif\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/banner2.gif\')}}" alt="HeteroFAM Banner Movie"> </a>', '<a href="{{url_for(\'static\', filename=\'arrows-static/EMSL_banner.jpeg\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/EMSL_banner.jpeg\')}}" alt="EMSL Computing Banner" height="162" width="450" border=0 /></a>', '<a href="{{url_for(\'static\', filename=\'arrows-static/Surface-uprot.gif\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/Surface-uprot.gif\')}}" alt="HeteroFAM Movie" width="200" height="200"> </a>', '<a href="{{url_for(\'static\', filename=\'heteroatom-static/TPicture1.gif\')}}"><img src="{{url_for(\'static\', filename=\'heteroatom-static/TPicture1.png\')}}" alt="HeteroFAM Movie"> </a>' ]
+headerfigure = [ '<a href="{{url_for(\'static\', filename=\'arrows-static/banner2.gif\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/banner2.gif\')}}" alt="HeteroFAM Banner Movie"> </a>', '<a href="{{url_for(\'static\', filename=\'arrows-static/EMSL_banner.jpeg\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/EMSL_banner.jpeg\')}}" alt="EMSL Computing Banner" height="162" width="450" border=0 /></a>', '<a href="{{url_for(\'static\', filename=\'arrows-static/Surface-uprot.gif\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/Surface-uprot.gif\')}}" alt="HeteroFAM Movie" width="200" height="200"> </a>', '<a href="{{url_for(\'static\', filename=\'heteroatom-static/TPicture1.gif\')}}"><img src="{{url_for(\'static\', filename=\'heteroatom-static/TPicture1.png\')}}" alt="HeteroFAM Movie"> </a>', '<a href="{{url_for(\'static\', filename=\'arrows-static/banner4.png\')}}"><img src="{{url_for(\'static\', filename=\'arrows-static/banner4.png\')}}" alt="HeteroFAM Banner3" width="600", height="200"> </a>' ]
 
 ##### define the arrows logos #####
 HeteroFAMHeader = '''
-   <head> <meta http-equiv="content-type" content="text/html; charset=UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"> <meta charset="utf-8"><link rel="icon" type="image/png" sizes="32x32" href="%sarrows-static/favicon-32x32.png"><link rel="icon" type="image/png" sizes="96x96" href="%sarrows-static/favicon-96x96.png"><link rel="icon" type="image/png" sizes="16x16" href="%sarrows-static/favicon-16x16.png"><style type="text/css"> </style> </head>
+   <head> <meta http-equiv="content-type" content="text/html; charset=UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"><meta charset="utf-8">
+          <link rel="icon" type="image/png" sizes="32x32" href="/static/arrows-static/favicon-32x32.png">
+          <link rel="icon" type="image/png" sizes="96x96" href="/static/arrows-static/favicon-96x96.png"> 
+          <link rel="icon" type="image/png" sizes="16x16" href="/static/arrows-static/favicon-16x16.png">
+          <style type="text/css"> </style> </head>
 
    <center> <font color="74A52B" size="+2"><p><b>Results from an HeteroFAM Request</b></p></font></center>
    <center> <p>Making molecular modeling accessible by combining NWChem, databases, web APIs (<a href="%s">%s</a>), and email (arrows@emsl.pnnl.gov)</p> </center>
    <center> %s </center>
-''' % (HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME,HeteroFAM_API_HOME+"arrows",HeteroFAM_API_HOME+"arrows",headerfigure[3])
+''' % (HeteroFAM_API_HOME+"arrows",HeteroFAM_API_HOME+"arrows",headerfigure[3])
 
 HeteroFAMHeader2 = '''
    <center> <font color="darkgreen" size="+2"><p><b> EMSL HeteroFAM Microsoft Quantum Development Kit Queue</b></p></font></center>
@@ -104,6 +108,83 @@ HeteroFAMHeader2 = '''
    <center><a href="https://arrows.emsl.pnnl.gov/api/qsharp_chem">Link back to Microsoft Quantum Editor</a></p></center>
    <center> %s </center>
 ''' % (headerfigure[1]+headerfigure[0])
+
+
+HeteroFAMHeader3 = '''
+   <head> <meta http-equiv="content-type" content="text/html; charset=UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"> <meta charset="utf-8">
+   <link rel="icon" type="image/png" sizes="32x32" href=/static/heteroatom-static/favicon-32x32.png">
+   <link rel="icon" type="image/png" sizes="96x96" href=/static/heteroatom-static/favicon-96x96.png">
+   <link rel="icon" type="image/png" sizes="16x16" href="/static/heteroatom-static/favicon-16x16.png">
+   <style type="text/css"> </style> </head>
+
+   <center> <font color="74A52B" size="+2"><p><b>HeteroFAM Solid Queue</b></p></font></center>
+   <center> <p style="margin:8px 0 0; font-size:clamp(14px,2.2vw,18px); color:#2a2a2a;">
+               Making molecular modeling accessible by combining NWChem NWPW or NWChemEx PWDFT, databases, and web APIs
+               (<a href=%s style="color:#0d8aa6;text-decoration:none;">%s</a>,
+                <a href=%s style="color:#0d8aa6;text-decoration:none;">%s</a>).
+            </p> </center>
+   <br>
+   <center> %s </center>
+''' % (HeteroFAM_API_HOME+"magnetic",HeteroFAM_API_HOME+"magnetic", HeteroFAM_API_HOME+"periodic",HeteroFAM_API_HOME+"periodic", headerfigure[4])
+
+
+HeteroFAMHeader4 = '''
+<head>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin-top: 20px;
+  }
+
+  /* Left column for icons */
+  .icon-column {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    /*margin-right: 30px;*/
+  }
+
+  .icon-column img {
+    width: 80px;
+    margin: 10px 0;
+  }
+
+  /* Right side for main image */
+  .main-figure img {
+    width: 400px;
+    height: 300px;
+    border: 5px solid #3BB7B3;
+    border-radius: 6px;
+  }
+
+</style>
+</head>
+   <center> <font color="74A52B" size="+2"><p><b>HeteroFAM Solid Queue</b></p></font></center>
+   <center> <p style="margin:8px 0 0; font-size:clamp(14px,2.2vw,18px); color:#2a2a2a;">
+               Making molecular modeling accessible by combining NWChem NWPW or NWChemEx PWDFT, databases, and web APIs
+            </p> 
+   </center>
+  <div class="container">
+     <div class="main-figure">
+      %s 
+     </div>
+   </div>
+
+  <div class="container">
+   <a href=%s><img src="{{url_for('static', filename='heteroatom-static/HeteroFAM.png')}}" alt="Copyright HeteroFAM Logo" width="80" height="80" align="right"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   <a href=%s><img src="{{url_for('static', filename='heteroatom-static/editor3.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="75" align="right"></a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+   <a href=%s><img src="{{url_for('static', filename='heteroatom-static/omegashell6.png')}}" alt="Copyright HeteroFAM Logo" width="50" height="50" align="right"></a> &nbsp;&nbsp;&nbsp;
+  </div>
+
+
+''' % (headerfigure[4],HeteroFAM_API_HOME,HeteroFAM_API_HOME+"periodic",HeteroFAM_API_HOME+"magnetic")
+
 
 
 
@@ -719,7 +800,7 @@ def nwinput2jsmol(backgroundcolor,nwinput):
 
 
    if cell!='':
-      xyzfilename = "tmp/molecule-jsmol-%d.cif" % xx
+      xyzfilename = "results/molecule-jsmol-%d.cif" % xx
       xyzlist = xyzdat.strip().split("\n")
       nion = eval(xyzlist[0].strip())
       cifdat = ''
@@ -731,7 +812,7 @@ def nwinput2jsmol(backgroundcolor,nwinput):
       with open(staticdir + xyzfilename,'w') as ff:
          ff.write(cifdat)
    else:
-      xyzfilename = "tmp/molecule-jsmol-%d.xyz" % xx
+      xyzfilename = "results/molecule-jsmol-%d.xyz" % xx
       with open(staticdir + xyzfilename,'w') as ff:
          ff.write(xyzdat)
 
@@ -865,8 +946,8 @@ def clean_upload_directory():
 
 def clean_directories():
    ### remove files from templatedir ###
-   for the_file in os.listdir(templatedir+"/tmp"):
-      file_path = os.path.join(templatedir+"/tmp", the_file)
+   for the_file in os.listdir(templatedir+"/results"):
+      file_path = os.path.join(templatedir+"/results", the_file)
       try:
          if os.path.isfile(file_path):
             if ('reaction' in file_path) or ('molecule' in file_path):
@@ -876,8 +957,8 @@ def clean_directories():
          print(e)
 
    ### remove files from staticdir ###
-   for the_file in os.listdir(staticdir+"/tmp"):
-      file_path = os.path.join(staticdir+"/tmp", the_file)
+   for the_file in os.listdir(staticdir+"/results"):
+      file_path = os.path.join(staticdir+"/results", the_file)
       try:
          if os.path.isfile(file_path):
             dt = time.time() - os.path.getmtime(file_path)
@@ -893,8 +974,8 @@ def resolve_images(result,html):
    for a in images:
       if os.path.isfile(a[0]):
          a1 = "cid:"+a[1]
-         a2 = " {{url_for('static',filename='tmp/img-%s')}}" % (a[0].split("/")[-1])
-         cmd8    = "cp " + a[0] + " " + staticdir + "/tmp/img-%s" %  (a[0].split("/")[-1])
+         a2 = " {{url_for('static',filename='results/img-%s')}}" % (a[0].split("/")[-1])
+         cmd8    = "cp " + a[0] + " " + staticdir + "/results/img-%s" %  (a[0].split("/")[-1])
          #result2 = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
          print("cmd8=",cmd8)
          result2 = subprocess.check_output(cmd8,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
@@ -942,18 +1023,64 @@ def apivisited():
       aa = "?????"
    return (aa.strip())
 
+#def increment_apivisited():
+#   try:
+#      with open(counterdir+"/apivisited",'r') as ff:
+#         aa = ff.read()
+#      count = int(aa.strip()) + 1
+#      with open(counterdir+"/apivisited",'w') as ff:
+#         ff.write("%d" % count)
+#   except:
+#      print("increment_apivisited failed")
+
+#def increment_apivisited():
+#   try:
+#      with open(counterdir+"/apivisited",'a+') as ff:
+#         fcntl.flock(ff, fcntl.LOCK_EX)
+#         ff.seek(0)
+#         aa = ff.read()
+#         try:
+#            count = int(aa.strip()) + 1
+#         except:
+#            count = 1
+#         ff.seek(0)
+#         ff.truncate()
+#         #with open(counterdir+"/apivisited",'w') as ff:
+#         ff.write("%d" % count)
+#         fcntl.flock(ff, fcntl.LOCK_UN)
+#   except:
+#      print("increment_apivisited failed")
+
+
 def increment_apivisited():
-   try:
-      with open(counterdir+"/apivisited",'r') as ff:
-         aa = ff.read()
-      count = int(aa.strip()) + 1
-      with open(counterdir+"/apivisited",'w') as ff:
-         ff.write("%d" % count)
-   except:
-      print("increment_apivisited failed")
+    filepath = os.path.join(counterdir, "apivisited")
+    try:
+        # Ensure file exists
+        if not os.path.exists(filepath):
+            with open(filepath, "w") as ff:
+                ff.write("0")
+
+        with open(filepath, "r+") as ff:
+            fcntl.flock(ff, fcntl.LOCK_EX)
+            try:
+                ff.seek(0)
+                content = ff.read().strip()
+                count = int(content) + 1 if content else 1
+                ff.seek(0)
+                ff.truncate()
+                ff.write(str(count))
+            finally:
+                fcntl.flock(ff, fcntl.LOCK_UN)
+        return count
+    except Exception as e:
+        print("increment_apivisited failed:", e)
+        return None
 
 
-app = Flask(__name__)
+
+
+
+app = Flask(__name__ ,static_url_path='/static', static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = secrets.token_hex(32)
 print("CONFIG UPLOAD_FOLDER =", app.config['UPLOAD_FOLDER'])
@@ -1077,7 +1204,7 @@ def get_osra(esmiles0):
 @app.route('/api/smarts/<smarts0>', methods=['GET'])
 def get_smarts(smarts0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1123,7 +1250,7 @@ def get_smarts(smarts0):
 @app.route('/api/frequency/<idfreq0>', methods=['GET'])
 def get_frequency(idfreq0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1174,9 +1301,10 @@ def get_frequency(idfreq0):
 @app.route('/api/listallesmiles/<nrows>', methods=['GET'])
 def get_listallesmiles(nrows):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
+    print("nrows=",nrows)
     increment_apivisited()
     clean_directories()
 
@@ -1193,6 +1321,8 @@ def get_listallesmiles(nrows):
        cmd7 = chemdb_fetch_reactions + inpfile + " " + outfile + " " + htmlfile
        #result = subprocess.check_output(cmd7,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
        result = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       #print("outfile=",outfile)
+       #print("htmlfile=",htmlfile)
 
        print("RESULT=",result)
 
@@ -1220,7 +1350,7 @@ def get_listallesmiles(nrows):
 @app.route('/api/listallreactions/', methods=['GET'])
 def get_listallreactions():
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1236,8 +1366,10 @@ def get_listallreactions():
        with open(inpfile,'w') as ff:
           ff.write("listallreactions\n usehtml5\n")
        cmd7 = chemdb_fetch_reactions + inpfile + " " + outfile + " " + htmlfile
+       print("cmd7=",cmd7)
        #result = subprocess.check_output(cmd7,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
        result = subprocess.check_output(cmd7,shell=True).decode("utf-8")
+       print("RRESULT=",result)
 
        ### resolve image files in html ###
        with open(htmlfile,'r') as ff: html = ff.read()
@@ -1266,7 +1398,7 @@ def get_listallreactions():
 @app.route('/api/submitesmiles/<esmiles0>', methods=['GET'])
 def get_submitesmiles(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1320,7 +1452,7 @@ def get_submitesmiles(esmiles0):
 @app.route('/api/molecule/<path:esmiles0>', methods=['GET'])
 def get_molecule(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1391,7 +1523,7 @@ def get_molecule(esmiles0):
 @app.route('/api/nmr/<esmiles0>', methods=['GET'])
 def get_nmr(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1444,7 +1576,7 @@ def get_nmr(esmiles0):
 @app.route('/api/xyz/<esmiles0>', methods=['GET'])
 def get_xyz(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1495,7 +1627,7 @@ def get_xyz(esmiles0):
 @app.route('/api/mol/<esmiles0>', methods=['GET'])
 def get_mol(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1552,7 +1684,7 @@ def get_mol(esmiles0):
 @app.route('/api/nwoutput/<esmiles0>', methods=['GET'])
 def get_nwoutput(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1599,7 +1731,7 @@ def get_nwoutput(esmiles0):
 @app.route('/api/nwoutput_download/<esmiles0>', methods=['GET'])
 def get_nwoutput_download(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1659,7 +1791,7 @@ def get_nwoutput_download(esmiles0):
 @app.route('/api/nwinput/<esmiles0>', methods=['GET'])
 def get_nwinput(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1712,7 +1844,7 @@ def get_nwinput(esmiles0):
 @app.route('/api/nwdatafile/<esmiles0>', methods=['GET'])
 def get_nwdatafile(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1764,7 +1896,7 @@ def get_nwdatafile(esmiles0):
 @app.route('/api/nwdatafile_download/<esmiles0>', methods=['GET'])
 def get_nwdatafile_download(esmiles0):
     global namecount
-    name = "tmp/molecule%d.html" % namecount
+    name = "results/molecule%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1828,7 +1960,7 @@ def get_nwdatafile_download(esmiles0):
 @app.route('/api/reaction/<path:esmiles0>', methods=['GET'])
 def get_reaction(esmiles0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1900,7 +2032,7 @@ def get_reaction(esmiles0):
 @app.route('/api/reactionpath/<esmiles0>', methods=['GET'])
 def get_reactionpath(esmiles0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -1958,7 +2090,7 @@ def get_reactionpath(esmiles0):
 @app.route('/api/predict/<esmiles0>', methods=['GET'])
 def get_predict(esmiles0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
 
     increment_apivisited()
@@ -2006,7 +2138,7 @@ def get_predict(esmiles0):
 @app.route('/api/input_deck/<esmiles0>', methods=['GET'])
 def get_input_deck(esmiles0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
     try:
        increment_apivisited()
@@ -2040,7 +2172,7 @@ def get_input_deck(esmiles0):
 @app.route('/api/crystal_input/<ocd0>', methods=['GET'])
 def get_crystal_input_deck(ocd0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
     try:
        ocd0 = ocd0.replace("\"",'')
@@ -2066,7 +2198,7 @@ def get_crystal_input_deck(ocd0):
 @app.route('/api/generate_crystal_cif/<ocd0>', methods=['GET'])
 def generate_crystal(ocd0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
     try:
        ocd0 = ocd0.replace("\"",'')
@@ -2095,7 +2227,7 @@ def generate_crystal(ocd0):
 @app.route('/api/generate_crystal_cif_conventional/<ocd0>', methods=['GET'])
 def generate_crystal_conventional(ocd0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
     try:
        ocd0 = ocd0.replace("\"",'')
@@ -2121,7 +2253,7 @@ def generate_crystal_conventional(ocd0):
 @app.route('/api/generate_crystal_cif_primitive/<ocd0>', methods=['GET'])
 def generate_crystal_primitive(ocd0):
     global namecount
-    name = "tmp/reaction%d.html" % namecount
+    name = "results/reaction%d.html" % namecount
     namecount += 1
     try:
        ocd0 = ocd0.replace("\"",'')
@@ -2185,7 +2317,7 @@ def list_queue_nwchem3():
 @app.route('/api/solid_queue/', methods=['GET'])
 def get_solid_queue():
    global namecount
-   name = "tmp/solid%d.html" % namecount
+   name = "results/solid%d.html" % namecount
    namecount += 1
    print("namecount=",namecount)
    print("name=",name)
@@ -2203,7 +2335,7 @@ def get_solid_queue():
    htmlfile1 = templatedir + "/"+name
 
    html = "<html>\n"
-   html += HeteroFAMHeader
+   html += HeteroFAMHeader3
    html += "<pre style=\"font-size:1.0em;color:black\">\n"
    #html += calcs
    #html += "</pre> </html>"
@@ -2217,7 +2349,7 @@ def get_solid_queue():
 @app.route('/api/solid_queue_html/', methods=['GET'])
 def list_solid_html():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2230,7 +2362,7 @@ def list_solid_html():
    htmlfile1 = templatedir + "/"+name
 
    html = "<html>\n"
-   html += HeteroFAMHeader
+   html += HeteroFAMHeader3
    html += "<pre style=\"font-size:1.0em;color:black\">\n"
    for ln in calcs.split("\n"):
       ss = ln.split()
@@ -2256,7 +2388,7 @@ def list_solid_html():
 @app.route('/api/solid_queue_prequeue/', methods=['GET'])
 def submit_solid_prequeue():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2284,7 +2416,7 @@ def submit_solid_prequeue():
 @app.route('/api/solid_queue_reset/<esmiles>', methods=['GET'])
 def add_solid_reset(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2318,7 +2450,7 @@ def add_solid_reset(esmiles):
 @app.route('/api/solid_queue_delete/<esmiles>', methods=['GET'])
 def add_solid_delete(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2350,7 +2482,7 @@ def add_solid_delete(esmiles):
 @app.route('/api/solid_queue_add/<esmiles>', methods=['GET'])
 def add_solid_queue(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2381,7 +2513,7 @@ def add_solid_queue(esmiles):
 @app.route('/api/solid_queue_fetch/<jobid>', methods=['GET'])
 def fetch_solid_queue(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2409,7 +2541,7 @@ def fetch_solid_queue(jobid):
 @app.route('/api/solid_queue_view/<jobid>', methods=['GET'])
 def view_solid_queue(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2450,7 +2582,7 @@ def view_solid_queue(jobid):
 @app.route('/api/queue/', methods=['GET'])
 def list_queue():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2477,7 +2609,7 @@ def list_queue():
 @app.route('/api/queue_html/', methods=['GET'])
 def list_queue_html():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2517,7 +2649,7 @@ def list_queue_html():
 @app.route('/api/queue_submit/', methods=['GET'])
 def submit_queue():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2544,7 +2676,7 @@ def submit_queue():
 @app.route('/api/solid_queue_submit/', methods=['GET'])
 def submit_solid_queue():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2572,7 +2704,7 @@ def submit_solid_queue():
 @app.route('/api/queue_prequeue/', methods=['GET'])
 def submit_queue_prequeue():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2600,7 +2732,7 @@ def submit_queue_prequeue():
 @app.route('/api/queue_reset/<esmiles>', methods=['GET'])
 def add_reset(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2634,7 +2766,7 @@ def add_reset(esmiles):
 @app.route('/api/queue_delete/<esmiles>', methods=['GET'])
 def add_delete(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2665,7 +2797,7 @@ def add_delete(esmiles):
 @app.route('/api/queue_add/<esmiles>', methods=['GET'])
 def add_queue(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2697,7 +2829,7 @@ def add_queue(esmiles):
 @app.route('/api/queue_fetch/<jobid>', methods=['GET'])
 def fetch_queue(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2725,7 +2857,7 @@ def fetch_queue(jobid):
 @app.route('/api/queue_view/<jobid>', methods=['GET'])
 def view_queue(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2763,7 +2895,7 @@ def view_queue(jobid):
 @app.route('/api/eric_view/<path:input_data>', methods=['GET'])
 def eric_queue(input_data):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -2820,7 +2952,7 @@ def eric_queue(input_data):
 @app.route('/api/eric_view2/<path:input_data>', methods=['GET'])
 def eric2_queue2(input_data):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    print("input_data",input_data)
    try:
@@ -3010,7 +3142,7 @@ def index():
         #print "after post"
         file = request.files['file']
         #print "FILE=",file
-        #print "file.filename=",file.filename, " file=",file
+        print("file.filename=",file.filename, " file=",file)
         app.logger.debug("Uploaded file object: %s", file)
         app.logger.debug("Filename: %s", file.filename)
         print("secure_filename=", secure_filename(file.filename))
@@ -3057,7 +3189,7 @@ def index():
 @app.route('/api/queue_nwchem/', methods=['GET'])
 def list_queue_nwchem():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3083,7 +3215,7 @@ def list_queue_nwchem():
 @app.route('/api/queue_nwchem_html/', methods=['GET'])
 def list_queue_nwchem_html():
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3143,7 +3275,7 @@ def list_queue_nwchem_html():
 @app.route('/api/queue_nwchem_check/<qname>', methods=['GET'])
 def list_queue_nwchem_check(qname):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3277,7 +3409,7 @@ def add_queue_nwchem(filename):
 @app.route('/api/queue_nwchem_fetch/<jobid>', methods=['GET'])
 def fetch_queue_nwchem(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3316,7 +3448,7 @@ def fetch_queue_nwchem(jobid):
 @app.route('/api/queue_nwchem_view/<jobid>', methods=['GET'])
 def view_queue_nwchemw(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3390,13 +3522,32 @@ def zip_queue_nwchem(jobid):
          #for dfile in extra_datafiles.split():
          #   calcs += "\n=================NEXT FILE: " + dfile + ":NEXT FILE===================\n"
          #   with open(dfile,'r') as ff: calcs += ff.read()
-         zipf = zipfile.ZipFile("chemdb_hold/"+jobid+'.zip','w', zipfile.ZIP_DEFLATED)
-         nwfile = "-".join(nwoutfile.split("/")[-1].split("-")[0:-1])
-         zipf.write("chemdb_hold/"+nwoutfile.split("/")[-1],"chemdb_hold_"+jobid+"/" + nwfile)
-         for dfile in extra_datafiles.split():
-            nwfile = "-".join(dfile.split("/")[-1].split("-")[0:-1])
-            zipf.write("chemdb_hold/"+dfile.split('/')[-1],"chemdb_hold_"+jobid+"/"+nwfile)
-         zipf.close()
+
+         print("HERA")
+         zippath = os.path.join("/HeteroFAM/Public/chemdb_hold", f"{jobid}.zip")
+         print("HERA2=",zippath)
+         with zipfile.ZipFile(zippath, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            print("HERB")
+            mainfile = os.path.basename(nwoutfile)
+            print("HERB2")
+            zipf.write( os.path.join("/HeteroFAM/Public/chemdb_hold", mainfile), arcname=f"chemdb_hold_{jobid}/{mainfile}")
+            print("HERB3")
+  
+            for dfile in extra_datafiles.split():
+               print("HERC=",dfile)
+               if os.path.exists(dfile):
+                  fname = os.path.basename(dfile)
+                  zipf.write(dfile, arcname=f"chemdb_hold_{jobid}/{fname}")
+               else:
+                  print(f"Skipping missing file: {dfile}")
+
+         #zipf = zipfile.ZipFile("chemdb_hold/"+jobid+'.zip','w', zipfile.ZIP_DEFLATED)
+         #nwfile = "-".join(nwoutfile.split("/")[-1].split("-")[0:-1])
+         #zipf.write("chemdb_hold/"+nwoutfile.split("/")[-1],"chemdb_hold_"+jobid+"/" + nwfile)
+         #for dfile in extra_datafiles.split():
+         #   nwfile = "-".join(dfile.split("/")[-1].split("-")[0:-1])
+         #   zipf.write("chemdb_hold/"+dfile.split('/')[-1],"chemdb_hold_"+jobid+"/"+nwfile)
+         #zipf.close()
    except:
       print("LOOKing for bad files!")
 
@@ -3406,7 +3557,8 @@ def zip_queue_nwchem(jobid):
    #html += "</html>"
    fname = jobid + ".zip"
 
-   return send_from_directory(directory='chemdb_hold', filename=fname,as_attachment=True)
+   #return send_from_directory(directory='chemdb_hold', filename=fname,as_attachment=True)
+   return send_from_directory('chemdb_hold', path=fname, as_attachment=True)
 
 
 
@@ -3415,7 +3567,7 @@ def zip_queue_nwchem(jobid):
 @app.route('/api/queue_nwchem_delete/<jobid>', methods=['GET'])
 def delete_queue_nwchem(jobid):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3440,7 +3592,7 @@ def delete_queue_nwchem(jobid):
 @app.route('/api/queue_nwchem_reset/<esmiles>', methods=['GET'])
 def queue_nwchem_add_reset(esmiles):
    global namecount
-   name = "tmp/molecule%d.html" % namecount
+   name = "results/molecule%d.html" % namecount
    namecount += 1
    try:
       increment_apivisited()
@@ -3737,7 +3889,7 @@ def arrows_draw_post():
           nrows = ''
        return get_listallesmiles(nrows)
     elif ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("listallesmiles")[1].split()[0]
+       nrows = text.lower().split("listallesmiles")[1].split()
        if (len(nrows)>0):
           nrows =nrows[0]
        else:
@@ -3856,12 +4008,16 @@ def arrows_reaction_draw_post():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
           nrows = ''
+
        return get_listallesmiles(nrows)
+
+    elif ("list all reactions"  in text.lower()) or ("listallreactions"  in text.lower()):
+       return get_listallreactions()
 
     elif (("solid" in text.lower()) and ("queue" in text.lower())):
        return list_solid_html()
@@ -3910,7 +4066,7 @@ def arrows_reaction_draw_post():
 
 
 
-@app.route('/api/3dbuilder')
+@app.route('/api/arrows/3dbuilder')
 def arrows_3dbuilder_draw_form():
    increment_apivisited()
    calcs = arrowsjobsrun()
@@ -3919,7 +4075,7 @@ def arrows_3dbuilder_draw_form():
    return render_template("Jmol-arrows.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
 
-@app.route('/api/3dbuilder', methods=['POST'])
+@app.route('/api/arrows/3dbuilder', methods=['POST'])
 def arrows_3dbuilder_draw_post():
 
     text = request.form['smi']
@@ -3974,7 +4130,7 @@ def arrows_3dbuilder_draw_post():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
@@ -4020,7 +4176,7 @@ def arrows_3dbuilder_draw_post():
        esmiles = text
        return get_molecule(esmiles)
 
-    processed_text = "EMSL HeteroFAM did not understand \"" + text + "\"."
+    processed_text = "HeteroFAM arrows/3dbuilder  did not understand \"" + text + "\"."
     return processed_text
 
 
@@ -4088,7 +4244,7 @@ def arrows_qsharp_chem_draw_post():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
@@ -4137,7 +4293,7 @@ def arrows_qsharp_chem_draw_post():
     return processed_text
 
 
-@app.route('/api/expert')
+@app.route('/api/arrows/expert')
 def arrows_expert_draw_form():
    increment_apivisited()
    calcs = arrowsjobsrun()
@@ -4146,7 +4302,7 @@ def arrows_expert_draw_form():
    return render_template("Expert-arrows.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
 
-@app.route('/api/expert', methods=['POST'])
+@app.route('/api/arrows/expert', methods=['POST'])
 def arrows_expert_draw_post():
 
     text = request.form['smi']
@@ -4201,7 +4357,7 @@ def arrows_expert_draw_post():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
@@ -4246,15 +4402,79 @@ def arrows_expert_draw_post():
        esmiles = text
        return get_molecule(esmiles)
 
-    processed_text = "EMSL HeteroFAM did not understand \"" + text + "\"."
+    processed_text = "HeteroFAM arrows/expert did not understand \"" + text + "\"."
+    return processed_text
+
+
+
+@app.route('/api/arrows/periodic')
+def arrows_periodic_draw_form():
+   increment_apivisited()
+   calcs = arrowsjobsrun()
+   molcalcs = calculationscount()
+   avisits = apivisited()
+   return render_template("Periodic-arrows.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+
+@app.route('/api/arrows_periodic', methods=['POST'])
+def arrows_periodic_draw_post():
+
+    text = request.form['smi']
+    text = text.replace("\"","")
+    text =  " ".join(text.split())
+    #if "-->" in text:
+    #   reaction = text
+    #   return get_reaction(reaction)
+    if "nmr for" in text.lower():
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_nmr(esmiles)
+    elif "predict for" in text.lower():
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_predict(esmiles)
+    elif ("input deck for" in text.lower()) or ("inputdeck for" in text.lower()) or ("nwinput for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_nwinput(esmiles)
+       #return get_input_deck(esmiles)
+    elif ("crystal input for" in text.lower()) or ("ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return get_crystal_input_deck(ocd)
+    elif ("generate crystal for" in text.lower()) or ("generate ocd for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       ocd = text2.split('for')[1]
+       return generate_crystal(ocd)
+    elif ("output deck for" in text.lower()) or ("outputdeck for" in text.lower()) or ("nwoutput for" in text.lower()):
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_nwoutput(esmiles)
+    elif "submitesmiles for" in text.lower():
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_submitesmiles(esmiles)
+    elif "xyz for" in text.lower():
+       text2 = ireplace("FOR","for",text)
+       esmiles = text2.split('for')[1]
+       return get_xyz(esmiles)
+
+
+    else:
+       esmiles = text
+       return get_molecule(esmiles)
+
+    processed_text = "HeteroFAM arrows/periodic did not understand \"" + text + "\"."
     return processed_text
 
 
 
 
 
+
+
+
 @app.route('/api/periodic')
-def arrows_periodic_draw_form():
+def heterofam_periodic_draw_form():
    increment_apivisited()
    calcs = arrowsjobsrun()
    molcalcs = calculationscount()
@@ -4262,7 +4482,7 @@ def arrows_periodic_draw_form():
    return render_template("Periodic-heterofam.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
 @app.route('/api/periodic', methods=['POST'])
-def arrows_periodic_draw_post():
+def heterofam_periodic_draw_post():
 
     text = request.form['smi']
     text = text.replace("\"","")
@@ -4316,7 +4536,7 @@ def arrows_periodic_draw_post():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
@@ -4419,7 +4639,7 @@ def parsing_text():
        smarts = text2.split('smarts')[1]
        return get_smarts(smarts)
     elif ("list all esmiles"  in text.lower()) or ("listallesmiles"  in text.lower()):
-       nrows = text.lower().split("esmiles")[1].split()[0]
+       nrows = text.lower().split("esmiles")[1].split()
        if (len(nrows)>0):
           nrows = nrows[0]
        else:
@@ -4490,7 +4710,7 @@ def arrows_magnetic_draw_form():
    calcs = arrowsjobsrun()
    molcalcs = calculationscount()
    avisits = apivisited()
-   return render_template("emsl-magnetic.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+   return render_template("magnetic-heterofam.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
 @app.route('/api/magnetic', methods=['POST'])
 def arrows_magnetic_draw_post():
@@ -4506,7 +4726,7 @@ def arrows_moire_draw_form():
    calcs = arrowsjobsrun()
    molcalcs = calculationscount()
    avisits = apivisited()
-   return render_template("emsl-moire.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
+   return render_template("moire-heterofam.html",heterofam_api=HeteroFAM_API_HOME,calculations=calcs,moleculecalculations=molcalcs,visits=avisits)
 
 @app.route('/api/moire', methods=['POST'])
 def arrows_moire_draw_post():

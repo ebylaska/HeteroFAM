@@ -2,6 +2,9 @@
 
 #import sys,os,time,pickle,math,MySQLdb,urllib2,getopt,subprocess,pexpect,random,operator,re,threading,shlex,urllib
 import sys,os,time,pickle,math,urllib,getopt,subprocess,pexpect,random,operator,re,threading,shlex,sqlite3,urllib.parse
+import urllib.request
+import urllib.error
+
 import pymysql as MySQLdb
 
 from math import *
@@ -14,8 +17,8 @@ MY_ENV                = os.environ.copy()
 MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 HOMOLUMO_RESUBMIT_ON  = False
 
-ARROWS_API_HOME = 'http://localhost:8080/api/'
-#ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
+#ARROWS_API_HOME = 'http://localhost:8080/api/'
+ARROWS_API_HOME = 'http://heterofam.pnnl.gov/api/'
 
 #################### machine specifics ######################
 #babel              = "/usr/bin/babel"
@@ -82,28 +85,28 @@ ih = random.randint(1,3)
 if (ih==1): ih=0
 
 ArrowsHeader0 = '''
-   <center> <font color="74A52B" size="+2"> <p><b>Results from an Tiny Arrows Calculation</b></p></font></center>
+   <center> <font color="74A52B" size="+2"> <p><b>Results from an Open Arrows Calculation</b></p></font></center>
    <table><tr>
-   <td> <center> <font color="298DB4"><p>Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
+   <td> <center> <font color="298DB4"><p>Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
    </td></tr></table>
    <font color="E8613B"><p> Molecular modeling software has previously been extremely complex, making it prohibative to all but experts in the field, yet even experts can struggle to perform calculations.  This service is designed to be used by experts and non-experts alike.  Experts can carry out and keep track of large numbers of complex calculations with diverse levels of theories present in their workflows.  Additionally, due to a streamlined and easy-to-use input, non-experts can carry out a wide variety of molecular modeling calculations previously not accessible to them.</p></font>
 ''' 
 
 ArrowsHeader = '''
-   <center> <font color="74A52B" size="+2"> <p><b>Results from an Tiny Arrows Calculation</b></p></font></center>
+   <center> <font color="74A52B" size="+2"> <p><b>Results from an Open Arrows Calculation</b></p></font></center>
    <table><tr>
    <td> %s </td>
-   <td> <center> <font color="298DB4"><p>Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
+   <td> <center> <font color="298DB4"><p>Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
    </td></tr></table>
    <font color="E8613B"><p> Molecular modeling software has previously been extremely complex, making it prohibative to all but experts in the field, yet even experts can struggle to perform calculations.  This service is designed to be used by experts and non-experts alike.  Experts can carry out and keep track of large numbers of complex calculations with diverse levels of theories present in their workflows.  Additionally, due to a streamlined and easy-to-use input, non-experts can carry out a wide variety of molecular modeling calculations previously not accessible to them.</p></font>
    %s
-''' % (headerfigure[4],'<a href="' + ARROWS_API_HOME + '/">Link back to Tiny Arrows API</a>')
+''' % (headerfigure[4],'<a href="' + ARROWS_API_HOME + '/">Link back to Open Arrows API</a>')
 
 ArrowsHeader_QDK = '''
-   <center> <font color="4A9FF9" size="+2"> <p><b>Results from an Tiny Arrows MQDK Calculation</b></p></font></center>
+   <center> <font color="4A9FF9" size="+2"> <p><b>Results from an Open Arrows MQDK Calculation</b></p></font></center>
    <table><tr>
    <td> %s </td>
-   <td> <center> <font color="298DB4"><p>Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
+   <td> <center> <font color="298DB4"><p>Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications including posts to web APIs, social networks, and traditional email. </p></font></center>
    </td></tr></table>
    <font color="E8613B"><p>  This webpage contains a link to a (Microsoft Quantum Development Kit) YAML file, which has in it the 1-electron and 2-electron integrals over the requested select-CI orbital subspace. To fetch the YAML file scroll down the the "Molecular Calculation" section in the output and then in the "Datafiles:" subsection click on the (download) link next to the YAML file. </p></font>
    %s
@@ -121,7 +124,7 @@ with open(arrowslogosvg,'r') as f: alogosvg += f.read()
 alogosvg += '''
 
 <br>
-<a href="http://www.nwchem-sw.org/index.php/Tiny_Arrows#">More information about Tiny Arrows</a>
+<a href="https://ebylaska.github.io/TinyArrows/">More information about Open Arrows</a>
 <br>
 <br>
 <pre style=\"font-size:1.0em;color:darkgreen\">
@@ -196,7 +199,7 @@ KEYWORDs -
 
 alogo = '''
 <br>
-<a href="http://www.nwchem-sw.org/index.php/Tiny_Arrows#">More information about Tiny Arrows</a>
+<a href="https://ebylaska.github.io/TinyArrows/">More information about Open Arrows</a>
 <br>
 <br>
 </pre> <pre style=\"font-size:1.0em;color:darkgreen\">
@@ -211,7 +214,7 @@ alogo = '''
  Q h                                         @          `W          
  Q   ",                                      @            `k,       
  Q     `g      [Thermodynamics and Kinetics] @               RQ     
- h       `v..................................@     Tiny        KQ   
+ h       `v..................................@     Open        KQ   
 `k````````x``````````````````````````````````@```````````````````R  
  [      m        [  of Molecules and Solids] @    Arrows      ,#    
  [    4.                                     @              ,R      
@@ -295,9 +298,9 @@ KEYWORDs -
 alogowww = '''
 </pre>
 <br>
-<a href="%s">Link to Tiny Arrows API</a>
+<a href="%s">Link to Open Arrows API</a>
 <br>
-<a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">More information about EMSL Arrows</a>
+<a href="https://ebylaska.github.io/TinyArrows/">More information about Open Arrows</a>
 <br>
 <br>
 <pre style=\"font-size:1.0em;color:darkgreen\">
@@ -369,7 +372,7 @@ KEYWORDs -
    <font color="443322" size="1"> This software service and its documentation were developed at the Environmental Molecular Sciences Laboratory (EMSL) at Pacific Northwest National Laboratory, a multiprogram national laboratory, operated for the U.S. Department of Energy by Battelle under Contract Number DE-AC05-76RL01830. Support for this work was provided by the Department of Energy Office of Biological and Environmental Research, and Department of Defense environmental science and technology program (SERDP). THE SOFTWARE SERVICE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE SERVICE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE SERVICE. </font>
    <pre style=\"font-size:1.0em;color:black\">
 
-''' % (ARROWS_API_HOME)
+''' % (ARROWS_API_HOME+"arrows")
 
 
 
@@ -767,7 +770,7 @@ def bond_order(rc1,rc2,r12):
 def f_reaction(mformulas,rps,coeffs):
    ss = []
    for a in mformulas:
-      ss += re.findall ('[^\d ]+', a)
+      ss += re.findall (r'[^\d ]+', a)
    symbols = list(set(ss))
 
    f = {}
@@ -777,8 +780,8 @@ def f_reaction(mformulas,rps,coeffs):
          mformula = mformulas[i]
          x        = coeffs[i]
          z        = rps[i]
-         ss1 = re.findall ('[^\d ]+', mformula)
-         ss2 = re.findall ('[\d]+', mformula)
+         ss1 = re.findall (r'[^\d ]+', mformula)
+         ss2 = re.findall (r'[\d]+', mformula)
          for j in range(len(ss1)):
             if ss1[j]==s:
                f[s] += eval(ss2[j])*x*z
@@ -1125,18 +1128,41 @@ print("archivepassword=",archivepassword)
 
 
 #### geturlresult function ####
+#def geturlresult(url):
+#    try:
+#        proxy = urllib2.ProxyHandler({'http': 'http://squid-proxy.pnl.gov:3128',
+#                                      'https': 'https://squid-proxy.pnl.gov:3128'}
+#                                    )
+#        opener = urllib2.build_opener(proxy)
+#        urllib2.install_opener(opener)
+#        connection = urllib2.urlopen(url)
+#    except urllib2.HTTPError(e):
+#        return ""
+#    else:
+#        return connection.read().rstrip()
+
+import urllib.request
+import urllib.error
+
 def geturlresult(url):
     try:
-        proxy = urllib2.ProxyHandler({'http': 'http://squid-proxy.pnl.gov:3128',
-                                      'https': 'https://squid-proxy.pnl.gov:3128'}
-                                    )
-        opener = urllib2.build_opener(proxy)
-        urllib2.install_opener(opener)
-        connection = urllib2.urlopen(url)
-    except urllib2.HTTPError(e):
+        proxy = urllib.request.ProxyHandler({
+            'http': 'http://squid-proxy.pnl.gov:3128',
+            'https': 'http://squid-proxy.pnl.gov:3128'
+        })
+        opener = urllib.request.build_opener(proxy)
+        urllib.request.install_opener(opener)
+
+        with urllib.request.urlopen(url) as connection:
+            data = connection.read()
+            return data.decode("utf-8").rstrip()  # decode bytes to str
+    except urllib.error.HTTPError as e:
+        print("HTTP error:", e)
         return ""
-    else:
-        return connection.read().rstrip()
+    except urllib.error.URLError as e:
+        print("URL error:", e)
+        return ""
+
 
 def pexpect_command(pcmd,mypassword):
    if (mypassword=="nopassword"):
@@ -1627,7 +1653,7 @@ def nametosmiles(name):
 def inchionlyHZ(inchi):
    try:
       onlyHZ = True
-      for a in re.findall('[A-Z][^A-Z]*', inchi.split("/")[1]):
+      for a in re.findall(r'[A-Z][^A-Z]*', inchi.split("/")[1]):
          aa = re.sub("[^a-zA-Z]","", a)
          if (periodic_table_charge[aa]<21): onlyHZ = False
    except:
@@ -1639,7 +1665,7 @@ def inchihasHZ(inchi):
    try:
       hasHZ = False
       #for aa in re.findall('[^\d^. ]+',inchi.split("/")[1]):
-      for a in re.findall('[A-Z][^A-Z]*', inchi.split("/")[1]):
+      for a in re.findall(r'[A-Z][^A-Z]*', inchi.split("/")[1]):
          aa = re.sub("[^a-zA-Z]","", a)
          if (periodic_table_charge[aa]>=21): hasHZ = True
    except:
@@ -2750,7 +2776,7 @@ def xyzdat2jsmol(backgroundcolor,xyzdat,cell=None):
    staticdir = ARROWS_HOME + "/Public/static/"
    xx = random.randint(0,999999)
    if cell is not None:
-      xyzfilename = "tmp/molecule-jsmol-%d.cif" % xx
+      xyzfilename = "results/molecule-jsmol-%d.cif" % xx
       xyzlist = xyzdat.strip().split("\n")
       nion = eval(xyzlist[0].strip())
       cifdat = ''
@@ -2762,7 +2788,7 @@ def xyzdat2jsmol(backgroundcolor,xyzdat,cell=None):
       with open(staticdir + xyzfilename,'w') as ff:
          ff.write(cifdat)
    else:
-      xyzfilename = "tmp/molecule-jsmol-%d.xyz" % xx
+      xyzfilename = "results/molecule-jsmol-%d.xyz" % xx
       with open(staticdir + xyzfilename,'w') as ff:
          ff.write(xyzdat)
 
@@ -2838,7 +2864,13 @@ def xyzdat2jsmol(backgroundcolor,xyzdat,cell=None):
 def nmrdat2jsmol(xyzdat,tscript):
    staticdir = ARROWS_HOME + "/Public/static/"
    xx = random.randint(0,999999)
-   xyzfilename = "tmp/molecule-nmr-jsmol-%d.xyz" % xx
+   #xyzfilename = "results/molecule-nmr-jsmol-%d.xyz" % xx
+   xyzfilename = f"results/molecule-nmr-jsmol-{xx}.xyz"
+
+   # decode if bytes
+   if isinstance(xyzdat, bytes):
+      xyzdat = xyzdat.decode('utf-8', errors='ignore')
+
    with open(staticdir + xyzfilename,'w') as ff:
       ff.write(xyzdat)
 
@@ -2896,7 +2928,7 @@ def nwout2jsmol(backgroundcolor,datafiles,xyzdat):
          afilename = mm
 
    xx = random.randint(0,999999)
-   nwoutfilename = "tmp/molecule-jsmol-%d.out" % xx
+   nwoutfilename = "results/molecule-jsmol-%d.out" % xx
    cmd0 = "scp " + afilename + " " + staticdir + nwoutfilename
    if ((":/" not in afilename) and (":/" not in nwoutfilename)): cmd0 = cmd0.replace("scp","cp")
    pexpect_command(cmd0,archivepassword)
@@ -3287,7 +3319,7 @@ def addspaces_reaction(reaction):
    for tag1 in tags: reaction2 = reaction2.replace(tag1," " + tag1)
 
    ### replace [ SHE] with [SHE] ###
-   reaction2 = re.sub("\[\s*SHE\s*\]","[SHE]",reaction2)
+   reaction2 = re.sub(r"\[\s*SHE\s*\]","[SHE]",reaction2)
 
    ### look for xc{mp2} and xc{ccsd(t)} ###
    reaction2 = reaction2.replace("xc{mp2}","theory{mp2}")
@@ -6974,7 +7006,23 @@ def add_nmrexp(hup,dbfile,table,xyznmr_data):
 #                                           #
 #############################################
 
+#def nmr_blob_to_isotropic(nmr_blob):
+#   isotropic = []
+#   for line in nmr_blob.split('\n'):
+#      if 'Atom:' in line:
+#         number = evalnum(line.split()[1])
+#         atom   = line.split()[2]
+#      if 'isotropic =' in line:
+#         iso = evalnum(line.split()[2])
+#         isotropic.append([number,atom,iso])
+#   return isotropic
+
 def nmr_blob_to_isotropic(nmr_blob):
+
+   # Decode if it's bytes
+   if isinstance(nmr_blob, bytes):
+      nmr_blob = nmr_blob.decode('utf-8', errors='ignore')
+
    isotropic = []
    for line in nmr_blob.split('\n'):
       if 'Atom:' in line:
@@ -6982,8 +7030,9 @@ def nmr_blob_to_isotropic(nmr_blob):
          atom   = line.split()[2]
       if 'isotropic =' in line:
          iso = evalnum(line.split()[2])
-         isotropic.append([number,atom,iso])
+         isotropic.append([number, atom, iso])
    return isotropic
+
 
 #############################################
 #                                           #
@@ -7087,7 +7136,9 @@ def print_nmr_row(usehtml5,hup,dbfile,table,row):
       isotxtscript = ''
       for iso in isotropic:
          isotxtscript += "select atomno=%d;"    % iso[0]
-         isotxtscript += "label \ %4.1f ppm\ ;" % iso[2]
+         #isotxtscript += "label \ %4.1f ppm\ ;" % iso[2]
+         isotxtscript += "label %4.1f ppm;" % iso[2]
+
       msg2 = nmrdat2jsmol(row[23],isotxtscript)
       #msg2 = xyzdat2glmol(row[23])
    else:
@@ -8437,9 +8488,9 @@ ooofile = open(args[2],'w')
 
 if (usehtml5): ooofile.write("<!DOCTYPE html>\n")
 ooofile.write("<html>\n")
-if (usehtml5): ooofile.write("<head> <meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, target-densitydpi=device-dpi\"> <meta charset=\"utf-8\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-32x32.png')}}\"><link rel=\"icon\" type=\"image/png\" sizes=\"96x96\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-96x96.png')}}\"><link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-16x16.png')}}\"><style type=\"text/css\"> \n .linkbanner { \n position: relative; \n padding: 1px; \n background-image: linear-gradient(#92D0DF,#EEC689,#92D0DF); \n font-size: 18px; \n font-weight: bold; \n font-family: arial; \n color: #1C6291; \n } \n </style> </head>")
+if (usehtml5): ooofile.write("<head> <meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, target-densitydpi=device-dpi\"> <meta charset=\"utf-8\"><link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-32x32.png')}}\"><link rel=\"icon\" type=\"image/png\" sizes=\"96x96\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-96x96.png')}}\"><link rel=\"icon\" type=\"image/png\" sizes=\"16x16\" href=\"{{url_for(\'static\', filename=\'heteroatom-static/favicon-16x16.png')}}\"><style type=\"text/css\"> \n .linkbanner { \n position: relative; \n padding: 1px; \n background-image: linear-gradient(#4286f4,lightgreen,#4286f4); \n font-size: 18px; \n font-weight: bold; \n font-family: times; \n color: #1C6291; \n } \n </style> </head>")
 ooofile.write("<body>\n")
-if (usehtml5): ooofile.write("<div class=\"linkbanner\"> <a href=\"%s\"><img src=\"{{url_for(\'static\', filename=\'heteroatom-static/HeteroFAM.png')}}\" alt=\"Copyright HeteroFAM Logo\" width=\"120\" height=\"120\" align=\"middle\"></a> <a href=\"%speriodic\">3D Periodic Editor</a> &nbsp;<a href=\"%s3dbuilder\">3D Molecular And Reaction Editor</a>  &nbsp; <a href=\"%sexpert\">Expert Editor</a> &nbsp;   <a href=\"%sqsharp_chem\">Microsoft Quantum Editor</a> &nbsp;  <a href=\"%saerosol\">EMSL Aerosol Workshop Editor</a> &nbsp; <a href=\"http://www.nwchem-sw.org/index.php/EMSL_Arrows#\">Manual</a> </div>" % (ARROWS_API_HOME,ARROWS_API_HOME,ARROWS_API_HOME,ARROWS_API_HOME,ARROWS_API_HOME,ARROWS_API_HOME))
+if (usehtml5): ooofile.write("<div class=\"linkbanner\"> <a href=\"%s\"><img src=\"{{url_for(\'static\', filename=\'arrows-static/OpenArrows2019.png')}}\" alt=\"Copyright Arrows Logo\" width=\"180\" height=\"90\" align=\"middle\"></a> <a href=\"%s\">HeteroFAM</a> &nbsp;<a href=\"%s\">Periodic and Molecular Editor</a>  &nbsp; <a href=\"%s\">3D Molecular And Reaction Editor</a> &nbsp;   <a href=\"%s\">Molecular Combo Editor</a> &nbsp;  <a href=\"%s\">SSH Tunneling</a> &nbsp; <a href=\"https://ebylaska.github.io/TinyArrows\">Manual</a> </div>" % (ARROWS_API_HOME+"arrows",ARROWS_API_HOME,ARROWS_API_HOME+"arrows/periodic",ARROWS_API_HOME+"arrows/3dbuilder",ARROWS_API_HOME+"arrows/expert",ARROWS_API_HOME+"ssh_tunnel"))
 if is_qsharp_chem:
    ooofile.write(ArrowsHeader_QDK)
 elif (usehtml5):
@@ -8664,6 +8715,7 @@ if "listallesmiles" in rstring:
 
 
 ### look for listallreactions keyword ###
+print("HERA LISTALLREACTIONS")
 listallreactions = False
 rstring = ireplace("LISTALLREACTIONS", "listallreactions", rstring)
 if "listallreactions" in rstring:
@@ -10953,35 +11005,35 @@ for reactionenumerate in reactionenumerates:
    pppfile.write(rr)
 
 
-### add reaction_data to reactionhash database ###
-#for reaction in reaction_data:
-#   try:
-#      print("Adding to reaction database=",reaction)
-#      Erxn     = reaction[1][0][0]*autokcal
-#      Hrxn     = reaction[1][0][1]*autokcal
-#      Grxn     = reaction[1][0][2]*autokcal
-#      Solv     = reaction[1][0][3]*autokcal
-#      Grxnaq   = reaction[1][0][4]*autokcal
-#      cmd9 = chemdb_predict_reaction + " -e %f -r %f -g %f -q %f -u %f  -a " % (Erxn,Hrxn,Grxn,Solv,Grxnaq)
-#      cmd9 += "\"" + reaction[0] + "\""
-#      print("cmd9=",cmd9)
-#      result9 = subprocess.check_output(cmd9,shell=True).decode("utf-8")
-#      print("adding reaction result=",result9)
-#   except:
-#      print("Failed adding adding reaction =", reaction[0])
+## add reaction_data to reactionhash database ###
+for reaction in reaction_data:
+   try:
+      print("Adding to reaction database=",reaction)
+      Erxn     = reaction[1][0][0]*autokcal
+      Hrxn     = reaction[1][0][1]*autokcal
+      Grxn     = reaction[1][0][2]*autokcal
+      Solv     = reaction[1][0][3]*autokcal
+      Grxnaq   = reaction[1][0][4]*autokcal
+      cmd9 = chemdb_predict_reaction + " -e %f -r %f -g %f -q %f -u %f  -a " % (Erxn,Hrxn,Grxn,Solv,Grxnaq)
+      cmd9 += "\"" + reaction[0] + "\""
+      print("cmd9=",cmd9)
+      result9 = subprocess.check_output(cmd9,shell=True).decode("utf-8")
+      print("adding reaction result=",result9)
+   except:
+      print("Failed adding adding reaction =", reaction[0])
 
 
-### add noreaction_data to reactionhash database ###
-#for reaction in noreaction_data:
-#   try:
-#      print("Adding to noreaction database=",reaction)
-#      cmd9 = chemdb_predict_reaction + " -n " 
-#      cmd9 += "\"" + reaction + "\""
-#      print("cmd9=",cmd9)
-#      result9 = subprocess.check_output(cmd9,shell=True).decode("utf-8")
-#      print("adding noreaction result=",result9)
-#   except:
-#      print("Failed adding adding noreaction =", reaction[0])
+## add noreaction_data to reactionhash database ###
+for reaction in noreaction_data:
+   try:
+      print("Adding to noreaction database=",reaction)
+      cmd9 = chemdb_predict_reaction + " -n " 
+      cmd9 += "\"" + reaction + "\""
+      print("cmd9=",cmd9)
+      result9 = subprocess.check_output(cmd9,shell=True).decode("utf-8")
+      print("adding noreaction result=",result9)
+   except:
+      print("Failed adding adding noreaction =", reaction[0])
 
 
 #### print asciiart ###
@@ -11187,8 +11239,11 @@ if (listallesmiles):
 
 #### listallreactions ####
 if (listallreactions):
+   print("LISTALLREACTIONS A")
    cmd1 = use_arrows_api(chemdb_predict_reaction)
+   print("LISTALLREACTIONS B")
    result = subprocess.check_output(cmd1,shell=True).decode("utf-8")
+   print("LISTALLREACTIONS C")
    ooofile.write(result)
    pppfile.write(result)
 

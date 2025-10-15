@@ -3369,9 +3369,14 @@ ul, li {
 
            var xyzdat = nion + "\n";
            if (cellon) {
+              xyzdat += 'Lattice=\"';
               xyzdat += document.getElementById("lattice_a1").value + " ";
               xyzdat += document.getElementById("lattice_a2").value + " ";
               xyzdat += document.getElementById("lattice_a3").value;
+              xyzdat += '\" ';
+              xyzdat += 'Properties=';
+              xyzdat += 'species:S:1:pos:R:3';
+              xyzdat += ' pbc=\"T T T\"'
            }
            xyzdat += "\n";
            xyzdat += xyzdat0;
@@ -12789,9 +12794,13 @@ ul, li {
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ heterofam_api }}"><img src="{{url_for('static', filename='heteroatom-static/HeteroFAM.png')}}" alt="Copyright HeteroFAM Logo" width="100" height="100" align="middle"></a>
-<a href="{{ heterofam_api }}periodic">Expert Periodic and Molecular Editor</a> &nbsp;
-   <a href="{{ heterofam_api }}moire">Moire Editor</a>  &nbsp; <a href="{{ heterofam_api }}magnetic">Magnetic Editor</a> &nbsp;  <a href="{{ heterofam_api }}arrows">Arrows</a> &nbsp;   <a href="{{ heterofam_api }}aerosol">AI Editor</a> &nbsp;  <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
+   <a href="{{ heterofam_api }}periodic"><img src="{{url_for('static', filename='heteroatom-static/editor3.png')}}" alt="Copyright HeteroFAM Logo" width="140" height="100" align="middle"></a>
+   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;
+   <a href="{{ heterofam_api }}magnetic">&Omega; Shell</a> &nbsp;  
+   <a href="{{ heterofam_api }}aerosol">AI Editor</a> &nbsp;  
+   <a href="{{ heterofam_api }}arrows">Arrows</a> &nbsp;   
+   <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  
+   <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>
 </div>
 
 

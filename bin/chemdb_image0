@@ -16,7 +16,7 @@ MY_ENV["ARROWS_HOME"] = ARROWS_HOME
 
 #TIMEOUT = '/usr/bin/timeout'
 #TIMEOUT = '/usr/local/bin/gtimeout'
-MYTIMEOUT = "/usr/local/bin/timeout "
+MYTIMEOUT = "/usr/bin/timeout "
 TIMEOUT   = MYTIMEOUT
 TIMEOUT20 ="DISPLAY=:10; " + TIMEOUT + " 20 "
 TIMEOUT40 ="DISPLAY=:10; " + TIMEOUT + " 40 "

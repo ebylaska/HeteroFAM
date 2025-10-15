@@ -8,11 +8,11 @@
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 
-<link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='heteroatom-static/favicon-32x32.png')}}">
-<link rel="icon" type="image/png" sizes="96x96" href="{{url_for('static', filename='heteroatom-static/favicon-96x96.png')}}">
-<link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='heteroatom-static/favicon-16x16.png')}}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='arrows-static/favicon-32x32.png')}}">
+<link rel="icon" type="image/png" sizes="96x96" href="{{url_for('static', filename='arrows-static/favicon-96x96.png')}}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='arrows-static/favicon-16x16.png')}}">
 
-<title>Tiny Arrows</title>
+<title>Open Arrows</title>
 
 <style>
    blink, .blink {
@@ -432,9 +432,13 @@
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ arrows_api }}"><img src="{{url_for('static', filename='arrows-static/TinyArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
-<a href="{{ arrows_api }}periodic">Expert Periodic and Molecular Editor </a> &nbsp;
-   <a href="{{ arrows_api }}3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}expert">Molecular Combo Editor</a> &nbsp;   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;  <a href="{{ arrows_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; <a href="https://ebylaska.github.io/TinyArrows/">Manual</a> &nbsp;  <a href="{{ arrows_api }}eric_view2/list=">Projects</a> 
+   <a href="{{ heterofam_api }}arrows"><img src="{{url_for('static', filename='arrows-static/OpenArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
+   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;
+   <a href="{{ heterofam_api }}arrows/periodic">Periodic and Molecular Editor</a> &nbsp;
+   <a href="{{ heterofam_api }}arrows/3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; 
+   <a href="{{ heterofam_api }}arrows/expert">Molecular Combo Editor</a> &nbsp;  
+   <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp; 
+   <a href="https://ebylaska.github.io/TinyArrows/">Manual</a> &nbsp;  
 
 </div>
 
@@ -447,8 +451,8 @@
 			application to display correctly.</div>
 	</noscript>
         
-        <center><font color="74A52B" size="+2"> <p><b>TinyArrows 2D Molecular And Reaction Editor</b></p></font></center>
-        <font color="E8613B" size="+1"><p align="center"> Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font><!--p align="center"><a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">Click here for the EMSL Arrows manual</a> </p-->
+        <center><font color="74A52B" size="+2"> <p><b>OpenArrows 2D Molecular And Reaction Editor</b></p></font></center>
+        <font color="E8613B" size="+1"><p align="center"> Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font><!--p align="center"><a href="http://www.nwchem-sw.org/index.php/EMSL_Arrows#">Click here for the EMSL Arrows manual</a> </p-->
          
          <font color="298DB4"><p> {{ calculations }}</b> Arrows calculations carried out to date <br>
                                     {{ moleculecalculations }} Molecular calculations in database to date </p></font>
@@ -774,7 +778,7 @@
 
     <div id="swapper-first" style="display:block; border:2px dashed; border-color: #102DB0; background-color: white;  padding:25px;>
     <font color="00008B">
-    <h3>  The following are examples of input that can be used with Tiny Arrows. Clicking on a button places the command into the above entry box. </h3>
+    <h3>  The following are examples of input that can be used with Open Arrows. Clicking on a button places the command into the above entry box. </h3>
     <form method="POST" ONSUBMIT="return false;">
        <p><b> <font size="+1.5">Molecular calculations: </font> </b> &nbsp;
        <INPUT TYPE="button" VALUE="CN1C=NC2=C1C(=O)N(C(=O)N2C)C" onClick="document.form.smi.value='CN1C=NC2=C1C(=O)N(C(=O)N2C)C'" 
@@ -950,7 +954,7 @@
 
 
 <br><br>
-<div align="right"><font color="298DB4"> Tiny Arrows API visited {{ visits }} times </font></div>
+<div align="right"><font color="298DB4"> Open Arrows API visited {{ visits }} times </font></div>
 
 </body>
 </html>

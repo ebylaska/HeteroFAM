@@ -12,13 +12,13 @@
 <link rel="icon" type="image/png" sizes="96x96" href="https://dl.dropboxusercontent.com/s/k0kyp30ale2pkod/favicon-96x96.png">
 <link rel="icon" type="image/png" sizes="16x16" href="https://dl.dropboxusercontent.com/s/0l0w2wk9wfxt4el/favicon-16x16.png">
 
-<title>Tiny Arrows</title>
+<title>Open Arrows</title>
 
 <!-- Alternative location for ace editor -->
 <!-- script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.1/ace.js" type="text/javascript" charset="utf-8"></script> -->
 <!--script src="https://unpkg.com/ace-builds@1.3.1/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script-->
 
-<!-- Location scripts for Tiny Arrows API -->
+<!-- Location scripts for Open Arrows API -->
 <script type="text/javascript" language="javascript" src="{{ url_for('static', filename='jsme-latest/jsme.nocache.js')}}"></script>
 <script type="text/javascript" language="javascript" src="{{ url_for('static', filename='jsmol/JSmol.min.js')}}"></script>
 <script src="https://unpkg.com/ace-builds@1.4.1/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
@@ -205,7 +205,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
             width: 750,
             height: 500,
             debug: false,
-            //File location for Tiny Arrows API
+            //File location for Open Arrows API
             j2sPath: "{{ url_for('static', filename='jsmol/j2s')}}",
 
             //File location for debugging and development
@@ -218,7 +218,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
             disableInitialConsole: true,
             addSelectionOptions: true,
 
-            //File location for Tiny Arrows API
+            //File location for Open Arrows API
             serverURL: "{{ url_for('static', filename='jsmol/jsmol.php')}}",
 
             //File location for debugging and development
@@ -414,8 +414,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 
 
         function submit_nwchemjob2() {
-           var arrows_post_url = '{{ arrows_api }}upload/';
-           var arrows_get_url  = '{{ arrows_api }}queue_nwchem_add/';
+           var arrows_post_url = '{{ heterofam_api }}upload/';
+           var arrows_get_url  = '{{ heterofam_api }}queue_nwchem_add/';
            var textToSave = editor.getValue();
 
            //var fileInput = document.getElementById("fileInput");
@@ -541,9 +541,9 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
                 x = 1;
               }
               if (url.indexOf("http") == -1) {
-                 url2 = "{{ arrows_api }}esmiles2xyz/\"" + url + "\"" ;
+                 url2 = "{{ heterofam_api }}esmiles2xyz/\"" + url + "\"" ;
                  //url = "https://arrows.emsl.pnnl.gov/api/xyz/\"" + url + "\"" ;
-                 url = "{{ arrows_api }}mol/\"" + url + "\"" ;
+                 url = "{{ heterofam_api }}mol/\"" + url + "\"" ;
               }
               console.log(url);
               if (url.trim().length>9) {
@@ -587,8 +587,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
         }
 
         function gen_reactions1() {
-           var arrows_post_url = "{{ arrows_api }}upload/";
-           var arrows_get_url  = "{{ arrows_api }}genhash/";
+           var arrows_post_url = "{{ heterofam_api }}upload/";
+           var arrows_get_url  = "{{ heterofam_api }}genhash/";
            var mol = exMod().replace('{','').replace('}','');
            var reaction_hash0 = document.getElementById("reaction_hash").value;
            var mollist = mol.split("\n");
@@ -647,8 +647,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 
 
         function check_rgamma() {
-           var arrows_post_url = "{{ arrows_api }}upload/";
-           var arrows_get_url  = "{{ arrows_api }}genhash/";
+           var arrows_post_url = "{{ heterofam_api }}upload/";
+           var arrows_get_url  = "{{ heterofam_api }}genhash/";
            var mol = exMod().replace('{','').replace('}','');
            var reaction_hash0 = document.getElementById("reaction_hash").value;
            var check_indexes  = document.getElementById("reaction_indexes").value.split(" ");
@@ -713,8 +713,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 
 
         function gen_rhash1() {
-           var arrows_post_url = "{{ arrows_api }}upload/";
-           var arrows_get_url  = "{{ arrows_api }}genhash/";
+           var arrows_post_url = "{{ heterofam_api }}upload/";
+           var arrows_get_url  = "{{ heterofam_api }}genhash/";
            var mol = exMod().replace('{','').replace('}','');
            var reaction_type = document.getElementById("reaction_type").value;
            var reaction_indexes = document.getElementById("reaction_indexes").value;
@@ -754,8 +754,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
         }
 
         function gen_rhash2() {
-           var arrows_post_url0 = "{{ arrows_api }}upload/";
-           var arrows_get_url  = "{{ arrows_api }}genhash/";
+           var arrows_post_url0 = "{{ heterofam_api }}upload/";
+           var arrows_get_url  = "{{ heterofam_api }}genhash/";
            var reaction = document.getElementById("reaction_genhash00").value;
            if (reaction.trim().length>5) {
               var mol = "reaction_genhash{"+reaction+"}\n";
@@ -948,7 +948,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
            var smiles = prompt("Please enter smiles:", "CCO");
            if (smiles.includes("http")) {
               alert("Running OSRA for " + smiles);
-              var url = "{{ arrows_api }}osra/'" + smiles + "'";
+              var url = "{{ heterofam_api }}osra/'" + smiles + "'";
               var ajax = new XMLHttpRequest();
               ajax.onload = functionName;
               ajax.onerror = errorFunctionName;
@@ -2358,9 +2358,13 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 </div-->
 
 <div class="linkbanner">
-   <a href="{{ arrows_api }}"><img src="{{url_for('static', filename='arrows-static/TinyArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
-<a href="{{ arrows_api }}periodic">Expert Periodic and Molecular Editor</a> &nbsp;
-   <a href="{{ arrows_api }}3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}expert">Molecular Combo Editor</a> &nbsp; <a href="{{ arrows_api }}qsharp_chem">Microsoft Quantum Editor</a> &nbsp;  <a href="{{ arrows_api }}aerosol">EMSL Aerosol Workshop Editor</a> &nbsp; <a href="{{ arrows_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>                                          
+   <a href="{{ heterofam_api }}arrows"><img src="{{url_for('static', filename='arrows-static/OpenArrows2019.png')}}" alt="Copyright Arrows Logo" width="180" height="90" align="middle"></a>
+   <a href="{{ heterofam_api }}">HeteroFAM</a> &nbsp;
+   <a href="{{ heterofam_api }}arrows/periodic">Periodic and Molecular Editor</a>  &nbsp; 
+   <a href="{{ heterofam_api }}arrows/3dbuilder">3D Molecular And Reaction Editor</a>  &nbsp; 
+   <a href="{{ heterofam_api }}arrows/expert">Molecular Combo Editor</a> &nbsp;  &nbsp; 
+   <a href="{{ heterofam_api }}ssh_tunnel">SSH Tunneling</a> &nbsp;  
+   <a href="https://ebylaska.github.io/TinyArrows/">Manual</a>                                          
 </div>
 
 	<!-- RECOMMENDED if your web app will not function without JavaScript enabled -->
@@ -2370,8 +2374,8 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
     application to display correctly.</div>
     </noscript>
 
-    <center><font color="74A52B" size="+2"> <p><b>Tiny Arrows Expert Molecular And Reaction Editor</b></p></font></center>
-    <font color="E8613B" size="+1"><p align="center"> Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font>
+    <center><font color="74A52B" size="+2"> <p><b>Open Arrows Expert Molecular And Reaction Editor</b></p></font></center>
+    <font color="E8613B" size="+1"><p align="center"> Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font>
 
     <font color="298DB4"><p> {{ calculations }}</b> Arrows calculations carried out to date <br>
                              {{ moleculecalculations }} Molecular calculations in database to date </p></font>
@@ -2383,12 +2387,12 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
                                     {{ moleculecalculations }} Molecular calculations in database to date </p></font>
         </td>
         <td>
-         <center><font color="74A52B" size="+2"> <p><b>Tiny Arrows Expert Molecular And Reaction Editor</b></p></font></center>
-         <font color="E8613B" size="+1"><p align="center"> Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font><p align="center"><a href="https://nwchemgit.github.io/EMSL_Arrows#">Click here for the Tiny Arrows manual</a> </p>
+         <center><font color="74A52B" size="+2"> <p><b>Open Arrows Expert Molecular And Reaction Editor</b></p></font></center>
+         <font color="E8613B" size="+1"><p align="center"> Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.</p></font><p align="center"><a href="https://nwchemgit.github.io/EMSL_Arrows#">Click here for the Open Arrows manual</a> </p>
 
         </td>
        </tr>
-       <tr>  <p> <a href="{{ arrows_api }}">Switch to 2D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}3dbuilder">Switch to 3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ arrows_api }}qsharp_chem">Switch to Microsoft Quantum Editor</a> &nbsp; </p>
+       <tr>  <p> <a href="{{ heterofam_api }}">Switch to 2D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ heterofam_api }}3dbuilder">Switch to 3D Molecular And Reaction Editor</a>  &nbsp; <a href="{{ heterofam_api }}qsharp_chem">Switch to Microsoft Quantum Editor</a> &nbsp; </p>
        </tr>
        </table-->
 
@@ -2407,7 +2411,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 <div id="Instructions" class="tabcontent">
 <p> This webpage is not finished.</p>
 
-<p> Tiny Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.  With this webpage, a molecule can be entered into Tiny Arrows using either an <a href="https://nwchemgit.github.io/EMSL_Arrows#introduction-to-esmiles-how-to-change-calculation-theories">esmiles</a> string, a 2D molecular builder, a 3D molecular builder, or as a NWChem input deck.</p>
+<p> Open Arrows is a revolutionary approach to materials and chemical simulations that uses NWChem and chemical computational databases to make materials and chemical modeling accessible via a broad spectrum of digital communications.  With this webpage, a molecule can be entered into Open Arrows using either an <a href="https://nwchemgit.github.io/EMSL_Arrows#introduction-to-esmiles-how-to-change-calculation-theories">esmiles</a> string, a 2D molecular builder, a 3D molecular builder, or as a NWChem input deck.</p>
 
 </div>
 
@@ -2456,7 +2460,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
     <input type="button" title="submits job to nwchem queue" VALUE="Submit NWChem &#8629;" onClick="submit_nwchemjob2()"  style="font-family: sans-serif; font-size: 14px;"/>
     <!--input id="fileInput" type="file" style="font-family: sans-serif; font-size: 14px;"/-->
     <section class="marquee" style="color: red"> <b id="runmebanner3"> </b> </section>
-    <p align="left"><a href="{{ arrows_api }}queue_nwchem_check/nwchem">Click here to check the status of submited NWChem Jobs</a> </p>
+    <p align="left"><a href="{{ heterofam_api }}queue_nwchem_check/nwchem">Click here to check the status of submited NWChem Jobs</a> </p>
     <p> Once the job is finished in the above queue, a zip file containing output files from the NWChem job can be downloaded. </p>
 
     </td>
@@ -3321,7 +3325,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
 
 
     <font color="00008B">
-    <h3>  The following are examples of input that can be used with Tiny Arrows. Clicking on a button places the command into the above entry box. </h3>
+    <h3>  The following are examples of input that can be used with Open Arrows. Clicking on a button places the command into the above entry box. </h3>
     <form method="POST" ONSUBMIT="return false;">
        <p><b> <font size="+1.5">Molecular calculations: </font> </b> &nbsp;
        <INPUT TYPE="button" VALUE="CN1C=NC2=C1C(=O)N(C(=O)N2C)C" onClick="document.form2.smi.value='CN1C=NC2=C1C(=O)N(C(=O)N2C)C'"
@@ -3481,7 +3485,7 @@ background-image: linear-gradient(#FEFEFE, #F1F1F1);
      Keywords: quantum chemistry calculations - quantum chemistry computations - quantum chemistry - molecular modeling calculations - molecular modeling computations - molecular modeling - chemical modeling - chemical reactions calculations - chemical reactions computations - chemical reactions - NWChem calculations - computational chemistry - NWChem 
 
 <br><br>
-<div align="right"><font color="298DB4"> Tiny Arrows API visited {{ visits }} times </font></div>
+<div align="right"><font color="298DB4"> Open Arrows API visited {{ visits }} times </font></div>
 
 
 <script type="text/javascript">

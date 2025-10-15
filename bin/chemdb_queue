@@ -1170,12 +1170,15 @@ if (listqueues2):
       print("queue_entry=%d smiles=%s theory=%s basis=%s nwchem_output=%s extra_datafiles=%s" % (entry['queue_number'],entry['smiles'],entry['theory'],entry['basis'],entry['nwchem_output'],entry['extra_datafiles']))
 
 if (submitqueue2):
+   print("IMHERA")
    check = {}
    queue2 = chemdb_finished_queue_collection.find(check)
    print()
    print("Adding Finsihed Jobs Queue to Arrows:")
    delete_queue2 = []
+   print("queue2=",queue2)
    for entry in queue2:
+      print("entry=",entry)
 
       ### remove queue entry ###
       delete_queue2.append({'queue_number' : entry['queue_number']})

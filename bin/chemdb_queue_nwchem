@@ -455,8 +455,9 @@ if (addqueue):
          label = label.split("QWAIT::")[0]
          label += " QWAIT:: "+qwait_label+" ::QWAIT"
 
-
-      if ("machine_type:" in nwchem_input) and (":machine_type" in nwchem_input) and (".nw" in nwinputfile):
+      if (machine != ''):
+         machine_type = machine
+      elif ("machine_type:" in nwchem_input) and (":machine_type" in nwchem_input) and (".nw" in nwinputfile):
          machine_type = nwchem_input.split('machine_type:')[1].split(':machine_type')[0].strip()
       elif ("#machine " in nwchem_input) and (".nw" in nwinputfile):
          machine_type = nwchem_input.split('#machine ')[1].split('\n')[0].strip()
@@ -466,12 +467,12 @@ if (addqueue):
          machine_type = "feff9"
       elif (".inp" in nwinputfile):
          machine_type = "feff9"
-      elif (machine != ''):
-         machine_type = machine
       else:
          machine_type = "unknown"
 
-      if ("queue_name:" in nwchem_input) and (":queue_name" in nwchem_input) and (".nw" in nwinputfile):
+      if (nqueue != ''):
+         queue_name = nqueue
+      elif ("queue_name:" in nwchem_input) and (":queue_name" in nwchem_input) and (".nw" in nwinputfile):
          queue_name = nwchem_input.split('queue_name:')[1].split(':queue_name')[0].strip()
       elif ("#queue " in nwchem_input) and (".nw" in nwinputfile):
          queue_name = nwchem_input.split('#queue ')[1].split('\n')[0].strip()
@@ -479,8 +480,6 @@ if (addqueue):
          queue_name = nwchem_input.split('queue_name:')[1].split(':queue_name')[0].strip()
       elif (".inp" in nwinputfile):
          queue_name = "exafs"
-      elif (nqueue != ''):
-         queue_name = nqueue
       else:
          queue_name = "regular"
 
@@ -614,7 +613,7 @@ if (runqueue):
             data1 += "\n"
             data1 += ctag + " queue_nwchem_restart_count: %d" % entry['restart_count']
             data1 += "\n"
-            data1 += ctag + "\n"
+            #data1 += ctag + "\n"
 
          if entry['restart_input_deck']=='no':
             #data1 +=  entry['nwchem_input_deck'] + "\n"
