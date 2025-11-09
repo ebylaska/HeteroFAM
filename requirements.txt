@@ -10,3 +10,4 @@ tinydb
 tinymongo
 pexpect
 ase
+Flask-Cors

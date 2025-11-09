@@ -2,11 +2,12 @@
 
 from flask import Flask, jsonify, render_template, request, redirect, url_for, send_from_directory, Response, session
 from flask import abort
+from flask_cors import CORS, cross_origin
 from werkzeug.utils import secure_filename
 import os,subprocess,urllib,time,uuid,random,requests,zipfile,re,math,yaml,csv,datetime,fcntl
 import paramiko,secrets
 import logging
-
+import pymysql as MySQLdb
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -1078,11 +1079,19 @@ def increment_apivisited():
 
 
 
+def get_db_connection():
+   return MySQLdb.connect(host="mariadb", user="hetero", passwd="solid", db="HeteroFAM_Project", charset="utf8mb4")
+
+def get_db_connection2():
+   return MySQLdb.connect(host="mariadb", user="hetero", passwd="solid", db="TNT_Project", charset="utf8mb4")
+
+
 
 
 app = Flask(__name__ ,static_url_path='/static', static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = secrets.token_hex(32)
+CORS(app, supports_credentials=True)
 print("CONFIG UPLOAD_FOLDER =", app.config['UPLOAD_FOLDER'])
 
 
@@ -1110,6 +1119,17 @@ def after_request(response):
    response.headers['Content-Security-Policy']=""
    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
    return response
+
+
+@app.route('/api/<path:path>', methods=['OPTIONS'])
+def handle_options(path):
+    """Handle CORS preflight requests for any /api/... route."""
+    response = make_response()
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    response.status_code = 204
+    return response
 
 
 
@@ -3010,60 +3030,152 @@ def eric2_queue2(input_data):
 
 
 
+#@app.route('/api/submit_output/<datafiles>', methods=['GET'])
+#def submit_output_deck(datafiles):
+#   #
+#   increment_apivisited()
+#   datafiles = datafiles.replace("\"",'')
+#   datafiles = datafiles.replace("\'",'')
+#
+#   #tt1 = time.localtime()
+#   #dd1 = "-%d-%d-%d-%d-%d-%d" % (tt1[0],tt1[1],tt1[2],tt1[3],tt1[4],tt1[5])
+#   ddrand = random.randint(0,999999)
+#   dd1 = "-%d" % (ddrand)
+#
+#   # copy data to chemdbdir and find nwoutfile and datafiles ####
+#   nwoutfile = ''
+#   nwoutfile0 = ''
+#   string_of_datafiles = ''
+#   string_of_datafiles0 = ''
+#
+#   for filename in datafiles.split():
+#      safe_name = secure_filename(filename)
+#      nwfilename  = os.path.join(UPLOAD_FOLDER, safe_name)
+#      nwfilename1 = os.path.join(chemdbdir, safe_name + dd1)
+#      nwfilename1 = nwfilename1.replace(",", "-")
+#
+#      if not os.path.exists(nwfilename):
+#         app.logger.warning(f"Missing upload file: {nwfilename}")
+#         continue
+#
+#      try:
+#         with open(nwfilename, 'r') as ff:
+#            tdata = ff.read()
+#         with open(nwfilename1, 'w') as ff:
+#            ff.write(tdata)
+#      except Exception as e:
+#         app.logger.error(f"Failed to copy {nwfilename}: {e}")
+#         continue
+#
+#   #for filename in datafiles.split():
+#   #   nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
+#   #   nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]+dd1
+#   #   nwfilename1 = nwfilename1.replace(",","-")
+#   #   if os.path.exists(nwfilename):
+#   #      ### copy data to chemdbdir ###
+#   #      with open(nwfilename, 'r') as ff: tdata = ff.read()
+#   #      with open(nwfilename1,'w') as ff: ff.write(tdata)
+##
+##         ### look for nwout file  or datafile ###
+##         if ('.out' in filename) or ('.nwo' in filename):
+##            nwoutfile  = nwfilename1
+##            nwoutfile0 = filename
+##         else:
+##            string_of_datafiles  += nwfilename1 + " "
+##            string_of_datafiles0 += filename  + " "
+#   string_of_datafiles  = string_of_datafiles.strip()
+#   string_of_datafiles0 = string_of_datafiles0.strip()
+#
+#   #### call chemdb_queue ###
+#   if nwoutfile != '':
+#      msg = "Submited " + nwoutfile0 
+#      cmd1 = chemdb_queue + "-w " +  nwoutfile 
+#      if string_of_datafiles!='':
+#         cmd1 +=  " -z \""+string_of_datafiles+"\""
+#         msg  += " with the following extra datafiles=" + string_of_datafiles0
+#
+#      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+#
+#   else:
+#      msg = "Nothing was submited"
+#
+#   #### clean the upload directory ####
+#   clean_upload_directory()
+#
+#   return msg
+      
+
 @app.route('/api/submit_output/<datafiles>', methods=['GET'])
 def submit_output_deck(datafiles):
-   #
-   increment_apivisited()
-   datafiles = datafiles.replace("\"",'')
-   datafiles = datafiles.replace("\'",'')
+    increment_apivisited()
 
-   #tt1 = time.localtime()
-   #dd1 = "-%d-%d-%d-%d-%d-%d" % (tt1[0],tt1[1],tt1[2],tt1[3],tt1[4],tt1[5])
-   ddrand = random.randint(0,999999)
-   dd1 = "-%d" % (ddrand)
+    # Sanitize input string
+    datafiles = datafiles.replace('"', '').replace("'", "")
 
-   # copy data to chemdbdir and find nwoutfile and datafiles ####
-   nwoutfile = ''
-   nwoutfile0 = ''
-   string_of_datafiles = ''
-   string_of_datafiles0 = ''
-   for filename in datafiles.split():
-      nwfilename  = UPLOAD_FOLDER + filename[filename.rfind('/')+1:]
-      nwfilename1 = chemdbdir + "/" + filename[filename.rfind('/')+1:]+dd1
-      nwfilename1 = nwfilename1.replace(",","-")
-      if os.path.exists(nwfilename):
-         ### copy data to chemdbdir ###
-         with open(nwfilename, 'r') as ff: tdata = ff.read()
-         with open(nwfilename1,'w') as ff: ff.write(tdata)
+    # Random suffix to prevent collisions
+    dd1 = f"-{random.randint(0,999999)}"
 
-         ### look for nwout file  or datafile ###
-         if ('.out' in filename) or ('.nwo' in filename):
+    # Ensure directories exist
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(chemdbdir, exist_ok=True)
+
+    nwoutfile = ''
+    nwoutfile0 = ''
+    string_of_datafiles = ''
+    string_of_datafiles0 = ''
+
+    for filename in datafiles.split():
+        safe_name = secure_filename(filename)
+        nwfilename  = os.path.join(UPLOAD_FOLDER, safe_name)
+        nwfilename1 = os.path.join(chemdbdir, safe_name + dd1)
+        nwfilename1 = nwfilename1.replace(",", "-")
+
+        if not os.path.exists(nwfilename):
+            app.logger.warning(f"Missing upload file: {nwfilename}")
+            continue
+
+        try:
+            with open(nwfilename, 'r') as ff:
+                tdata = ff.read()
+            with open(nwfilename1, 'w') as ff:
+                ff.write(tdata)
+        except Exception as e:
+            app.logger.error(f"Failed to copy {nwfilename}: {e}")
+            continue
+
+        # Determine file type
+        if ('.out' in filename) or ('.nwo' in filename):
             nwoutfile  = nwfilename1
             nwoutfile0 = filename
-         else:
+        else:
             string_of_datafiles  += nwfilename1 + " "
-            string_of_datafiles0 += filename  + " "
-   string_of_datafiles  = string_of_datafiles.strip()
-   string_of_datafiles0 = string_of_datafiles0.strip()
+            string_of_datafiles0 += filename + " "
 
-   #### call chemdb_queue ###
-   if nwoutfile != '':
-      msg = "Submited " + nwoutfile0 
-      cmd1 = chemdb_queue + "-w " +  nwoutfile 
-      if string_of_datafiles!='':
-         cmd1 +=  " -z \""+string_of_datafiles+"\""
-         msg  += " with the following extra datafiles=" + string_of_datafiles0
+    string_of_datafiles  = string_of_datafiles.strip()
+    string_of_datafiles0 = string_of_datafiles0.strip()
 
-      result = subprocess.check_output(cmd1,shell=True,stderr=subprocess.STDOUT).decode("utf-8")
+    #### Execute chemdb_queue ###
+    if nwoutfile:
+        msg = f"Submitted {nwoutfile0}"
+        cmd1 = f"{chemdb_queue} -w {nwoutfile}"
+        if string_of_datafiles:
+            cmd1 += f' -z "{string_of_datafiles}"'
+            msg  += f" with the following extra datafiles={string_of_datafiles0}"
 
-   else:
-      msg = "Nothing was submited"
+        try:
+            result = subprocess.check_output(cmd1, shell=True, stderr=subprocess.STDOUT).decode("utf-8")
+            app.logger.info(f"Ran: {cmd1}")
+            app.logger.info(f"chemdb_queue output: {result.strip()[:200]}")
+        except subprocess.CalledProcessError as e:
+            app.logger.error(f"chemdb_queue failed: {e.output.decode('utf-8')}")
+            msg = f"chemdb_queue failed for {nwoutfile0}"
+    else:
+        msg = "Nothing was submitted (no .out or .nwo file found)"
 
-   #### clean the upload directory ####
-   clean_upload_directory()
+    clean_upload_directory()
 
-   return msg
-      
+    return jsonify({"message": msg})
+
 
 
 @app.route('/api/submit_solid_output/<datafiles9>', methods=['GET'])
@@ -3132,8 +3244,6 @@ def submit_solid_output_deck(datafiles9):
 
 
 
-
-
 @app.route('/api/upload/', methods=['GET','POST'])
 def index():
     #print "i am here", request
@@ -3161,6 +3271,105 @@ def index():
     </form>
     <p>%s</p>
     """ % "<br>".join(os.listdir(app.config['UPLOAD_FOLDER'],))
+
+
+
+@app.route('/api/add_output/', methods=['POST'])
+def index_add_output():
+    app.logger.debug("Request received for /api/add_output")
+
+    # Ensure upload folder exists
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+    # Check if file is included in request
+    if 'file' not in request.files:
+        app.logger.warning("No file part in request")
+        return jsonify({"error": "No file part in request"}), 400
+
+    file = request.files['file']
+    app.logger.debug(f"Uploaded file object: {file}")
+    app.logger.debug(f"Filename: {file.filename}")
+
+    if file.filename == '':
+        app.logger.warning("Empty filename submitted")
+        return jsonify({"error": "No selected file"}), 400
+
+    # Only save allowed files
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(save_path)
+        app.logger.info(f"File saved: {save_path}")
+        return jsonify({"message": f"File {filename} uploaded successfully."}), 200
+    else:
+        app.logger.warning(f"Disallowed file type: {file.filename}")
+        return jsonify({"error": "File type not allowed"}), 400
+
+
+@app.route('/api/upload_test/',  methods=['GET'])
+def upload_test_page():
+    return """
+    <!doctype html>
+    <title>Manual Upload Test</title>
+    <h1>Upload new File</h1>
+    <form action="/api/add_output/" method="post" enctype="multipart/form-data">
+        <input type=file name=file>
+        <input type=submit value=Upload>
+    </form>
+    """
+
+@app.route('/api/combine_parts/', methods=['POST'])
+def combine_parts():
+    data = request.get_json()
+    basename = secure_filename(data.get("basename", ""))
+    nparts = int(data.get("nparts", 0))
+    folder = app.config["UPLOAD_FOLDER"]
+
+    target = os.path.join(folder, basename)
+    with open(target, "wb") as outfile:
+        for i in range(nparts):
+            partname = f"{basename}_part_{i:03d}"
+            partpath = os.path.join(folder, partname)
+            if os.path.exists(partpath):
+                with open(partpath, "rb") as pf:
+                    outfile.write(pf.read())
+                os.remove(partpath)
+            else:
+                app.logger.warning(f"Missing part {partpath}")
+
+    app.logger.info(f"Recombined file: {target}")
+    return jsonify({"message": f"Recombined {basename} from {nparts} parts."})
+
+
+
+
+#@app.route('/api/add_output/', methods=['GET','POST'])
+#def index_add_output():
+#    #print "i am here", request
+#    app.logger.debug("Request received: %s", request)
+#    if request.method == 'POST':
+#        #print "after post"
+#        file = request.files['file']
+#        #print "FILE=",file
+#        print("file.filename=",file.filename, " file=",file)
+#        app.logger.debug("Uploaded file object: %s", file)
+#        app.logger.debug("Filename: %s", file.filename)
+#        print("secure_filename=", secure_filename(file.filename))
+#        if file and allowed_file(file.filename):
+#            filename = secure_filename(file.filename)
+#            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+#            app.logger.info("File saved: %s", filename)
+#            return redirect(url_for('index'))
+#    return """
+#    <!doctype html>
+#    <title>Upload new File</title>
+#    <h1>Upload new File</h1>
+#    <form action="" method=post enctype=multipart/form-data>
+#      <p><input type=file name=file>
+#         <input type=submit value=Upload>
+#    </form>
+#    <p>%s</p>
+#    """ % "<br>".join(os.listdir(app.config['UPLOAD_FOLDER'],))
 
 #@app.route('/api/upload/', methods=['GET', 'POST'])
 #def index():
@@ -5247,6 +5456,67 @@ def cpu_plot():
     #LOG_PATH = os.path.join(os.path.dirname(__file__), 'templates', 'cpu_plot.html')
     with open(LOG_PATH,"r") as f:
         return f.read()
+
+
+
+@app.route("/api/peter")
+def testdb():
+   try:
+      conn = get_db_connection()
+      cursor = conn.cursor()
+      cursor.execute("SELECT 1")
+      result = cursor.fetchone()
+      return f"DB OK: {result}"
+   except Exception as e:
+      return f"DB ERROR: {e}"
+
+
+@app.route('/api/view/<table_name>')
+def view_table(table_name):
+   conn = get_db_connection()
+   cursor = conn.cursor()
+
+   # WARNING: only allow specific tables to avoid SQL injection
+   allowed = ["materials", "exafs"]
+   if table_name not in allowed:
+       return f"Table '{table_name}' not allowed."
+
+   query = f"SELECT * FROM {table_name} LIMIT 200"  # prevent 100k row dumps
+   cursor.execute(query)
+   rows = cursor.fetchall()
+
+   # Column names
+   colnames = [desc[0] for desc in cursor.description]
+
+   cursor.close()
+   conn.close()
+
+   return render_template("view_table.html", table_name=table_name, colnames=colnames, rows=rows)
+
+
+
+@app.route('/api/view2/<table_name>')
+def view2_table(table_name):
+   conn = get_db_connection2()
+   cursor = conn.cursor()
+
+   # WARNING: only allow specific tables to avoid SQL injection
+   allowed = ["abbreviations","aimd_calculations","calculations","heats_of_formation","nametosmiles","newreactionhashes","nmr_calculations","nmr_experiments","nmr_scaling","reactionhashes","reactionhashes2","requests","solute_structures"]
+   if table_name not in allowed:
+       return f"Table '{table_name}' not allowed."
+
+   query = f"SELECT * FROM {table_name} LIMIT 200"  # prevent 100k row dumps
+   cursor.execute(query)
+   rows = cursor.fetchall()
+
+   # Column names
+   colnames = [desc[0] for desc in cursor.description]
+
+   cursor.close()
+   conn.close()
+
+   return render_template("view_table.html", table_name=table_name, colnames=colnames, rows=rows)
+
 
 
 
