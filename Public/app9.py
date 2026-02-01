@@ -9,6 +9,9 @@ import paramiko,secrets
 import logging
 import pymysql as MySQLdb
 
+from ericview.queue import lookup_queue
+from ericview.render import render_jsmol_from_cif
+
 logging.basicConfig(level=logging.DEBUG)
 
 ###################### HeteroFAM Locations #######################
@@ -53,6 +56,7 @@ ALLOWED_EXTENSIONS = {
 
 print("HeteroFAM_HOME =", HeteroFAM_HOME)
 print("UPLOAD_FOLDER =", UPLOAD_FOLDER)
+print("ERIC_UPLOAD_FOLDER =", ERIC_UPLOAD_FOLDER)
 
 tar                     = "/bin/tar -czf " 
 chemdb_fetch_reactions  = HeteroFAM_HOME + "/bin/chemdb_fetch_reactions5 --heterofam_api=" + HeteroFAM_API_HOME + " -e "
@@ -1090,6 +1094,7 @@ def get_db_connection2():
 
 app = Flask(__name__ ,static_url_path='/static', static_folder='static')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config["ERIC_UPLOAD_FOLDER"] = ERIC_UPLOAD_FOLDER
 app.secret_key = secrets.token_hex(32)
 CORS(app, supports_credentials=True)
 print("CONFIG UPLOAD_FOLDER =", app.config['UPLOAD_FOLDER'])
@@ -3582,6 +3587,235 @@ def list_queue_nwchem_check(qname):
 #   clean_upload_directory()
 #
 #   return msg
+
+
+# need to make comments here
+@app.route('/api/upload_and_queue/', methods=['POST'])
+def upload_and_queue():
+    """
+    Upload an NWChem input, output, or related data file and register it with
+    the Arrows queue system.
+
+    This endpoint serves two purposes:
+      1) Submit computational jobs (e.g. NWChem, FEFF, EAP, etc.).
+      2) Register files so they can be fetched, inspected, or visualized
+         through the web interface using the existing queue machinery.
+
+    Design principles:
+      - This endpoint is policy-level (HTTP boundary).
+      - Authorization, if any, happens only here.
+      - The downstream queue command (chemdb_queue_nwchem) remains dumb,
+        stable, and replayable.
+      - Queue entries may represent *jobs or data*, not necessarily executions.
+      - Optional job-level protection (-p) is supported but never required.
+    """
+
+    # ---- sanity checks ----
+    # We fail fast here before touching the filesystem or queue.
+    if 'file' not in request.files:
+        return "No file part in request", 400
+
+    file = request.files['file']
+
+    if file.filename == '':
+        return "Empty filename", 400
+
+    if not allowed_file(file.filename):
+        return "File type not allowed", 400
+
+    # ---- save file ----
+    # ---- save uploaded file into the shared uploads directory ----
+    # This directory is volume-mounted so both the API container and
+    # downstream queue runners can see the same file.
+    filename = secure_filename(file.filename)
+    upload_dir = app.config['ERIC_UPLOAD_FOLDER']
+    filepath = os.path.join(upload_dir, filename)
+
+    file.save(filepath)
+
+    # ---- provenance from request ----
+    # submit_machine: user-declared logical origin of the file
+    #   (e.g. laptop name, workstation, HPC login node).
+    # submit_ip: network-level source address (best-effort; may be NATed).
+    # job_password: OPTIONAL job-level protection token used by the queue
+    #   to gate future actions (fetch/reset/delete). This is NOT HTTP auth.
+    submit_machine = request.headers.get("X-Arrows-Machine", "unknown")
+    #submit_dir     = request.headers.get("X-Arrows-Submit-Dir", "unknown")
+    submit_dir     = request.headers.get("X-Arrows-Submit-Dir")
+    submit_ip      = request.remote_addr
+    job_password   = request.headers.get("X-Arrows-Job-Pass")
+
+
+    # ---- label ----
+    # ---- durable label stored with the queue entry ----
+    # The label is immutable provenance and must not contain secrets.
+    # It is intended for humans, logs, listings, and long-term audit.
+    label = (
+        f"{filename} "
+        f"submit_machine:{submit_machine} "
+        f"submit_dir:{submit_dir} "
+        f"submit_ip:{submit_ip} "
+        f"type:data "
+        f"submit_file:{filepath}"
+    )
+
+
+    # ---- submit to queue ----
+    # We register this upload as a *data* queue entry:
+    #   - it may be fetched, inspected, or visualized via the web
+    #   - it may later be promoted to a computational job
+    # The queue command itself remains dumb and replayable.
+    cmd = [
+        chemdb_queue_nwchem.strip(),
+        "-a", filepath,
+        "-b", label,
+        "-m", submit_machine,
+        "-n", "data"
+    ]
+
+    # Optional job-level password:
+    # If provided, protects future queue operations on this entry.
+    if job_password:
+       cmd.extend(["-p", job_password])
+
+    try:
+        result = subprocess.check_output(
+            cmd,
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        return (
+            "Queue submission failed\n\n" + e.output,
+            500
+        )
+
+    # ---- parse queue entry ----
+    if "QUEUE_ENTRY:" not in result:
+        return (
+            "QUEUE_ENTRY missing in output\n\n" + result,
+            500
+        )
+
+    queue_entry = result.split("QUEUE_ENTRY:")[1].split(":QUEUE_ENTRY")[0].strip()
+
+    return jsonify({
+        "status": "ok",
+        "queue_entry": int(queue_entry),
+        "file": filepath,
+        "submit_machine": submit_machine,
+        "submit_ip": submit_ip,
+        "label": label
+    })
+
+
+
+@app.route('/api/ericview/list', methods=['GET'])
+def ericviewlist():
+    """
+    List data artifacts available for visualization via ericview.
+
+    Read-only endpoint.
+    No execution.
+    No mutation.
+    """
+
+    # ---- query the queue ----
+    # chemdb_queue_nwchem must support a list/query mode
+    # Example assumes: chemdb_queue_nwchem -l emits machine-readable text
+    try:
+        result = subprocess.check_output(
+            [chemdb_queue_nwchem.strip(), "-l"],
+            stderr=subprocess.STDOUT,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        return (
+            "Queue listing failed\n\n" + e.output,
+            500
+        )
+
+    entries = []
+
+    # ---- parse queue output ----
+    # This depends on your existing queue output format.
+    # The logic below is deliberately conservative.
+    for line in result.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        # Skip headers or separators if present
+        if line.startswith("#") or line.startswith("QUEUE"):
+            continue
+
+        # Example line structure (you already showed this):
+        # 355 (remove) 0 no no no WE38802 data eric.out01 submit_machine:...
+        parts = line.split()
+
+        # Defensive parsing
+        if len(parts) < 8:
+            continue
+
+        try:
+            queue_entry = int(parts[0])
+        except ValueError:
+            continue
+
+        queue_name = parts[6]
+
+        # ---- only expose data artifacts ----
+        if queue_name != "data":
+            continue
+
+        label = " ".join(parts[8:])
+
+        meta = parse_ericview_label(label)
+
+        entries.append({
+            "queue_entry": queue_entry,
+            "queue_name": queue_name,
+            "filename": parts[7],
+            "submit_machine": meta.get("submit_machine"),
+            "submit_dir": meta.get("submit_dir"),
+            "submit_ip": meta.get("submit_ip"),
+            "stored_file": meta.get("submit_file"),
+        })
+
+    return jsonify(entries)
+
+
+def parse_ericview_label(label):
+    """
+    Parse immutable queue label into a dict.
+
+    Labels are space-separated key:value pairs.
+    Unknown keys are ignored.
+    """
+    meta = {}
+    for token in label.split():
+        if ":" not in token:
+            continue
+        k, v = token.split(":", 1)
+        meta[k] = v
+    return meta
+
+
+@app.route("/api/ericview/entry/<int:qid>")
+def ericview_entry(qid):
+    try:
+        entry = lookup_queue(qid)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("queue backend failure") from e
+    except json.JSONDecodeError:
+        raise RuntimeError("invalid queue JSON")
+    except KeyError:
+        raise
+
+    return entry
+
+
+
 
 @app.route('/api/queue_nwchem_add/<filename>', methods=['GET'])
 def add_queue_nwchem(filename):

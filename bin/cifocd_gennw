@@ -130,9 +130,31 @@ def pubchem_cid2InChI(cid):
     result = geturlresult("http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/%s/property/InChI/TXT" % cid)
     return result
 
+#def ocd_get(ocd):
+#    result = geturlresult("http://www.crystallography.net/cod/" + ocd + ".cif")
+#    return result
+
+COD_MIRRORS = [
+    "http://www.crystallography.net/cod/",
+    "http://www.crystallography.org/cod/",
+    "http://www.crystallography.eu/cod/",
+]
 def ocd_get(ocd):
-    result = geturlresult("http://www.crystallography.net/cod/" + ocd + ".cif")
-    return result
+    last_err = None
+
+    for base in COD_MIRRORS:
+        url = base + ocd + ".cif"
+        try:
+            result = geturlresult(url)
+            return result
+        except Exception as e:
+            last_err = e
+            # optional: print or log
+            # print(f"COD mirror failed: {url} ({e})")
+
+    raise RuntimeError(f"All COD mirrors failed ({last_err})")
+
+
 
 
 #### cml2smiles function ####

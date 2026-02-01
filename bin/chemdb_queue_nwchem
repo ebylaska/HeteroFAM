@@ -252,6 +252,12 @@ resetqueue = False
 add_fetch = False
 forcedelqueue = False
 forcefetch    = False
+listqueues_json = False   # -L
+meta_only       = False   # -M
+json_output     = False   # -J
+meta_queue_entry = None
+#print_banner = True
+quiet_mode = False
 extra_datafiles = ''
 nwinputfile      = ''
 nwoutfile      = ''
@@ -261,7 +267,7 @@ queue_name = ''
 machine = ''
 nqueue = ''
 apassword = ''
-opts, args = getopt.getopt(sys.argv[1:], "a:b:d:x:y:e:f:m:n:p:q:g:w:z:r:lskh",['help','arrows_api=','heterofam_api='])
+opts, args = getopt.getopt(sys.argv[1:], "a:b:d:x:y:e:f:m:n:p:q:g:w:z:r:lskhQLM:J",['help','arrows_api=','heterofam_api='])
 for o, a in opts:
   if o=='-l':
      listqueues = True
@@ -351,6 +357,22 @@ for o, a in opts:
         listqueues = True
         outqueue   = False
 
+  if o == '-L':
+     listqueues = False
+     listqueues_json = True
+
+  if o == '-M':
+     listqueues = False
+     meta_only = True
+     meta_queue_entry = eval(a)
+
+  if o == '-J':
+     json_output = True
+
+  if o == '-Q':
+    #print_banner = False
+    quiet_mode = True
+
   if o=='-w':
      nwoutfile = a
      listqueues = False
@@ -365,9 +387,10 @@ for o, a in opts:
     print(usage)
     exit()
 
-print()
-print("#chemdb_queue_nwchem - version 2.0 - arrows_api url=",ARROWS_API_HOME)
-print()
+if not quiet_mode:
+   print()
+   print("#chemdb_queue_nwchem - version 2.0 - arrows_api url=",ARROWS_API_HOME)
+   print()
 
 if (listqueues):
    check = {}
@@ -408,6 +431,92 @@ if (listqueues):
 
 if (listqueues2):
    print("hello")
+
+if listqueues_json:
+   check = {}
+   projection = {}
+
+   if ismongo:
+      projection = {
+         'queue_number': 1,
+         'queue_name': 1,
+         'machine_type': 1,
+         'label': 1,
+         'fetched': 1,
+         'finished': 1,
+         'stopped': 1,
+         'start_time': 1,
+      }
+
+   queue = chemdb_queue_collection.find(check, projection)
+
+   results = []
+
+   for entry in queue:
+      results.append({
+         "queue_entry": entry.get("queue_number"),
+         "queue_name": entry.get("queue_name"),
+         "machine_type": entry.get("machine_type"),
+         "label": entry.get("label"),
+         "fetched": entry.get("fetched"),
+         "finished": entry.get("finished"),
+         "stopped": entry.get("stopped"),
+         "start_time": entry.get("start_time"),
+      })
+
+   if json_output:
+      print(json.dumps(results))
+   else:
+      for r in results:
+         print(r)
+
+   sys.exit(0)
+
+
+if meta_only:
+   entry = chemdb_queue_collection.find_one(
+      {'queue_number': meta_queue_entry}
+   )
+
+   if not entry:
+      print(json.dumps({"error": "queue_entry not found"}))
+      sys.exit(1)
+
+   label = entry.get("label", "")
+
+   # VERY IMPORTANT:
+   # reuse your existing label semantics
+   meta = {}
+
+   for token in label.split():
+      if ':' in token:
+         k, v = token.split(':', 1)
+         meta[k] = v
+
+   out = {
+      "queue_entry": entry.get("queue_number"),
+      "queue_name": entry.get("queue_name"),
+      "machine_type": entry.get("machine_type"),
+      "label": label,
+      "submit_machine": meta.get("submit_machine"),
+      "submit_dir": meta.get("submit_dir"),
+      "submit_ip": meta.get("submit_ip"),
+      "type": meta.get("type"),
+      "stored_file": meta.get("submit_file"),
+      "start_time": entry.get("start_time"),
+      "finished": entry.get("finished"),
+      "fetched": entry.get("fetched"),
+   }
+
+   if json_output:
+      print(json.dumps(out))
+   else:
+      for k, v in out.items():
+         print(f"{k}: {v}")
+
+   sys.exit(0)
+
+
 
 if (addqueue):
    entry = {}
@@ -590,6 +699,13 @@ if (runqueue):
       runentry = {'queue_number' : run_queue_number, 'arrows_password':arrows_password}
    entry    = chemdb_queue_collection.find_one(runentry)
    if entry is not None:
+
+      if json_output:
+         # JSON always wins. No rendering, no quiet mode.
+         print(json.dumps(entry, default=str))
+         sys.exit(0)
+
+
       if (entry['finished']=='no'):
          if (add_fetch):
             if ismongo:
@@ -606,7 +722,7 @@ if (runqueue):
             cname = "FEFF9"
 
          data1= ''
-         if (entry['print_header']):
+         if (entry['print_header'] and not quiet_mode):
             data1 =  ctag + "########################  START "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
             data1 += ctag + "\n"
             data1 += ctag + " queue_nwchem_JobId: %s" % entry['_id']
@@ -622,19 +738,31 @@ if (runqueue):
             #data1 +=  entry['restart_input_deck'] + "\n"
             data1 +=  entry['restart_input_deck'].strip().rstrip() 
 
-         if (entry['print_header']):
+         if (entry['print_header'] and not quiet_mode):
             data1 += ctag + "########################  END   "+cname+" INPUT DECK - NWJOB %d ########################\n" % entry['queue_number']
          print(data1)
       else:
-         print()
-         try:
-            print("# CHEMDB OUTPUT AVAILABLE!")
-            print("# nwoutfile       = ",entry['nwchem_output'] )
-            print("# extra_datafiles = ",entry['extra_datafiles'])
-         except:
-            print("#no output files available")
+         if quiet_mode:
+            # emit resolvable artifacts only
+            if 'nwchem_output' in entry:
+               print(entry['nwchem_output'])
+            if 'extra_datafiles' in entry:
+               for f in entry['extra_datafiles'].split():
+                  print(f)
+         else:
+            print()
+            try:
+               print("# CHEMDB OUTPUT AVAILABLE!")
+               print("# nwoutfile       = ",entry['nwchem_output'] )
+               print("# extra_datafiles = ",entry['extra_datafiles'])
+            except:
+               if not quiet_mode:
+                  print("#no output files available")
    else:
-      print("# CHEMDB ENTRY NOT AVAILABLE! queue_number=", run_queue_number)
+      if not quiet_mode:
+         print("# CHEMDB ENTRY NOT AVAILABLE! queue_number=", run_queue_number)
+
+
 
 if (outqueue):
    outentry = {'queue_number' : out_queue_number}
