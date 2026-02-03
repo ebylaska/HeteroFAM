@@ -289,6 +289,10 @@ ul, li {
     border-style: ridge;
 }
 
+#magmomField.copied {
+  background-color: #e6ffe6;
+}
+
 
 #overlay {
   position: fixed;
@@ -14696,10 +14700,12 @@ function generateGKAtau() {
                populateSpinAtoms(result.spins, magneticAtomInfo)
 
 
-               // --- Displaye VASP MAGMOM ---
+               // --- Display VASP MAGMOM ---
                const magmomLine = generateMAGMOM(atoms, result.spins, magneticAtomInfo);
                console.log("VASP:", magmomLine);
 	       document.getElementById("magmomField").value = magmomLine;
+
+
 
 
                // Display the energy
@@ -14715,6 +14721,7 @@ function generateGKAtau() {
             }
        }
 
+	/*
       function copyMAGMOM() {
            const field = document.getElementById("magmomField");
   
@@ -14738,6 +14745,66 @@ function generateGKAtau() {
                    console.error("Clipboard copy failed:", err);
                    alert("Copy failed — try selecting text manually.");
                });
+      }
+     */
+
+      function copyMAGMOM() {
+        const field = document.getElementById("magmomField");
+  
+        if (!field) {
+          console.error("MAGMOM field not found");
+          return;
+        }
+  
+        const text = field.value.trim();
+        if (!text) {
+          console.warn("MAGMOM field is empty");
+          return;
+        }
+  
+        navigator.clipboard.writeText(text)
+          .then(() => {
+            console.log("MAGMOM copied to clipboard");
+  
+            // optional visual feedback
+            field.classList.add("copied");
+            setTimeout(() => field.classList.remove("copied"), 800);
+          })
+          .catch(err => {
+            console.error("Clipboard copy failed:", err);
+            alert("Copy failed — try selecting text manually.");
+          });
+      }
+
+
+      function copyJij() {
+          const textarea = document.getElementById("pdata");
+          if (!textarea) {
+              console.error("pdata textarea not found");
+              return;
+          }
+  
+          const text = textarea.value;
+          if (!text) {
+              console.warn("pdata is empty");
+              return;
+          }
+  
+          // --- Extract Jij block ---
+          const match = text.match(/Jij Matrix:\n([\s\S]*?)\n\nDij Matrix:/);
+          if (!match) {
+              alert("Jij Matrix not found");
+              return;
+          }
+  
+          const jijText = match[1].trim();
+  
+          navigator.clipboard.writeText(jijText)
+              .then(() => console.log("Jij matrix copied"))
+              .catch(err => {
+                  console.error("Clipboard error:", err);
+                  alert("Copy failed — try selecting text manually.");
+              });
       }
 
 
@@ -15867,6 +15934,14 @@ function solveIsingExactMultiplicity(
             const method = document.getElementById("spinmethod").value;
             const controls = document.getElementById("isingControls");
             // Show controls only for Ising-type model
+	    // Show Ising controls only for methods that actually use them
+            if (method === "ising") {
+               controls.style.display = "block";
+            } else {
+               controls.style.display = "none";
+            }
+
+			 /*
             if ((method === "Ising Model using superexchange Rules") ||
                 (method === "Spin Energy"))
  	    {
@@ -15874,6 +15949,8 @@ function solveIsingExactMultiplicity(
             } else {
                 controls.style.display = "none";
             }
+       */
+
          }
 </script>
 
@@ -15895,19 +15972,26 @@ function solveIsingExactMultiplicity(
                   <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" 
 		         onClick="jms('delete $atomlist*;');"/>  
                   <div class="dropdown">
-                      <select id="spinmethod" oninput="updateSpinControls(); cacheInput(this)">
-                          <option value="GKA-&tau; Rules" selected="selected">GKA-&tau; Rules</option>
-                          <option value="Ising Model using superexchange Rules">Ising Model using superexchange Rules</option>
-                          <option value="AI Model">AI Model</option>
-                          <option value="Spin Energy">Spin Energy</option>
+                      <!--select id="spinmethod" oninput="updateSpinControls(); cacheInput(this)"-->
+                      <select id="spinmethod" oninput="updateSpinControls()">
+                           <option value="ising" selected>Ising Model using superexchange Rules</option>
+                           <option value="gka">GKA-τ Rules (in progress)</option>
+                           <option value="ai" disabled>AI Model (coming soon)</option>
                       </select>
+
+                      <!--select id="spinmethod" oninput="updateSpinControls(); cacheInput(this)">
+                          <option value="Ising Model using superexchange Rules" selected>Ising Model using superexchange Rules</option>
+                          <option value="GKA">GKA-&tau; Rules (in progress)</option>
+                          <option value="ai" disabled>AI Model (coming soon)</option>
+                      </select-->
+
                   </div>
                   <br><br>
 
 		  <button id="generateMagneticSpin" onClick="handleGenerateSpin();"> Generate Magnetic Spin Data </button>
 		  <label><input type="checkbox" id="noPerturb"> Resume exactly</label>
 
-		  <div id="isingControls" style="display:none;">
+		  <div id="isingControls" style="display:block;">
                      <label for="mult">multiplicity:</label> 
 		     <!--input type="number" id="nwchemmult2" list="multOptions" min="0" value="0">
                      <datalist id="multOptions"></datalist-->
@@ -15935,7 +16019,7 @@ function solveIsingExactMultiplicity(
                          Multiplicity: <span id="multiplicityValue">Not calculated yet</span>
                          Total Intrisic Spin: <span id="intrisicValue">Not calculated yet</span>
                      </div>
-		     <div style="margin-top:6px;">
+		     <!--div style="margin-top:6px;">
                           <label><b>MAGMOM:</b></label>
                           <input
                             id="magmomField"
@@ -15947,9 +16031,27 @@ function solveIsingExactMultiplicity(
 			  <span style="font-size:0.85em; color:#555; margin-left:6px;">
                              Paste directly into VASP INCAR
                           </span>
-                     </div>
+                     </div-->
 
                   </div>
+
+		  <div id="MAGMOMOuput" style="display:block;">
+		     <div style="margin-top:6px;">
+                          <label><b>MAGMOM:</b></label>
+                          <input
+                            id="magmomField"
+                            type="text"
+                            spellcheck="false"
+			    placeholder="MAGMOM values will appear here"
+                            style="width:100%; font-family:monospace; font-size:0.95em; white-space:nowrap;"
+                          />
+                          <button onclick="copyMAGMOM()">Copy MAGMOM</button>
+			  <span style="font-size:0.85em; color:#555; margin-left:6px;">
+			      Paste directly into VASP INCAR<br>
+			      MAGMOM values are in POSCAR atom order (μB)
+                          </span>
+                     </div>
+		  </div>
 
                   </tr>
                   <tr> 
@@ -16032,6 +16134,13 @@ function solveIsingExactMultiplicity(
 
                </table>
                </div>
+	       <div style="margin-top:6px;">
+                 <button onclick="copyJij()">Copy Jij</button>
+                 <span style="font-size:0.85em; color:#555; margin-left:6px;">
+                   Copies Jij matrix only (no metadata)
+                 </span>
+               </div>
+
 
                 <!-- reaction input -->
 
@@ -18611,24 +18720,6 @@ changenwchemfractional();
 changenwchemefieldtype();
 </script>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const select = document.getElementById("spinmethod");
-  if (!select) return;
-
-  function clean() {
-    const seen = new Set();
-    for (let i = select.options.length - 1; i >= 0; i--) {
-      const val = select.options[i].value.trim();
-      if (val === "Ising Model using GKA Rules" || seen.has(val)) select.remove(i);
-      else seen.add(val);
-    }
-  }
-
-  // Run once and every time something mutates the options list
-  clean();
-  new MutationObserver(clean).observe(select, { childList: true });
-});
 </script>
 
 <script>
@@ -18636,28 +18727,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const select = document.getElementById("spinmethod");
   if (!select) return;
 
-  // remove duplicates
+  const order = ["ising", "gka", "ai"];
   const seen = new Set();
-  for (let i = select.options.length - 1; i >= 0; i--) {
-    const val = select.options[i].value.trim();
-    if (seen.has(val) || val === "Ising Model using GKA Rules") select.remove(i);
-    else seen.add(val);
+  const opts = [];
+
+  // deduplicate
+  for (const opt of Array.from(select.options)) {
+    if (!seen.has(opt.value)) {
+      seen.add(opt.value);
+      opts.push(opt);
+    }
   }
 
-  // enforce your desired order
-  const order = [
-    "GKA-&tau; Rules",
-    "Ising Model using superexchange Rules",
-    "AI Model",
-    "Spin Energy"
-  ];
-  const opts = Array.from(select.options).sort(
-    (a, b) => order.indexOf(a.text) - order.indexOf(b.text)
+  // enforce order
+  opts.sort(
+    (a, b) => order.indexOf(a.value) - order.indexOf(b.value)
   );
+
   select.innerHTML = "";
   opts.forEach(o => select.add(o));
 });
 </script>
+
 
 
 <hr>
