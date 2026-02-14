@@ -385,6 +385,37 @@ ul, li {
       height: 80vh;
     }
 
+.spin-panel {
+  border: 1px solid #aaa;
+  padding: 8px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 700px;
+  background: #f9f9f9;
+}
+
+.spin-list {
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.spin-entry {
+  padding: 4px 6px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.spin-entry:hover {
+  background: #e6f0ff;
+}
+
+.spin-entry.active {
+  background: #cde1ff;
+}
+
+
 </style>
 
 
@@ -457,6 +488,71 @@ ul, li {
    // ------------------------------
    // Spin Cache Utilities
    // ------------------------------
+
+function saveSpinStateToCache(structureHash, spinData) {
+    try {
+        localStorage.setItem(
+            `spins_${structureHash}`,
+            JSON.stringify(spinData)
+        );
+        console.log(`Saved spin configuration for ${structureHash}`);
+    } catch (e) {
+        console.warn("Could not save spin configuration:", e);
+    }
+}
+
+function loadSpinStateFromCache(structureHash, representation = null) {
+    try {
+        const data = localStorage.getItem(`spins_${structureHash}`);
+        if (!data) return null;
+
+        const parsed = JSON.parse(data);
+
+        // Backward compatibility (old cache = raw ±1 array)
+        if (Array.isArray(parsed)) {
+            return representation === "vector"
+                ? parsed.map(s => [0, 0, s])   // promote to vector
+                : parsed;                     // already collinear
+        }
+
+        if (!representation) {
+            return parsed; // full object
+        }
+
+        if (representation === "collinear") {
+            if (Array.isArray(parsed.spins_z_sign)) {
+                return parsed.spins_z_sign;
+            }
+
+            if (Array.isArray(parsed.spins_vec)) {
+                // collapse vectors → ±1
+                return parsed.spins_vec.map(v => Math.sign(v[2]));
+            }
+        }
+
+        if (representation === "vector") {
+            if (Array.isArray(parsed.spins_vec)) {
+                return parsed.spins_vec;
+            }
+
+            if (Array.isArray(parsed.spins_z_sign)) {
+                // promote ±1 → z-axis vectors
+                return parsed.spins_z_sign.map(s => [0, 0, s]);
+            }
+        }
+
+        return null;
+
+    } catch (e) {
+        console.warn("Could not load spin configuration:", e);
+        return null;
+    }
+}
+
+
+
+
+						      /*
    function saveSpinStateToCache(structureHash, spins) {
        try {
            localStorage.setItem(`spins_${structureHash}`, JSON.stringify(spins));
@@ -475,6 +571,7 @@ ul, li {
            return [];
        }
    }
+						      */
 
    function clearSpinCache(structureHash) {
        try {
@@ -11116,6 +11213,7 @@ ul, li {
               }
            }
         }
+
         function supercell_atomlist_color_penalty(alist,ctype,pena,penb,penc,nion,n1,n2,n3) {
            var ii,kk,newatomlist1;
            //var atomlist1 = expand_atomlist(document.getElementById(alist).value).trim();
@@ -14140,6 +14238,7 @@ function computeMLMAnglesPBC(symbols, coords, adjacency, lattice, magneticElemen
            Y: 0.0, Zr: 0.5, Nb: 1.0, Mo: 1.5, Tc: 2.0, Ru: 1.5, Rh: 1.0, Pd: 0.0, Ag: 0.0, Cd: 0.0,
            Hf: 0.5, Ta: 1.0, W: 1.5, Re: 2.0, Os: 1.5, Ir: 1.0, Pt: 0.0, Au: 0.5, Hg: 0.0,
 
+
            // Lanthanides (assuming trivalent states as most common)
            La: 0.0, Ce: 1.0, Pr: 1.5, Nd: 2.0, Pm: 2.5, Sm: 2.5, Eu: 3.0, Gd: 3.5, Tb: 3.0,
            Dy: 2.5, Ho: 2.0, Er: 1.5, Tm: 1.0, Yb: 0.5, Lu: 0.0,
@@ -14147,6 +14246,23 @@ function computeMLMAnglesPBC(symbols, coords, adjacency, lattice, magneticElemen
            // Actinides (assuming trivalent states as most common)
            Th: 0.0, Pa: 0.5, U: 1.0, Np: 1.5, Pu: 2.0, Am: 2.5, Cm: 3.0, Bk: 3.5, Cf: 4.0,
            Es: 3.5, Fm: 3.0, Md: 2.5, No: 2.0, Lr: 0.5,
+
+	   // Explicit oxidation overrides
+           // ===== 3d SERIES =====
+           "Sc+3": 0.0, "Ti+2": 1.0,   "Ti+3": 0.5,  "Ti+4": 0.0,  "V+2": 1.5,  "V+3": 1.0,  "V+4": 0.5,  "V+5": 0.0,
+           "Cr+2": 2.0, "Cr+3": 1.5, "Cr+4": 1.0, "Cr+6": 0.0, "Mn+2": 2.5, "Mn+3": 2.0, "Mn+4": 1.5, "Mn+7": 0.0,
+           "Fe+2": 2.0, "Fe+3": 2.5, "Fe+4": 2.0, "Co+2": 1.5, "Co+3": 2.0, "Co+4": 1.5, "Ni+2": 1.0, "Ni+3": 1.5, "Ni+4": 1.0,
+           "Cu+1": 0.0, "Cu+2": 0.5, "Cu+3": 1.0, "Zn+2": 0.0,
+
+	   // 4d / 5d Series (Spin Usually Lower)
+           "Ru+3": 0.5, "Ru+4": 1.0, "Ru+5": 1.5, "Rh+3": 0.0, "Rh+4": 0.5, "Pd+2": 0.0, "Ir+3": 0.5, "Ir+4": 0.5, "Pt+2": 0.0, "Pt+4": 0.0,
+
+	   //Lanthanides (Trivalent Dominant)
+           "Ce+3": 0.5, "Pr+3": 1.0, "Nd+3": 1.5, "Sm+3": 2.5, "Eu+2": 3.5, "Eu+3": 3.0, "Gd+3": 3.5, "Tb+3": 3.0, 
+	   "Dy+3": 2.5, "Ho+3": 2.0, "Er+3": 1.5, "Tm+3": 1.0, "Yb+2": 0.5, "Yb+3": 0.5,
+
+           //Actinides (Geochemistry Relevant)
+	   "U+3": 1.5, "U+4": 1.0, "U+5": 0.5, "U+6": 0.0, "Np+4": 2.0, "Np+5": 1.5, "Pu+3": 2.5, "Pu+4": 2.0, "Pu+5": 1.5,
        };
 
        const BOND_THRESHOLD = 3.0; // Maximum bond distance for interaction in Å
@@ -14386,6 +14502,7 @@ function generateGKAtau() {
         /**
         * Generate spin penalty energy
         */
+/*	
        function generateSpin() {
            console.log("HELLOA");
            const temperature = parseFloat(document.getElementById("temperature").value);
@@ -14454,7 +14571,8 @@ function generateGKAtau() {
 	       }
 
 	       // --- Controlled random perturbation (keeps some memory of last state) ---
-	       const noPerturb = document.getElementById("noPerturb").checked;
+	       //const noPerturb = document.getElementById("noPerturb").checked;
+	       const noPerturb = false;
                if (!noPerturb) {
                   const perturbRate = Math.min(0.5, temperature / 1000);
                   initial_spins = initial_spins.map(spin => Math.random() < perturbRate ? -spin : spin);
@@ -14503,7 +14621,20 @@ function generateGKAtau() {
 		    }
 
 
+            recordSpinState({
+               energy,
+               multiplicity,
+               spins,
+               magmom,
+               upAtoms,
+               downAtoms,
+               source: "Ising-SA"
+            });
+
+
+
        }
+*/
 
 
         /**
@@ -14546,10 +14677,338 @@ function generateGKAtau() {
 
 
 
+     /**
+      * buildJijContextFromEditor
+      *
+      * Extract a magnetic interaction context from the structure currently
+      * loaded in the editor.
+      *
+      * Responsibilities:
+      *   - Parse the crystal structure (CIF / NWChem-style input).
+      *   - Identify magnetic atoms and their positions.
+      *   - Construct exchange interaction matrices (Jij, Dij) using
+      *     GKA-based superexchange rules.
+      *   - Generate a consistent magnetic-atom ordering and metadata
+      *     suitable for downstream solvers (Ising, Heisenberg, etc.).
+      *
+      * Returns:
+      *   {
+      *     atoms,              // full atom list with fractional coordinates
+      *     lattice,            // lattice vectors / cell parameters
+      *     magneticAtoms,      // magnetic atom subset
+      *     magneticAtomInfo,   // formatted magnetic atom metadata
+      *     Jij,                // symmetric exchange matrix
+      *     Dij                 // anisotropic / DMI matrix (if present)
+      *   }
+      *
+      * Notes:
+      *   - This function is deliberately solver-agnostic.
+      *   - It defines the *magnetic model*, not the magnetic state.
+      *   - Intended as the common front-end for Ising, Heisenberg,
+      *     and future magnetic Hamiltonians.
+      *
+      * Throws:
+      *   - Logs errors if structure parsing or Jij construction fails.
+      */
+     function buildJijContextFromEditor() {
+        const cifData = editor.getValue();
+        const parsedCIFData = parse_cif(cifData);
+    
+        const atomsRaw = parsedCIFData[0];
+        const lattice  = parsedCIFData[1];
+    
+        const atoms = atomsRaw.map(([element, fx, fy, fz]) => ({ element, fx, fy, fz }));
+    
+        const { Jij, Dij } = buildJijFromGKA(atoms, lattice);
+    
+        const magneticAtomInfo = formatMagneticAtoms(
+          atoms,
+          atoms.filter(a => MAGNETIC_ELEMENTS.includes(a.element))
+        );
+    
+        return {
+          atoms,
+          lattice,
+          Jij,
+          Dij,
+          magneticAtomInfo,
+          cifData
+        };
+       }
+
+
+       /**
+        * Build a magnetic exchange model (Jij/Dij) from the current CIF editor contents.
+        *
+        * This routine:
+        *  - Parses the crystal structure from the editor (CIF format)
+        *  - Identifies magnetic atoms
+        *  - Constructs exchange (Jij) and distance (Dij) matrices using the selected method
+        *  - Tags the resulting model with both an exchange model and a spin model
+        *
+        * The distinction is intentional:
+        *   exchangeModel → how exchange couplings were generated (GKA, GKA-tau, AI, …)
+        *   spinModel     → which Hamiltonian will be solved (Ising, Heisenberg)
+        *
+        * Supported methods:
+        *   "ising"       → GKA-derived Jij, Ising spins (default)
+        *   "heisenberg"  → GKA-derived Jij, vector (Heisenberg) spins
+        *   "gka"         → GKA-τ exchange with Heisenberg spins
+        *   "ai"          → AI-generated Jij with Ising spins
+        *
+        * Returns an immutable model object suitable for downstream solvers,
+        * visualization, caching, and UI display.
+        *
+        * @param {string} method - Spin/exchange construction mode
+        * @returns {Object} Magnetic exchange model
+        * @returns {string}   return.structureHash   - Base64 hash of structure (for caching)
+        * @returns {Array}    return.atoms           - Parsed atomic positions
+        * @returns {Array}    return.lattice         - Lattice vectors
+        * @returns {Array}    return.Jij             - Exchange matrix
+        * @returns {Array}    return.Dij             - Distance matrix
+        * @returns {Array}    return.magneticAtoms   - Magnetic atom subset
+        * @returns {string}   return.magneticAtomInfo- Human-readable atom info
+        * @returns {number}   return.N               - Number of magnetic sites
+        * @returns {string}   return.exchangeModel   - Exchange model identifier
+        * @returns {string}   return.spinModel       - Spin Hamiltonian type
+        */
+
+       function buildJijModel(method = "ising") {
+          const cifData = editor.getValue();
+          const parsedCIFData = parse_cif(cifData);
+    
+          const atomsRaw = parsedCIFData[0];
+          const lattice  = parsedCIFData[1];
+    
+          const atoms = atomsRaw.map(([element, fx, fy, fz]) => ({
+            element, fx, fy, fz
+          }));
+    
+          let Jij, Dij;
+          let exchangeModel = "GKA";
+          let spinModel = "Ising";
+    
+          switch (method) {
+            case "gka":
+              ({ Jij, Dij } = buildJijFromGKA_tau(atoms, lattice));
+              exchangeModel = "GKA-tau";
+              spinModel = "Heisenberg";
+              break;
+    
+            case "ai":
+              ({ Jij, Dij } = buildJijFromAI(atoms, lattice));
+              exchangeModel = "AI";
+              spinModel = "Ising";
+              break;
+    
+            case "heisenberg":
+              ({ Jij, Dij } = buildJijFromGKA(atoms, lattice));
+              exchangeModel = "GKA";
+              spinModel = "Heisenberg";
+              break;
+    
+            case "ising":
+            default:
+              ({ Jij, Dij } = buildJijFromGKA(atoms, lattice));
+              // exchangeModel = "GKA";   // already default
+              // spinModel = "Ising";     // already default
+              break;
+          }
+    
+          const magneticAtoms = atoms.filter(a =>
+            MAGNETIC_ELEMENTS.includes(a.element)
+          );
+    
+          const magneticAtomInfo = formatMagneticAtoms(atoms, magneticAtoms);
+          const structureHash = btoa(cifData.trim().slice(0, 200));
+	  const allowed = allowedMultiplicities(magneticAtoms, MAGNETIC_ION_SPINS);
+    
+          return {
+            // identity
+            structureHash,
+    
+            // geometry
+            atoms,
+            lattice,
+    
+            // magnetic model
+            Jij,
+            Dij,
+    
+            // metadata
+            magneticAtoms,
+            magneticAtomInfo,
+    
+            // bookkeeping
+            N: Jij.length,
+            exchangeModel,
+            spinModel,
+	    allowedMultiplicities: allowed
+          };
+       }
+
+       function displayJijModel(model, textareaId = "pdata") {
+          const textarea = document.getElementById(textareaId);
+          if (!textarea) {
+            console.warn(`displayJijModel: textarea '${textareaId}' not found`);
+            return;
+          }
+      
+          textarea.value =
+            "=== Magnetic Exchange Model ===\n" +
+            `Exchange Model         : ${model.exchangeModel ?? "unknown"}\n` +
+            `Spin Model             : ${model.spinModel ?? "unknown"}\n` +
+            `Magnetic Sites         : ${model.N ?? "?"}\n` +
+            `Allowed Multiplicities : ${model.allowedMultiplicities ?? "?"}\n` +
+            `Structure Hash : ${(model.structureHash ?? "n/a").trim()}\n` +
+            "\n" +
+            "Magnetic Atom Info:\n" +
+            model.magneticAtomInfo +
+            "\n\nJij Matrix:\n" +
+            formatJijMatrix(model.Jij) +
+            "\n\nDij Matrix:\n" +
+            formatJijMatrix(model.Dij);
+       }
+
+       /**
+        * Solve an Ising model using either:
+        *  - exact enumeration (when targetMultiplicity set and N is small), or
+        *  - simulated annealing (fallback / AUTO / large N).
+        *
+        * Returns the same result object shape as your existing solvers:
+        * { spins, energy, multiplicity, Sz, S_target, ... }
+        */
+       function solveIsingModel(model, options = {}) {
+          const {
+            temperature = 100,
+            coolingRate = 0.98,
+            maxIterations = 1000,
+            targetMultiplicity = null
+          } = options;
+    
+          const jijMatrix = model.Jij;              // <-- matches your model dump (Jij not JijMatrix)
+          const magneticAtomInfo = model.magneticAtomInfo;
+          const N = model.N ?? (jijMatrix ? jijMatrix.length : 0);
+    
+          if (!jijMatrix || !Array.isArray(jijMatrix) || !jijMatrix.length) {
+            throw new Error("solveIsingModel: model.Jij is missing/empty");
+          }
+    
+          // ---- initial spins: cache -> init -> optional perturb
+          let initial_spins = loadSpinStateFromCache(model.structureHash, "collinear");
+          if (!initial_spins || initial_spins.length !== N) {
+            initial_spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? -1 : 1));
+          }
+    
+          const noPerturb = document.getElementById("noPerturb")?.checked ?? false;
+          if (!noPerturb) {
+            const perturbRate = Math.min(0.5, temperature / 1000);
+            initial_spins = initial_spins.map(s => (Math.random() < perturbRate ? -s : s));
+          }
+    
+          // ---- validate multiplicity (optional, but recommended)
+          let targetMult = Number.isFinite(targetMultiplicity) ? targetMultiplicity : null;
+          if (targetMult === 0) targetMult = null; // treat 0 as AUTO, matches your UI
+    
+          // If you already computed allowed multiplicities in buildJijModel, prefer that:
+          if (targetMult != null && Array.isArray(model.allowedMultiplicities)) {
+            if (!model.allowedMultiplicities.includes(targetMult)) {
+              console.warn(
+                `Requested multiplicity ${targetMult} is impossible. ` +
+                `Allowed values: ${model.allowedMultiplicities.join(", ")}. Switching to AUTO.`
+              );
+              targetMult = null;
+            }
+          }
+    
+          // ---- choose solver
+          let result;
+          if (targetMult != null && N < 17) {
+            result = solveIsingExactMultiplicity(
+              jijMatrix,
+              magneticAtomInfo,
+              MAGNETIC_ION_SPINS,
+              targetMult,
+              initial_spins
+            );
+          } else {
+            result = solveSpinStates(
+              jijMatrix,
+              magneticAtomInfo,
+              MAGNETIC_ION_SPINS,
+              targetMult,
+              initial_spins,
+              temperature,
+              coolingRate,
+              maxIterations
+            );
+          }
+    
+    
+          return result;
+       }
+
+
+	/*
+       function solveIsingModel(model, options) {
+          const {Jij, magneticAtomInfo, N} = model;
+	  const {targetMultiplicity = null, initialSpins, temperature = 100, coolingRate = 0.98, maxIterations = 1000 } = options;
+
+          let result;
+
+          // ------------------------------------
+          // --- Solve the spin configuration ---
+          // ------------------------------------
+
+          // --- Exact solver ONLY when multiplicity is specified and system is small
+          if (targetMultiplicity != null && N < 17) {
+             result = solveIsingExactMultiplicity( Jij, magneticAtomInfo, MAGNETIC_ION_SPINS, targetMultiplicity, initialSpins);
+          } 
+
+          // --- AUTO mode OR large-N fallback (simulated annealing)
+	  else 
+	  {
+             result = solveSpinStates( Jij, magneticAtomInfo, MAGNETIC_ION_SPINS, targetMultiplicity, initialSpins, temperature, coolingRate, maxIterations);
+          }
+
+          return result;
+       }
+	*/
+
+
+       function solveHeisenbergModel(model, options = {}) {
+          const { temperature = 100, coolingRate = 0.98, maxIterations = 1000, targetMultiplicity = null } = options;
+    
+          // Optional: seed from cached Ising / previous solution
+          // If present, allow +/-1 spins to seed ±z directions
+          const initial_dirs = model.initial_spins ?? null;
+    
+          const result = solveHeisenbergStates(model.Jij,
+                                               model.magneticAtomInfo,
+                                               MAGNETIC_ION_SPINS,
+                                               targetMultiplicity,
+                                               initial_dirs,
+                                               temperature,
+                                               coolingRate,
+                                               maxIterations);
+    
+          // Optional but VERY useful:
+          // Project vector spins onto collinear z for reuse by existing pipelines
+          const spins_collinear = result.spins.map(n => (n[2] >= 0 ? 1 : -1));
+    
+          return {
+            ...result,
+            spins_collinear,      // ±1 projection (for MAGMOM, Ising, etc.)
+            source: "Heisenberg-SA"
+          };
+       }
+
+
+
        /**
         * Generate Jij Matrix based on GKA rules
         */
-
+/*
        function generateJijMatrix() {
            console.log("HELLOA");
            const temperature = parseFloat(document.getElementById("temperature").value);
@@ -14581,8 +15040,6 @@ function generateGKAtau() {
                  atoms.filter(a => MAGNETIC_ELEMENTS.includes(a.element))
                );
 
-
-			   
                console.log("HELLOD, JijMatrix=", jijMatrix);
                console.log("HELLOD, Magnetic Atom Info:\n", magneticAtomInfo);
           
@@ -14614,7 +15071,8 @@ function generateGKAtau() {
 	       // --- Initialize if cache missing or wrong size ---
                if (!initial_spins  || initial_spins.length !== N)
 	       {
-                  initial_spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
+                  //initial_spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? 1 : -1));
+                  initial_spins = Array.from({ length: N }, () => (Math.random() < 0.5 ? -1 : 1));
 	       }
 
 	       // --- Controlled random perturbation (keeps some memory of last state) ---
@@ -14649,17 +15107,6 @@ function generateGKAtau() {
 
 	       // Update UI text
                document.getElementById("allowedMultiplicity").textContent = "Allowed multiplicities: " + allowed.join(", ");
-
-	       /*
-               const dl = document.getElementById("multOptions");
-               if (dl) {
-                   dl.innerHTML = "<option value='0'>AUTO</option>";
-                   allowed.forEach(m => {
-                       dl.innerHTML += `<option value="${m}">`;
-                   });
-               }
-	       */
-
 
                console.log("A targetMult=", targetMult);
 
@@ -14714,12 +15161,42 @@ function generateGKAtau() {
                const intrisicValueElement = document.getElementById("intrisicValue");
                energyValueElement.textContent = result.energy.toFixed(4); // Update energy display
                multiplicityValueElement.textContent = result.multiplicity; // Update multiplicity display
-               intrisicValueElement.textContent = result.totalIntrinsicSpin;
+               //intrisicValueElement.textContent = result.totalIntrinsicSpin;
+               intrisicValueElement.textContent = result.Sz;
 
             } catch (error) {
                 console.error("Error generating Jij Matrix:", error);
             }
+
+            // Build MAGMOM array (numeric, per magnetic atom)
+            const magmom = result.spins.map(s => s * 2.5);
+
+            // Derive atom lists
+            const upAtoms = [];
+            const downAtoms = [];
+
+            result.spins.forEach((s, i) => {
+              if (s > 0) upAtoms.push(i + 1);    // +1 if POSCAR-style indexing
+              else downAtoms.push(i + 1);
+            });
+
+
+            recordSpinState({
+              spins: result.spins,
+              energy: result.energy,
+              multiplicity: result.multiplicity,
+              Sz: result.Sz,
+              spectrum: result.spectrum,
+              magmom: magmom,
+              upAtoms: upAtoms,
+              downAtoms: downAtoms,
+              source: "Exact-Ising"
+            });
+
        }
+*/
+
+
 
 	/*
       function copyMAGMOM() {
@@ -15228,6 +15705,275 @@ function buildJijFromGKA(atoms, lattice) {
 
 
 /**
+ * Simulated annealing solver for classical Heisenberg spins with intrinsic magnitudes.
+ * Optional total-|Sz| constraint (multiplicity) via a soft penalty, same semantics as Ising solver.
+ *
+ * JijMatrix: NxN symmetric matrix (J_ij). Diagonal ignored.
+ * magneticAtomInfo lines like:
+ *   "Index: 1, Element: Fe, Coordinates: (x, y, z)"
+ * ionSpins: map {Fe: 2.5, Co: 1.5, ...} giving intrinsic spin magnitude S_i.
+ *
+ * Returns: { spins, energy, multiplicity, Sz, S_target, feasible, infeasibilityReason }
+ *
+ * spins: Array(N) of unit vectors [nx, ny, nz] (direction only).
+ * Physical spin vectors are S_i * spins[i].
+ */
+function solveHeisenbergStates(
+  JijMatrix,
+  magneticAtomInfo,
+  ionSpins,
+  multiplicity = null,        // target S = (M-1)/2 on |Sz|
+  initial_dirs = null,        // optional Array(N) of [nx,ny,nz] OR Array(N) of +/-1 (Ising) to seed
+  temperature = 100,
+  coolingRate = 0.98,
+  maxIterations = 1000,
+  penaltyWeight = 100.0,
+  stepScale = 0.30            // ~0.1..0.5 : size of random rotation proposals
+) {
+  const N = JijMatrix.length;
+
+  // ---- Parse magneticAtomInfo -> [{index, element, S}]
+  const magneticAtoms = magneticAtomInfo
+    .split("\n")
+    .map(line => {
+      const m = line.match(/Index:\s*(\d+),\s*Element:\s*([A-Za-z]+)/);
+      if (!m) return null;
+      const idx = parseInt(m[1], 10);
+      const elem = m[2];
+      const S = ionSpins?.[elem] ?? 0;
+      return { index: idx, element: elem, S };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.index - b.index);
+
+  if (magneticAtoms.length !== N) {
+    throw new Error(`Size mismatch: Jij is ${N} but parsed ${magneticAtoms.length} magnetic atoms.`);
+  }
+
+  const Svals = magneticAtoms.map(a => a.S);
+  const Smax = Svals.reduce((s, x) => s + Math.abs(x), 0);
+
+  // Target total S from multiplicity (same as your Ising semantics)
+  const Starget = (multiplicity != null && multiplicity > 0) ? (multiplicity - 1) / 2 : null;
+
+
+  // ---- Vector helpers
+  const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+  const norm = v => Math.sqrt(dot(v, v));
+  const scale = (v, s) => [v[0]*s, v[1]*s, v[2]*s];
+  const add = (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]];
+  const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+  const normalize = v => {
+    const n = norm(v);
+    if (n < 1e-15) return [0, 0, 1];
+    return [v[0]/n, v[1]/n, v[2]/n];
+  };
+  const sumVectors = vectors =>
+    vectors.reduce((acc, v) => [acc[0] + v[0], acc[1] + v[1], acc[2] + v[2]], [0, 0, 0]);
+  
+
+  // Uniform random unit vector on S^2
+  function randomUnit() {
+    // Marsaglia method
+    let x1, x2, s;
+    do {
+      x1 = 2*Math.random() - 1;
+      x2 = 2*Math.random() - 1;
+      s = x1*x1 + x2*x2;
+    } while (s >= 1 || s === 0);
+    const z = 1 - 2*s;
+    const t = 2*Math.sqrt(1 - s);
+    const x = x1 * t;
+    const y = x2 * t;
+    return [x, y, z];
+  }
+
+  // Small random "tilt" proposal: n' = normalize(n + stepScale * r)
+  function proposeTilt(n) {
+    const r = randomUnit();
+    return normalize(add(n, scale(r, stepScale)));
+  }
+
+  // ---- Initialize directions (unit vectors)
+  let curDirs;
+  if (!initial_dirs) {
+    curDirs = Array.from({ length: N }, () => randomUnit());
+  } else {
+    // Allow seeding from Ising (+/-1): map +1 -> +z, -1 -> -z
+    if (typeof initial_dirs[0] === "number") {
+      curDirs = initial_dirs.map(s => (s >= 0 ? [0,0,1] : [0,0,-1]));
+    } else {
+      curDirs = initial_dirs.map(v => normalize(v));
+    }
+    if (curDirs.length !== N) throw new Error(`initial_dirs length ${curDirs.length} != N=${N}`);
+  }
+
+  // ---- Observables
+  const Sz = dirs => dirs.reduce((sum, n, i) => sum + Svals[i] * n[2], 0);
+
+  function energy(dirs) {
+    // E = -sum_{i<j} J_ij (S_i n_i)·(S_j n_j)
+    let e = 0;
+    for (let i = 0; i < N; i++) {
+      const Si = Svals[i];
+      const ni = dirs[i];
+      for (let j = i + 1; j < N; j++) {
+        const Sj = Svals[j];
+        const nj = dirs[j];
+        e += -JijMatrix[i][j] * (Si * Sj) * dot(ni, nj);
+      }
+    }
+    return e;
+  }
+
+  function spinPenalty(dirs) {
+     if (Starget == null) return 0;
+     const diff = Math.abs(Sz(dirs)) - Starget;
+     return diff * diff;
+  }
+ 
+  function localDeltaE(i, oldDir, newDir, dirs) {
+     // ΔE from changing n_i: sum over j != i
+     // E = -sum_{i<j} J_ij (S_i S_j) (n_i·n_j)
+     const Si = Svals[i];
+     const dni = sub(newDir, oldDir);
+    
+     let dE = 0;
+     for (let j = 0; j < N; j++) {
+       if (j === i) continue;
+       const Sj = Svals[j];
+       dE += -JijMatrix[i][j] * (Si * Sj) * dot(dni, dirs[j]);
+     }
+     // Because your E uses i<j, but we summed all j != i,
+     // JijMatrix is symmetric, this formula matches the full-energy difference.
+     return dE;
+  }
+
+
+  const effEnergy = dirs => energy(dirs) + penaltyWeight * spinPenalty(dirs);
+
+  // Initial energies
+  let curE = energy(curDirs);
+  let curEff = curE + penaltyWeight * spinPenalty(curDirs);
+
+  let best = {
+    dirs: curDirs.map(v => v.slice()),
+    E: curE,
+    Eff: curEff,
+    feasible: Starget == null ? true : Math.abs(Math.abs(Sz(curDirs)) - Starget) < 1e-6
+  };
+
+  // ---- Simulated annealing
+  let T = temperature;
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    const sweeps = Math.max(5, Math.floor(N / 2));
+
+    for (let s = 0; s < sweeps * N; s++) {
+      const i = Math.floor(Math.random() * N);
+
+      // Propose local tilt on site i
+      const old = curDirs[i];
+      const proposed = proposeTilt(old);
+
+      curDirs[i] = proposed;
+
+      const newE = energy(curDirs);
+      const newEff = newE + penaltyWeight * spinPenalty(curDirs);
+
+      //curDirs[i] = proposed;
+
+      //const dE = localDeltaE(i, old, proposed, curDirs);
+      //const newE = curE + dE;
+      //const newEff = newE + penaltyWeight * spinPenalty(curDirs);
+
+
+      const accept =
+        (newEff < curEff) ||
+        (Math.random() < Math.exp((curEff - newEff) / Math.max(T, 1e-12)));
+
+      if (accept) {
+        curE = newE;
+        curEff = newEff;
+      } else {
+        curDirs[i] = old; // revert
+      }
+
+      // Update best from current accepted state
+      const feasibleNow =
+        Starget == null ? true : Math.abs(Math.abs(Sz(curDirs)) - Starget) < 1e-6;
+
+      if (
+        (feasibleNow && (!best.feasible || curE < best.E)) ||
+        (!best.feasible && curEff < best.Eff)
+      ) {
+        best = {
+          dirs: curDirs.map(v => v.slice()),
+          E: curE,
+          Eff: curEff,
+          feasible: feasibleNow
+        };
+      }
+    }
+
+    T *= coolingRate;
+    if (T < 1e-8) break;
+  }
+
+  const spins_vec = best.dirs.map(v => [...v]);
+
+  //const StotVec = sumVectors(spins_vec);
+  //const StotMag = norm(StotVec);
+  //const finalSz  = StotVec[2];
+
+  //const multiplicityOut = Math.round(2 * StotMag + 1);
+  const finalSz = Sz(best.dirs);
+  const multiplicityOut = Math.round(2 * Math.abs(finalSz) + 1);
+
+  let feasible = best.feasible;
+  let infeasibilityReason = null;
+  if (Starget != null && Starget > Smax + 1e-9) {
+    feasible = false;
+    infeasibilityReason = `Target S=${Starget} exceeds S_max=${Smax}.`;
+  }
+
+  // --- NorthSpin canonical spin outputs ---
+  //const spins_vec = best.dirs;
+  // z-projection derived from canonical vectors
+  const spins_z_sign = spins_vec.map(n => (n[2] > 0 ? 1 : -1));
+
+  return {
+    // Identity
+    model: "heisenberg",
+    representation: "vector",
+    source: "Heisenberg-SA",
+
+    // Canonical outputs
+    spins_vec,
+    spins_z_sign,
+
+    // Backward compatibility (optional, remove later)
+    spins: best.dirs,          // unit vectors
+
+    magneticAtomInfo: magneticAtomInfo,  // <-- ADD THIS
+
+    // Physics
+    energy: best.E,
+    multiplicity: multiplicityOut,
+    Sz: finalSz,
+    S_target: Starget,
+
+    // Solver diagnostics
+    feasible,
+    infeasibilityReason,
+  };
+}
+
+
+
+
+
+/**
  * Simulated annealing solver for Ising-like spins with intrinsic spin magnitudes.
  * Enforces an optional total-spin (multiplicity) constraint via a soft penalty.
  *
@@ -15378,15 +16124,39 @@ function solveSpinStates(
     infeasibilityReason = `Target S=${Starget} exceeds S_max=${Smax}.`;
   }
 
+  // --- NorthSpin canonical spin outputs ---
+  const spins_z_sign = best.spins.slice();                 // ±1
+  const spins_vec = spins_z_sign.map(s => [0, 0, s]);      // collinear unit vectors
+
+
   return {
+    // Identity
+    model: "ising",
+    representation: "collinear",
+    source: "Ising-SA",
+
+    // Canonical spin data
+    spins_vec,
+    spins_z_sign,
+
+    // Backward compatibility (optional, remove later)
     spins: best.spins,
+
+    magneticAtomInfo: magneticAtomInfo,  // <-- ADD THIS
+
+    // Physics
     energy: best.E,
     multiplicity: multiplicityOut,
     Sz: finalSz,
     S_target: Starget,
+		  
+    // Solver diagnostics
     feasible,
-    infeasibilityReason
+    infeasibilityReason,
   };
+
+
+
 }
 
 
@@ -15456,16 +16226,16 @@ function solveIsingExactMultiplicity(
   let groundStates = [];
   const energies = [];
 
-  console.log("totalStates=",totalStates);
   for (let state = 0; state < totalStates; state++) {
     const spins = new Array(N);
     for (let i = 0; i < N; i++) {
-      spins[i] = (state & (1 << i)) ? 1 : -1;
+      //spins[i] = (state & (1 << i)) ? 1 : -1;
+      spins[i] = (state & (1 << i)) ? -1 : 1;
     }
 
     const Szval = Sz(spins);
     const mult = 2 * Math.abs(Szval) + 1;
-    console.log("state=",state, " spins=",spins," Szval=",Szval, " mult=",mult," multiplicity=",multiplicity);
+    //console.log("state=",state, " spins=",spins," Szval=",Szval, " mult=",mult," multiplicity=",multiplicity);
     if (Math.abs(mult - multiplicity) > 1e-6) continue;
 
     console.log("HERE!");
@@ -15488,21 +16258,25 @@ function solveIsingExactMultiplicity(
   const degeneracy = groundStates.length;
   const spectrum = Array.from(new Set(energies)).sort((a, b) => a - b);
 
-  //return {
-  //  N,
-  //  multiplicity,
-  //  S_target: Starget,
-  //  bestEnergy,
-  //  degeneracy,
-  //  bestSpins,
-  //  groundStates,
-  //  spectrum,
-  //  energyRange: [spectrum[0], spectrum[spectrum.length - 1]],
-  //  Sz: bestSpins ? Sz(bestSpins) : null,
-  //};
+  const spins_z_sign = bestSpins.slice();
+  const spins_vec = spins_z_sign.map(s => [0, 0, s]);
 
   return {
+    // Identity
+    model: "ising",
+    representation: "collinear",
+    source: "Ising-Exact",
+
+    // Canonical NorthSpin output
+    spins_vec,
+    spins_z_sign,
+
+    // Backward compatibility (optional)
     spins: bestSpins,
+
+    magneticAtomInfo: magneticAtomInfo,  // <-- ADD THIS
+										   
+    //Physics 
     energy: bestEnergy,
     multiplicity: 2 * Math.abs(bestSzval) + 1,
     Sz: bestSzval,
@@ -15511,6 +16285,265 @@ function solveIsingExactMultiplicity(
     bestEffectiveEnergy: bestEnergy,
   };
 }
+
+
+
+	/**
+         * Populate the Vector Spin text box (#sdata) with unit spin vectors.
+         *
+         * Format:
+         *   atomIndex  nx  ny  nz
+         *
+         * Accepts:
+         *   spins_vec : Array<[nx,ny,nz]>
+         *   magneticAtomInfo : formatted magnetic atom string
+         */
+        function populateVectorSpinBox(spins_vec, magneticAtomInfo) {
+
+            if (!Array.isArray(spins_vec) || !Array.isArray(spins_vec[0])) {
+                console.warn("populateVectorSpinBox: spins_vec invalid");
+                return;
+            }
+ 
+            const textarea = document.getElementById("sdata");
+            if (!textarea) {
+                console.warn("sdata textarea not found");
+                return;
+            }
+ 
+            // Parse magnetic atom indices
+            const magneticAtoms = magneticAtomInfo
+                .split("\n")
+                .map(line => {
+                    const match = line.match(/Index:\s*(\d+)/);
+                    return match ? parseInt(match[1], 10) : null;
+                })
+                .filter(Boolean);
+ 
+            if (magneticAtoms.length !== spins_vec.length) {
+                console.error("Vector spin length mismatch");
+                return;
+            }
+ 
+            let lines = [];
+ 
+            for (let i = 0; i < spins_vec.length; i++) {
+ 
+                const atomIndex = magneticAtoms[i];
+                const [nx, ny, nz] = spins_vec[i];
+ 
+                lines.push(
+                    `${atomIndex}   ${nx.toFixed(6)}   ${ny.toFixed(6)}   ${nz.toFixed(6)}`
+                );
+            }
+ 
+            textarea.value = lines.join("\n");
+
+	    makeMagneticAtomsTranslucent(magneticAtomInfo);
+            visualizeSpinsFromTextarea();
+
+        }
+
+
+/*
+function visualizeSpinsFromTextarea() {
+
+  const textarea = document.getElementById("sdata");
+  if (!textarea) return;
+
+  const lines = textarea.value
+    .trim()
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  for (let line of lines) {
+
+    const tokens = line.split(/[ ,]+/);
+
+    const atomIndex = parseInt(tokens[0], 10);
+    if (!Number.isFinite(atomIndex)) continue;
+
+    let r, g, b;
+
+    // --- Heisenberg case (index nx ny nz)
+    if (tokens.length >= 4) {
+
+      const nx = parseFloat(tokens[1]);
+      const ny = parseFloat(tokens[2]);
+      const nz = parseFloat(tokens[3]);
+      const norm = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      const ux = nx / norm;
+      const uy = ny / norm;
+      const uz = nz / norm;
+
+      if (!Number.isFinite(ux) ||
+          !Number.isFinite(uy) ||
+          !Number.isFinite(uz)) continue;
+
+      r = Math.round(255 * (ux + 1) / 2);
+      g = Math.round(255 * (uy + 1) / 2);
+      b = Math.round(255 * (uz + 1) / 2);
+
+    }
+    // --- Ising case (index spin)
+    else if (tokens.length >= 2) {
+
+      const spin = parseFloat(tokens[1]);
+
+      if (!Number.isFinite(spin)) continue;
+
+      if (spin > 0) {
+        r = 0; g = 255; b = 0;
+      } else {
+        r = 255; g = 255; b = 0;
+      }
+    }
+    else {
+      continue;
+    }
+
+    // Clamp for safety
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+
+    jms0(`select atomno=${atomIndex}; color [${r},${g},${b}] translucent 0.4;`);
+  }
+}
+	*/
+
+
+function visualizeSpinsFromTextarea() {
+
+  const textarea = document.getElementById("sdata");
+  if (!textarea) return;
+
+  // Remove previous arrows
+  jms0("draw delete spinArrow*;");
+
+  const lines = textarea.value
+    .trim()
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+
+  const scale = 1.0;      // arrow length
+  const offset = 0.35;     // push arrow outside atom sphere
+  const width = 0.18;      // arrow thickness
+
+  const atomInfo = Jmol.getPropertyAsArray(jmolApplet0, "atomInfo");
+
+  for (let line of lines) {
+
+    const tokens = line.split(/[ ,]+/);
+    const atomIndex = parseInt(tokens[0], 10);
+    if (!Number.isFinite(atomIndex)) continue;
+
+    let nx = 0, ny = 0, nz = 0;
+    let r = 0, g = 0, b = 0;
+
+    // ------------------------
+    // Heisenberg (vector)
+    // ------------------------
+    if (tokens.length >= 4) {
+
+      nx = parseFloat(tokens[1]);
+      ny = parseFloat(tokens[2]);
+      nz = parseFloat(tokens[3]);
+
+      const norm = Math.sqrt(nx*nx + ny*ny + nz*nz);
+      if (norm < 1e-12) continue;
+
+      nx /= norm;
+      ny /= norm;
+      nz /= norm;
+
+      r = Math.round(255 * (nx + 1) / 2);
+      g = Math.round(255 * (ny + 1) / 2);
+      b = Math.round(255 * (nz + 1) / 2);
+    }
+
+    // ------------------------
+    // Ising
+    // ------------------------
+    else if (tokens.length >= 2) {
+
+      const spin = parseFloat(tokens[1]);
+      if (!Number.isFinite(spin)) continue;
+
+      nx = 0;
+      ny = 0;
+      nz = spin > 0 ? 1 : -1;
+
+      if (spin > 0) {
+        r = 0; g = 255; b = 0;
+      } else {
+        r = 255; g = 255; b = 0;
+      }
+    }
+    else {
+      continue;
+    }
+
+    // Clamp colors
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+
+    // Get atom object
+    const atom = atomInfo.find(a => a.atomno === atomIndex);
+    if (!atom) continue;
+
+    const x = atom.x;
+    const y = atom.y;
+    const z = atom.z;
+
+    // Offset arrow start outside sphere
+    const x1 = x + offset * nx;
+    const y1 = y + offset * ny;
+    const z1 = z + offset * nz;
+
+    const x2 = x1 + scale * nx;
+    const y2 = y1 + scale * ny;
+    const z2 = z1 + scale * nz;
+
+    // Draw arrow
+    jms0(
+      `draw ID spinArrow${atomIndex} arrow ` +
+      `{${x1} ${y1} ${z1}} ` +
+      `{${x2} ${y2} ${z2}} ` +
+      `width ${width} color [${r},${g},${b}];`
+    );
+/*
+    jms0(
+      `draw ID spinCone${atomIndex} cone ` +
+      `{${x1} ${y1} ${z1}} ` +
+      `{${x2} ${y2} ${z2}} ` +
+      `width ${width} color [${r},${g},${b}];`
+    );
+		  */
+  }
+}
+
+
+function makeMagneticAtomsTranslucent(magneticAtomInfo) {
+
+  const magneticAtoms = magneticAtomInfo
+    .split("\n")
+    .map(line => {
+      const match = line.match(/Index:\s*(\d+)/);
+      return match ? parseInt(match[1], 10) : null;
+    })
+    .filter(Boolean);
+
+  if (!magneticAtoms.length) return;
+
+  const atomList = magneticAtoms.join(",");
+
+  jms0(`select atomno=${atomList}; color translucent 0.5;`);
+}
+
 
 
 
@@ -15615,8 +16648,11 @@ function solveIsingExactMultiplicity(
                  const spin = spinConfiguration[i];
                  const S = MAGNETIC_ION_SPINS[atom.element] ?? 0.0;
   
+                 const mu = 2.0 * S;  // <-- Correct physics
+
                  // atom.index is 1-based → POSCAR is 0-based
-                 magmom[atom.index - 1] = spin * S;
+                 //magmom[atom.index - 1] = spin * S;
+                 magmom[atom.index - 1] = spin * mu;
              });
   
              return "MAGMOM = " + magmom.map(m => m.toFixed(2)).join(" ");
@@ -15909,49 +16945,568 @@ function solveIsingExactMultiplicity(
          }
 
  
+	/*
   	 function handleGenerateSpin() {
+            // Reset state browser unless resuming
+            if (!document.getElementById("noPerturb").checked) {
+              topSpinStates.length = 0;
+              currentSpinIndex = 0;
+              updateSpinStateViewer();
+            }
+
   	    ensureEditorIsCrystalGeometry();
             const method = document.getElementById("spinmethod").value;
-            if (method === "GKA-&tau; Rules") {
-               generateGKAtau();
-            }
-            else if (method === "AI Model") {
-               generateAI();
+	    const model  = buildJijModel(method);
+            displayJijModel(model);
+            console.log("Model=",model); 
+
+
+            //if (method === "gka") {
+               //generateGKAtau();
+            //}
+	    if (method === "heisenberg") {
+	    
+			    console.log("HERA");
 	    }
-            else if (method === "Spin Energy") {
-	       generateSpin();
-            } else {
-                generateJijMatrix();
+            else if (method === "ai") {
+               generateAI();
+            } 
+	    else {
+               generateJijMatrix();
             }
+
          }
+	*/
+
+
+	 function handleGenerateSpin() {
+            // Reset state browser unless resuming
+            if (!document.getElementById("noPerturb").checked) {
+              topSpinStates.length = 0;
+              currentSpinIndex = 0;
+              updateSpinStateViewer();
+            }
+
+            ensureEditorIsCrystalGeometry();
+            const method = document.getElementById("spinmethod").value;
+            const model  = buildJijModel(method);
+            displayJijModel(model);
+            console.log("Model=",model);
+
+	    // Update UI text
+	    document.getElementById("allowedMultiplicity").textContent = "Allowed multiplicities: " 
+				                                       + model.allowedMultiplicities.join(", ");
+
+            let multRaw = document.getElementById("nwchemmult2").value;
+            let multParsed = parseInt(multRaw, 10);
+
+            if (isNaN(multParsed) || multParsed < 1) {
+                multParsed = 0;  // safe fallback
+            }
+
+	    // Collect solver options in ONE place
+            const options = { temperature: parseFloat(document.getElementById("temperature").value),
+                              coolingRate: parseFloat(document.getElementById("coolingRate").value),
+                              maxIterations: parseInt(document.getElementById("maxIterations").value, 10),
+                              targetMultiplicity: multParsed };
+                              //targetMultiplicity: parseInt(document.getElementById("nwchemmult2").value, 10) || null };
+
+            let result;
+
+            switch (method) {
+               case "heisenberg":
+                 result = solveHeisenbergModel(model, options);
+	         console.log("solveHeisenbergModel result=",result);
+                 break;
+           
+               case "ai":
+                 result = generateAI(model);
+                 break;
+           
+               default: // gka / ising
+	         result = solveIsingModel(model, options)
+	         console.log("solveIsingModel result=",result);
+                 break;
+            }
+
+            if (!result) {
+              console.warn("No result returned from solver");
+              return;
+            }
+	    console.log("solver RESULT=",result);
+
+            // --- Auto-update multiplicity input ---
+            const multInput = document.getElementById("nwchemmult2");
+				/*
+            if (multInput && result.multiplicity != null) {
+              multInput.value = result.multiplicity;
+              multInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+				*/
+            if ( multInput && typeof result.multiplicity === "number" && !isNaN(result.multiplicity) && result.multiplicity > 0) {
+              multInput.value = result.multiplicity;
+              multInput.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+
+            // Cache results
+            //saveSpinStateToCache(model.structureHash, result.spins_z_sign);
+	    saveSpinStateToCache(model.structureHash, { representation: result.representation, spins_z_sign: result.spins_z_sign, spins_vec: result.spins_vec });
+      
+
+            // --- Display spins ---
+            // Prefer vector spins when available and valid
+	    displaySpinState(result);
+
+            //populateSpinAtoms(result.spins_z_sign, model.magneticAtomInfo);
+
+      
+            // --- Display VASP MAGMOM ---
+            const magmomLine = generateMAGMOM(
+              model.atoms,
+              result.spins_z_sign,
+              model.magneticAtomInfo
+            );
+            document.getElementById("magmomField").value = magmomLine;
+      
+            // Display energies
+            document.getElementById("energyValue").textContent = result.energy.toFixed(4);
+            document.getElementById("multiplicityValue").textContent = result.multiplicity;
+            document.getElementById("intrisicValue").textContent = result.Sz;
+
+            // Build MAGMOM array (numeric, per magnetic atom)
+            const magmom = result.spins_z_sign.map(s => s * 2.5);
+
+            // Derive atom lists
+            const upAtoms = [];
+            const downAtoms = [];
+
+            result.spins_z_sign.forEach((s, i) => {
+              if (s > 0) upAtoms.push(i + 1);    // +1 if POSCAR-style indexing
+              else downAtoms.push(i + 1);
+            });
+
+	    console.log("Into recordSpinState");
+
+			 /*
+            recordSpinState({
+	       spins_vec: result.spins_vec,
+               spins_z_sign: result.spins_z_sign,
+               spins: result.spins,
+               energy: result.energy,
+               multiplicity: result.multiplicity,
+               Sz: result.Sz,
+               spectrum: result.spectrum,
+               magmom: magmom,
+               upAtoms: upAtoms,
+               downAtoms: downAtoms,
+               source: method
+            });
+			 */
+
+            result.magmom   = magmom;
+            result.upAtoms  = upAtoms;
+            result.downAtoms = downAtoms;
+	    recordSpinState(result);
+
+        }
+
  	 window.handleGenerateSpin = handleGenerateSpin;
  	 console.log("handleGenerateSpin attached:", window.handleGenerateSpin);
 
 </script>
 <script>
 
+	 /**
+          * updateSpinControls()
+          *
+          * Dynamically updates the NorthSpin user interface based on the selected
+          * spin model (Ising, Heisenberg, AI, GKA, etc.).
+          *
+          * Responsibilities:
+          *   1. Shows or hides generic solver controls (temperature, cooling, iterations).
+          *   2. Switches between collinear (Ising-style) and vector (Heisenberg-style)
+          *      spin visualization panels.
+          *
+          * UI Logic:
+          *   - "ising" and "ai"      → show colinearbox (z-sign based spin controls)
+          *   - "heisenberg" and "gka" → show vectorbox (3D spin vector controls)
+          *   - All other modes        → hide both visualization boxes
+          *
+          * This function does not perform any physics or solver operations.
+          * It strictly manages presentation-layer state to ensure the UI
+          * reflects the currently selected spin model.
+          *
+          * Part of the NorthSpin spin data pipeline.
+          */
          function updateSpinControls() {
             const method = document.getElementById("spinmethod").value;
             const controls = document.getElementById("isingControls");
-            // Show controls only for Ising-type model
+	    const vectorbox = document.getElementById("vectorbox");
+	    const colinearbox = document.getElementById("colinearbox");
+	    const atomlist1 = document.getElementById("atomlist1");
+	    const atomlist2 = document.getElementById("atomlist2");
+	    const spinvecbox = document.getElementById("sdata");
+	    const noncolBox = document.getElementById("vasp-noncollinear");
+	    const noncolBoxContainer = document.getElementById("vasp-noncollinearContainer");
+
+	    // Show generic solver controls for Ising or Heisenberg
 	    // Show Ising controls only for methods that actually use them
-            if (method === "ising") {
-               controls.style.display = "block";
-            } else {
-               controls.style.display = "none";
-            }
+	    // Show solver controls
+            controls.style.display = (method === "ising" || method === "heisenberg") ? "block" : "none";
 
-			 /*
-            if ((method === "Ising Model using superexchange Rules") ||
-                (method === "Spin Energy"))
- 	    {
-                controls.style.display = "block";
+            // Switch between collinear (ising-style) and vector (heisenberg-style) UI
+            if (method === "ising" || method === "ai") {
+               colinearbox.style.display = "block";
+               vectorbox.style.display  = "none";
+	       spinvecbox.value = '';
+	       noncolBox.checked = false;
+               noncolBox.parentElement.style.display = "none";
+               noncolBoxContainer.style.display = "none";
+            } else if (method === "heisenberg" || method === "gka") {
+               colinearbox.style.display = "none";
+               vectorbox.style.display  = "block";
+	       atomlist1.value = '';
+	       atomlist2.value = '';
+               noncolBoxContainer.style.display = "inline-block";
+	       noncolBox.parentElement.style.display = "inline-block";
             } else {
-                controls.style.display = "none";
+               // fallback safe state
+               colinearbox.style.display = "none";
+               vectorbox.style.display  = "none";
             }
-       */
-
          }
+
+
+	// ---- Top Spin global state ----
+        let currentSpinIndex = 0;
+        let topSpinStates = [];
+
+	function setMAGMOM(magmomArray) {
+           if (!magmomArray) return;
+
+           // Convert numeric array → VASP string
+           const magmomLine = magmomArray
+             .map(v => v.toFixed(2))
+             .join(" ");
+
+           const field = document.getElementById("magmomField");
+           if (field) {
+             field.value = magmomLine;
+           }
+        }
+
+	function setSpinAtomLists(upAtoms, downAtoms) {
+           const upField = document.getElementById("atomlist1");
+           const downField = document.getElementById("atomlist2");
+
+           if (upField) {
+             upField.value = upAtoms && upAtoms.length ? upAtoms.join(" ") : "";
+             set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c');
+           }
+
+           if (downField) {
+             downField.value = downAtoms && downAtoms.length ? downAtoms.join(" ") : "";
+             set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c');
+           }
+        }
+
+
+	function updateSpinVisualization(spins) {
+			  // Temporary safe wrapper
+           console.log("updateSpinVisualization called with spins:", spins);
+
+           // If you already visualize spins elsewhere, wire it here.
+           // Example (only if applicable):
+           // populateSpinAtoms(spins, magneticAtomInfo);
+           // updateJSmolSpinColors(spins);
+        }
+
+
+        function sameSpins(a, b) {
+           if (a.length !== b.length) return false;
+           for (let i = 0; i < a.length; i++) {
+             if (a[i] !== b[i]) return false;
+           }
+           return true;
+        }
+
+
+
+	function recordSpinState(state) {
+
+  	   console.log("RecordSpinState state=",state);
+
+           // Reject duplicate spin configurations
+           if (topSpinStates.some(s => sameSpins(s.spins, state.spins))) {
+             console.log("Duplicate spin state — not recording");
+             return;
+           }
+
+
+
+           // Defensive copy (important!)
+           const snapshot = {
+             ...state,
+             spins: [...state.spins],
+             magmom: [...state.magmom],
+             upAtoms: [...state.upAtoms],
+             downAtoms: [...state.downAtoms],
+           };
+
+           topSpinStates.push(snapshot);
+
+           // Keep list sorted by energy (optional but very nice)
+           topSpinStates.sort((a, b) => a.energy - b.energy);
+
+           // Update UI
+           updateSpinStateViewer();
+
+           // Select the newly added state
+           currentSpinIndex = topSpinStates.findIndex(s => s === snapshot);
+           selectSpinState(currentSpinIndex);
+
+			//state.energy
+			//state.multiplicity
+			//state.Sz
+         }
+
+
+
+
+        // ---- Viewer ----
+        function updateSpinStateViewer() {
+           const list = document.getElementById("spinStateList");
+           list.innerHTML = "";
+
+           topSpinStates.forEach((s, i) => {
+             const div = document.createElement("div");
+             div.className = "spin-entry";
+	     div.innerText = `#${i}  E=${s.energy.toFixed(4)}  Multiplicity=${s.multiplicity} Intrinsic Spin=${s.Sz}`;
+             div.onclick = () => selectSpinState(i);
+             list.appendChild(div);
+           });
+        }
+
+        function selectSpinState(index) {
+           if (index < 0 || index >= topSpinStates.length) return;
+          
+           currentSpinIndex = index;
+           const state = topSpinStates[index];
+          
+           const entries = document.querySelectorAll(".spin-entry");
+           entries.forEach((e, i) => {
+             e.classList.toggle("active", i === index);
+             if (i === index) {
+               e.scrollIntoView({ block: "nearest" });
+             }
+           });
+          
+           // Repopulate UI
+           //setMAGMOM(state.magmom);
+   	   console.log("MAGMOM state=",state);
+	   setMAGMOMFromState(state);
+
+           // Only fill the atom lists for collinear states
+           if (state.representation === "collinear") {
+             setSpinAtomLists(state.upAtoms, state.downAtoms);
+           } else {
+             // optional: clear them so they don't “stick”
+             setSpinAtomLists([], []);
+           }
+
+           // This is the real visualization router:
+           displaySpinState(state);
+
+
+           //updateSpinVisualization(state.spins);
+
+	   const energyValueElement = document.getElementById("energyValue");
+           const multiplicityValueElement = document.getElementById("multiplicityValue");
+           const intrisicValueElement = document.getElementById("intrisicValue");
+           energyValueElement.textContent = state.energy.toFixed(4); // Update energy display
+           multiplicityValueElement.textContent = state.multiplicity; // Update multiplicity display
+           intrisicValueElement.textContent = state.Sz;
+          
+           console.log("Loaded spin state:", state);
+        }
+
+
+
+	function displaySpinState(state) {
+           if (state.representation === "vector") {
+	      console.log("Display vector");
+              populateVectorSpinBox(state.spins_vec, state.magneticAtomInfo);
+	   }
+           else if (state.representation === "collinear") {
+	      console.log("Display collinear");
+              populateSpinAtoms(state.spins_z_sign, state.magneticAtomInfo);
+           }
+           else
+              console.warn("Unknown representation:", state.representation);
+        }
+
+
+
+        // ---- Keyboard navigation ----
+        function initSpinStateKeyboardNavigation() {
+          document.addEventListener("keydown", e => {
+
+            if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+            if (topSpinStates.length === 0) return;
+
+            if (e.key === "ArrowDown") {
+              selectSpinState(
+                Math.min(currentSpinIndex + 1, topSpinStates.length - 1)
+              );
+              e.preventDefault();
+            }
+
+            if (e.key === "ArrowUp") {
+              selectSpinState(
+                Math.max(currentSpinIndex - 1, 0)
+              );
+              e.preventDefault();
+            }
+          });
+        }
+
+        // ---- Init ----
+        window.addEventListener("DOMContentLoaded", () => {
+          initButtons();
+          initSelectors();
+          initSpinStateKeyboardNavigation();
+
+          const noncolCheckbox = document.getElementById("vasp-noncollinear");
+
+          if (noncolCheckbox) {
+             noncolCheckbox.addEventListener("change", () => {
+               if (topSpinStates.length > 0) {
+                 setMAGMOMFromState(topSpinStates[currentSpinIndex]);
+               }
+             });
+          }
+        });
+
+
+        function clearMagneticStateExplorer() {
+
+           // 1️⃣ Clear JSmol arrows/cones
+           jms0("draw delete spin*;");
+           jms0("select *; color cpk;");
+     
+           // 2️⃣ Clear text fields
+           const idsToClear = [
+             "magmomField",
+             "atomlist1",
+             "atomlist2",
+             "sdata"
+           ];
+     
+           idsToClear.forEach(id => {
+             const el = document.getElementById(id);
+             if (el) el.value = "";
+           });
+     
+           // 3️⃣ Clear spin state panel
+           const list = document.getElementById("spinStateList");
+           if (list) list.innerHTML = "";
+     
+           // 4️⃣ Reset energy display
+           document.getElementById("energyValue").textContent = "—";
+           document.getElementById("multiplicityValue").textContent = "—";
+           document.getElementById("intrisicValue").textContent = "—";
+     
+           // 5️⃣ Reset internal state
+           topSpinStates = [];
+           currentSpinIndex = -1;
+     
+           console.log("Magnetic State Explorer cleared.");
+        }
+
+
+
+        function setMAGMOMFromState(state) {
+
+            const field = document.getElementById("magmomField");
+            const noncol = document.getElementById("vasp-noncollinear")?.checked;
+      
+            if (!field || !state || !state.magneticAtomInfo) return;
+      
+            // Parse magnetic atoms
+            const magneticAtoms = state.magneticAtomInfo
+              .split("\n")
+              .map(line => {
+                const m = line.match(/Index: (\d+), Element: (\w+)/);
+                return m
+                  ? { index: parseInt(m[1], 10), element: m[2] }
+                  : null;
+              })
+              .filter(Boolean);
+      
+            // Safety check
+            if (state.spins_z_sign &&
+                state.spins_z_sign.length !== magneticAtoms.length) {
+              console.warn("Spin length mismatch");
+              return;
+            }
+      
+            // ---------------------------
+            // NONCOLLINEAR MODE
+            // ---------------------------
+            if (noncol) {
+      
+              let vectors = [];
+      
+              if (state.representation === "vector" && state.spins_vec) {
+                vectors = state.spins_vec;
+              }
+              else if (state.spins_z_sign) {
+                vectors = state.spins_z_sign.map(s => [0, 0, s]);
+              }
+      
+              const magmomLine = vectors.map((v, i) => {
+      
+                const element = magneticAtoms[i].element;
+                const S = MAGNETIC_ION_SPINS[element] ?? 0.0;
+                const mu = 2.0 * S;
+      
+                return [
+                  (mu * v[0]).toFixed(4),
+                  (mu * v[1]).toFixed(4),
+                  (mu * v[2]).toFixed(4)
+                ].join(" ");
+      
+              }).join(" ");
+      
+              field.value =
+                "LNONCOLLINEAR = .TRUE.\n" +
+                "ISPIN = 2\n" +
+                "MAGMOM = " + magmomLine;
+            }
+      
+            // ---------------------------
+            // COLLINEAR MODE
+            // ---------------------------
+            else {
+      
+              const mags = state.spins_z_sign.map((s, i) => {
+      
+                const element = magneticAtoms[i].element;
+                const S = MAGNETIC_ION_SPINS[element] ?? 0.0;
+                const mu = 2.0 * S;
+      
+                return (mu * s).toFixed(4);
+              });
+      
+              field.value =
+                "ISPIN = 2\n" +
+                "MAGMOM = " + mags.join(" ");
+            }
+        }
+
+
+
+
 </script>
 
 
@@ -15962,34 +17517,33 @@ function solveIsingExactMultiplicity(
                <!--p align="center" style="color:#102DB0">Magnetic Spin Structure</p>
                <p align="center" style="color:#102DB0">(using GKA Rules or Ising Model)</p-->
                <h1 class="title">Magnetic Spin Structure</h1>
+	       <h2 class="subtitle">NorthSpin · Magnetic State Explorer</h2>
                <table>
                   <tr> 
-                  <input type="button" class="button" id="redrawspin" value="Clear spins" 
+                  <input type="button" class="button" id="redrawspin" value="Clear Ising Spins" 
 		         onClick="jms('select *; color cpk;');
 		                  document.getElementById('magmomField').value = '';
 		                  document.getElementById('atomlist1').value = '';
 		                  document.getElementById('atomlist2').value = '';"/>  
-                  <input type="button" class="button" id="redrawpoly" value="Clear polyhedra" 
+                  <input type="button" class="button" id="redrawpoly" value="Clear Polyhedra" 
 		         onClick="jms('delete $atomlist*;');"/>  
+		  <input type="button" class="button" value="Clear Magnetic State Explorer" 
+		         onclick="clearMagneticStateExplorer();" />
+
                   <div class="dropdown">
                       <!--select id="spinmethod" oninput="updateSpinControls(); cacheInput(this)"-->
                       <select id="spinmethod" oninput="updateSpinControls()">
-                           <option value="ising" selected>Ising Model using superexchange Rules</option>
-                           <option value="gka">GKA-τ Rules (in progress)</option>
-                           <option value="ai" disabled>AI Model (coming soon)</option>
+                           <option value="ising" selected>GKA Exchange · Ising Spins</option>
+                           <option value="heisenberg">GKA Exchange · Heisenberg Spins (in progress)</option>
+                           <option value="gka">GKA-τ Exchange · Heisenberg Spins (in progress)</option>
+                           <option value="ai" disabled>AI Exchange · Ising Spins (coming soon)</option>
                       </select>
 
-                      <!--select id="spinmethod" oninput="updateSpinControls(); cacheInput(this)">
-                          <option value="Ising Model using superexchange Rules" selected>Ising Model using superexchange Rules</option>
-                          <option value="GKA">GKA-&tau; Rules (in progress)</option>
-                          <option value="ai" disabled>AI Model (coming soon)</option>
-                      </select-->
-
                   </div>
-                  <br><br>
+		  <br><hr><br>
 
 		  <button id="generateMagneticSpin" onClick="handleGenerateSpin();"> Generate Magnetic Spin Data </button>
-		  <label><input type="checkbox" id="noPerturb"> Resume exactly</label>
+		  <label><input type="checkbox" id="noPerturb"> Save Spin States</label>
 
 		  <div id="isingControls" style="display:block;">
                      <label for="mult">multiplicity:</label> 
@@ -15998,8 +17552,13 @@ function solveIsingExactMultiplicity(
 
 		     <input type="number" name="nwchemmult9" id="nwchemmult2" 
 		            title=": set number nwchemmult2  :" size="3" min="0" max="100" step="1" value="0" 
-			    onChange="changenwchemmult(this)" oninput="cacheInput(this)">
-			    <span style="font-size: 0.9em; color: #666;"> (0 = AUTO) </span>
+			    onChange="changenwchemmult(this)" >
+		     <!--input type="number" name="nwchemmult9" id="nwchemmult2" 
+		            title=": set number nwchemmult2  :" size="3" min="0" max="100" step="1" value="0" 
+			    onChange="changenwchemmult(this)" oninput="cacheInput(this)"-->
+
+
+		     <span style="font-size: 0.9em; color: #666;"> (0 = AUTO) </span>
                      <label for="temperature">Initial Temperature:</label> 
 		     <input type="number" id="temperature" value="100" step="1" min="1" style="width: 80px;">
                      <label for="coolingRate">Cooling Rate:</label> 
@@ -16012,6 +17571,10 @@ function solveIsingExactMultiplicity(
                         Allowed multiplicities: —
                      </div>
 		     <br>
+		     <div id="spinStatePanel" class="spin-panel">
+                        <h3>Magnetic State Explorer</h3>
+                        <div id="spinStateList" class="spin-list"></div>
+                      </div>
 
                      <!-- Placeholder for showing energy -->
                      <div id="energyDisplay" style="font-weight: bold; margin-top: 10px;">
@@ -16019,126 +17582,148 @@ function solveIsingExactMultiplicity(
                          Multiplicity: <span id="multiplicityValue">Not calculated yet</span>
                          Total Intrisic Spin: <span id="intrisicValue">Not calculated yet</span>
                      </div>
-		     <!--div style="margin-top:6px;">
-                          <label><b>MAGMOM:</b></label>
-                          <input
-                            id="magmomField"
-                            type="text"
-                            spellcheck="false"
-                            style="width:100%; font-family:monospace; font-size:0.95em; white-space:nowrap;"
-                          />
-                          <button onclick="copyMAGMOM()">Copy MAGMOM</button>
-			  <span style="font-size:0.85em; color:#555; margin-left:6px;">
-                             Paste directly into VASP INCAR
-                          </span>
-                     </div-->
-
                   </div>
 
-		  <div id="MAGMOMOuput" style="display:block;">
-		     <div style="margin-top:6px;">
-                          <label><b>MAGMOM:</b></label>
-                          <input
-                            id="magmomField"
-                            type="text"
-                            spellcheck="false"
-			    placeholder="MAGMOM values will appear here"
-                            style="width:100%; font-family:monospace; font-size:0.95em; white-space:nowrap;"
-                          />
-                          <button onclick="copyMAGMOM()">Copy MAGMOM</button>
-			  <span style="font-size:0.85em; color:#555; margin-left:6px;">
-			      Paste directly into VASP INCAR<br>
-			      MAGMOM values are in POSCAR atom order (μB)
-                          </span>
-                     </div>
-		  </div>
 
                   </tr>
+
                   <tr> 
-                     <td> <select id="colortype1" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)">
-                          <option value="translucent green" selected="selected">translucent green</option>
-                          <option value="translucent yellow">translucent yellow</option>
-                          <option value="translucent red">translucent red</option>
-                          <option value="translucent blue">translucent blue</option>
-                          <option value="translucent orange">translucent orange</option>
-                          <option value="translucent grey">translucent grey</option>
-                          </select>
-                          <select id="penalty1a" oninput="cacheInput(this)">
-                          <option value="up" selected="selected">up</option>
-                          <option value="down">down</option>
-                          <option value="polyhedra">polyhedra</option>
-                          </select>
-                          <select id="penalty1b" oninput="cacheInput(this)">
-                          <option value="s">s</option>
-                          <option value="p">p</option>
-                          <option value="d" selected="selected">d</option>
-                          <option value="f">f</option>
-                          <option value="tetra">tetra</option>
-                          <option value="penta">penta</option>
-                          <option value="octa">octa</option>
-                          <option value="other">other</option>
-                          </select>
-                          <input type="number" id="penalty1c" size="9" min="-10.000" max="10.000" step="0.01" value="-1.00" oninput="cacheInput(this)"> 
+                     <td colspan="2">  <!-- adjust colspan as needed -->
+                        <hr>
+                        <div><b>DFT Intialization:</b></div>
+           	        <div id="MAGMOMOuput" style="display:block;">
+           	           <div style="margin-top:6px;">
+                                <label>MAGMOM:</label>
+           	                <textarea id="magmomField"
+                                   spellcheck="false"
+                                   placeholder="MAGMOM values will appear here"
+                                   style="width:100%; font-family:monospace; font-size:0.95em;
+                                          white-space:pre; resize:vertical;"
+                                   rows="3"></textarea>
+                                <button onclick="copyMAGMOM()">Copy MAGMOM</button>
+           	                <label id="vasp-noncollinearContainer" style="display:none;"> 
+           	                   <input type="checkbox" id="vasp-noncollinear"> 
+           	                   non-collinear
+           	                </label>
+           	               <span style="font-size:0.85em; color:#555; margin-left:6px;">
+           	                 Paste directly into VASP INCAR<br>
+           	                 MAGMOM values are in POSCAR atom order (μB)
+                               </span>
+                           </div>
+           	        </div>
                      </td>
-                  </tr> 
-                  <tr>
-                     <td> Spin Up Atoms (spin penalty down): 
-			  <input type="atomarray" id="atomlist1"  size="70" value="" 
-				 onchange="cacheInput(this)" 
-			         oninput="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c'); cacheInput(this)" >
-			   <br><br>
-		     </td>
                   </tr>
-                  <tr> 
-                     <td> <select id="colortype2" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)">
-                          <option value="translucent green">translucent green</option>
-                          <option value="translucent yellow" selected="selected">translucent yellow</option>
-                          <option value="translucent red">translucent red</option>
-                          <option value="translucent blue">translucent blue</option>
-                          <option value="translucent orange">translucent orange</option>
-                          <option value="translucent grey">translucent grey</option>
-                          </select>
-                          <select id="penalty2a" oninput="cacheInput(this)">
-                          <option value="up">up</option>
-                          <option value="down" selected="selected">down</option>
-                          <option value="polyhedra">polyhedra</option>
-                          </select>
-                          <select id="penalty2b" oninput="cacheInput(this)">
-                          <option value="s">s</option>
-                          <option value="p">p</option>
-                          <option value="d" selected="selected">d</option>
-                          <option value="f">f</option>
-                          <option value="tetra">tetra</option>
-                          <option value="penta">penta</option>
-                          <option value="octa">octa</option>
-                          <option value="other">other</option>
-                          </select>
-                           <input type="number" id="penalty2c" size="9" min="-10.000" max="10.000" step="0.01" value="-1.00" oninput="cacheInput(this)"> 
-                     </td>
-                  </tr> 
-                  <tr>
-                     <td> Spin Down Atoms (spin penalty up): 
-			  <input type="atomarray" id="atomlist2"  size="70" value="" 
-				  onchange="cacheInput(this)"
-				  oninput="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c'); cacheInput(this)">
-			  <br><br></td>
-                  </tr>
-                  <tr> 
-                     <td> Spin Structure Data: <br><br> </td>
-                  </tr> 
-                  <tr> 
-                     <td> 
-                          <textarea  name="ppdata" id="pdata" rows="15" cols="65" style="color: blue; font-size: 14px;"></textarea>
-                     </td>
-                  </tr> 
 
                </table>
-               </div>
+               <table>
+                  <tr> 
+		     <hr>
+		     <div><b>Spin Data:</b></div>
+                  </tr>
+               </table>
+
+	      <div id="vectorbox" style="display:none;">
+                 <table>
+                    <tr> 
+		      Vector Spins : <br>
+                      <textarea  name="ssdata" id="sdata" rows="15" cols="65" style="color: black; font-size: 12px;"></textarea>
+		    </tr>
+                 </table>
+	      </div>
+
+	      <div id="colinearbox" style="display:block;">
+		 <table>
+                    <tr> 
+                       <td> <select id="colortype1" onchange="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c')" oninput="cacheInput(this)">
+                            <option value="translucent green" selected="selected">translucent green</option>
+                            <option value="translucent yellow">translucent yellow</option>
+                            <option value="translucent red">translucent red</option>
+                            <option value="translucent blue">translucent blue</option>
+                            <option value="translucent orange">translucent orange</option>
+                            <option value="translucent grey">translucent grey</option>
+                            </select>
+                            <select id="penalty1a" oninput="cacheInput(this)">
+                            <option value="up" selected="selected">up</option>
+                            <option value="down">down</option>
+                            <option value="polyhedra">polyhedra</option>
+                            </select>
+                            <select id="penalty1b" oninput="cacheInput(this)">
+                            <option value="s">s</option>
+                            <option value="p">p</option>
+                            <option value="d" selected="selected">d</option>
+                            <option value="f">f</option>
+                            <option value="tetra">tetra</option>
+                            <option value="penta">penta</option>
+                            <option value="octa">octa</option>
+                            <option value="other">other</option>
+                            </select>
+                            <input type="number" id="penalty1c" size="9" min="-10.000" max="10.000" step="0.01" value="-1.00" oninput="cacheInput(this)"> 
+                       </td>
+                    </tr> 
+                    <tr>
+                       <td> Spin Up Atoms (spin penalty down): 
+		            <input type="text" class="atomarray" id="atomlist1"  size="70" value="" 
+		          	 onchange="cacheInput(this)" 
+		                   oninput="set_color_penalty('atomlist1','colortype1','penalty1a','penalty1b','penalty1c'); cacheInput(this)" >
+		             <br><br>
+		       </td>
+                    </tr>
+                   
+                    <tr> 
+                       <td> <select id="colortype2" onchange="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c')" oninput="cacheInput(this)">
+                            <option value="translucent green">translucent green</option>
+                            <option value="translucent yellow" selected="selected">translucent yellow</option>
+                            <option value="translucent red">translucent red</option>
+                            <option value="translucent blue">translucent blue</option>
+                            <option value="translucent orange">translucent orange</option>
+                            <option value="translucent grey">translucent grey</option>
+                            </select>
+                            <select id="penalty2a" oninput="cacheInput(this)">
+                            <option value="up">up</option>
+                            <option value="down" selected="selected">down</option>
+                            <option value="polyhedra">polyhedra</option>
+                            </select>
+                            <select id="penalty2b" oninput="cacheInput(this)">
+                            <option value="s">s</option>
+                            <option value="p">p</option>
+                            <option value="d" selected="selected">d</option>
+                            <option value="f">f</option>
+                            <option value="tetra">tetra</option>
+                            <option value="penta">penta</option>
+                            <option value="octa">octa</option>
+                            <option value="other">other</option>
+                            </select>
+                             <input type="number" id="penalty2c" size="9" min="-10.000" max="10.000" step="0.01" value="-1.00" oninput="cacheInput(this)"> 
+                       </td>
+                    </tr> 
+                    <tr>
+                       <td> Spin Down Atoms (spin penalty up): 
+		            <input type="text" class="atomarray" id="atomlist2"  size="70" value="" 
+		          	  onchange="cacheInput(this)"
+		          	  oninput="set_color_penalty('atomlist2','colortype2','penalty2a','penalty2b','penalty2c'); cacheInput(this)">
+		            <br><br></td>
+                    </tr>
+	         </table>
+	      </div>
+
+	      <table>
+	          <tr>
+		     <hr>
+		     <td> <b>Spin Hamiltonian Data:</b></td>
+	          </tr>
+                  <tr> 
+                     <td> 
+                        <textarea  name="ppdata" id="pdata" rows="15" cols="65" style="color: blue; font-size: 14px;"></textarea>
+                     </td>
+                  </tr> 
+              </table>
+	      
 	       <div style="margin-top:6px;">
                  <button onclick="copyJij()">Copy Jij</button>
                  <span style="font-size:0.85em; color:#555; margin-left:6px;">
                    Copies Jij matrix only (no metadata)
                  </span>
+               </div>
                </div>
 
 
@@ -18727,7 +20312,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const select = document.getElementById("spinmethod");
   if (!select) return;
 
-  const order = ["ising", "gka", "ai"];
+  const order = ["ising", "heisenberg", "gka", "ai"];
   const seen = new Set();
   const opts = [];
 
